@@ -15,16 +15,13 @@ export default function Navbar() {
                 <Link
                   className="nav-link active text-white"
                   aria-current="page"
-                  to="/NinjaDeliveries"
+                  to="/"
                 >
                   Home
                 </Link>
               </li>
               <li className="nav-item ">
-                <Link
-                  className="nav-link text-white"
-                  to="/NinjaDeliveries/businesslist"
-                >
+                <Link className="nav-link text-white" to="/businesslist">
                   {" "}
                   Business List
                 </Link>
@@ -33,7 +30,7 @@ export default function Navbar() {
                 <Link
                   className="nav-link active text-white"
                   aria-current="page"
-                  to="/NinjaDeliveries/riderlist"
+                  to="/riderlist"
                 >
                   Riders List{" "}
                 </Link>
@@ -42,7 +39,7 @@ export default function Navbar() {
                 <Link
                   className="nav-link active text-white"
                   aria-current="page"
-                  to="/NinjaDeliveries/addtransaction"
+                  to="/addtransaction"
                 >
                   Add Transaction{" "}
                 </Link>

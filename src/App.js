@@ -1,5 +1,5 @@
 import "./App.css";
-import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar";
 // import Riders from "./pages/Riders";
 import Home from "./pages/Home";
@@ -16,24 +16,15 @@ function App() {
       <Navbar />
 
       <Routes>
-        <Route path="/NinjaDeliveries" element={<Home />} />
+        <Route path="/" element={<Home />} />
         <Route
-          path="/NinjaDeliveries/bussinessregistration"
+          path="/bussinessregistration"
           element={<BusinessRegistration />}
         />
-        <Route
-          path="/NinjaDeliveries/businesslist"
-          element={<BusinessDataFetch />}
-        />
-        <Route
-          path="/NinjaDeliveries/riderregistration"
-          element={<RiderRegistration />}
-        />
-        <Route path="/NinjaDeliveries/riderlist" element={<RiderDataFetch />} />
-        <Route
-          path="/NinjaDeliveries/addtransaction"
-          element={<FetchAddTransaction />}
-        />
+        <Route path="/businesslist" element={<BusinessDataFetch />} />
+        <Route path="/riderregistration" element={<RiderRegistration />} />
+        <Route path="/riderlist" element={<RiderDataFetch />} />
+        <Route path="/addtransaction" element={<FetchAddTransaction />} />
       </Routes>
     </>
   );
