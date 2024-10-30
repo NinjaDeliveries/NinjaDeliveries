@@ -9,7 +9,6 @@ import BusinessDataFetch from "./context/BusinessDataFetch";
 import RiderRegistration from "./pages/RiderRegistration";
 import RiderDataFetch from "./context/RiderDataFetch";
 import FetchAddTransaction from "./context/FetchAddTransaction";
-import AddTransaction from "./pages/AddTransaction";
 
 function App() {
   return (
@@ -17,15 +16,24 @@ function App() {
       <Navbar />
 
       <Routes>
-        <Route path="/" element={<Home />} />
+        <Route path="/NinjaDeliveries" element={<Home />} />
         <Route
-          path="/bussinessregistration"
+          path="/NinjaDeliveries/bussinessregistration"
           element={<BusinessRegistration />}
         />
-        <Route path="/businesslist" element={<BusinessDataFetch />} />
-        <Route path="/riderregistration" element={<RiderRegistration />} />
-        <Route path="/riderlist" element={<RiderDataFetch />} />
-        <Route path="/addtransaction" element={<FetchAddTransaction />} />
+        <Route
+          path="/NinjaDeliveries/businesslist"
+          element={<BusinessDataFetch />}
+        />
+        <Route
+          path="/NinjaDeliveries/riderregistration"
+          element={<RiderRegistration />}
+        />
+        <Route path="/NinjaDeliveries/riderlist" element={<RiderDataFetch />} />
+        <Route
+          path="/NinjaDeliveries/addtransaction"
+          element={<FetchAddTransaction />}
+        />
       </Routes>
     </>
   );
