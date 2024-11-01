@@ -13,7 +13,7 @@ export default function Home() {
           <div className="card-body">
             <h5 className="card-title">Register Business</h5>
             <p className="card-text">Click below to Register a new business </p>
-            <Link to="/bussinessregistration" className="btn btn-primary">
+            <Link to="/bussinessregistration" className="btn btn-success">
               {" "}
               Register Business{" "}
             </Link>
@@ -28,7 +28,7 @@ export default function Home() {
           <div className="card-body">
             <h5 className="card-title">Register Riders</h5>
             <p className="card-text">Click below to Register a new Rider </p>
-            <Link to="/riderregistration" className="btn btn-primary">
+            <Link to="/riderregistration" className="btn btn-success">
               {" "}
               Register Rider{" "}
             </Link>

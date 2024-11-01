@@ -1,6 +1,6 @@
 import React from "react";
 import { initializeApp } from "firebase/app";
-
+import { getAuth } from "firebase/auth";
 import {
   getFirestore,
   collection,
@@ -28,7 +28,7 @@ const firebaseConfig = {
 
 const firebaseApp = initializeApp(firebaseConfig);
 export const firestore = getFirestore(firebaseApp);
-
+export const auth = getAuth();
 export const db = getFirestore(firebaseApp);
 
 // const handleCreateNewRider = async (Name, AadharCard, MobileNumber) => {

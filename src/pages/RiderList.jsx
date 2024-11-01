@@ -8,7 +8,7 @@ function RiderList({ item }) {
     <div key={item.id}>
       <ul className="list-group">
         <li className="list-group-item d-flex justify-content-between align-items-center">
-          {item.name}
+          {item.username}
           <button
             onClick={() => {
               if (Editbox === false) {

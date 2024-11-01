@@ -15,7 +15,7 @@ export default function Navbar() {
                 <Link
                   className="nav-link active text-white"
                   aria-current="page"
-                  to="/"
+                  to="/home"
                 >
                   Home
                 </Link>
