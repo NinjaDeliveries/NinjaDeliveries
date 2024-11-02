@@ -7,10 +7,10 @@ import App from "./App";
 import reportWebVitals from "./reportWebVitals";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
-const basename = process.env.PUBLIC_URL;
+
 root.render(
   <React.StrictMode>
-    <BrowserRouter basename={basename}>
+    <BrowserRouter>
       <FirebaseProvider>
         <App />
       </FirebaseProvider>
