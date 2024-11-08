@@ -1,10 +1,5 @@
 import "./App.css";
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-  Navigate,
-} from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Home from "./pages/Home";
 import BusinessRegistration from "./pages/BusinessRegistration";
@@ -25,7 +20,7 @@ function App() {
           path="/NinjaDeliveries"
           element={nav === true ? <Home /> : <Login setNav={setNav} />}
         />
-        {console.log(nav)}
+
         <Route
           path="/home"
           element={nav === true ? <Home /> : <Login setNav={setNav} />}
