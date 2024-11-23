@@ -1,0 +1,70 @@
+.heading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 4rem;
+}
+.list {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 60%;
+  margin-left: 20%;
+  margin-right: 20%;
+}
+
+.editclicked {
+  width: 64%;
+  margin-left: 18%;
+  margin-right: 18%;
+  transition: all 0.5s ease-in-out;
+}
+
+.list:hover {
+  width: 64%;
+  margin-left: 18%;
+  margin-right: 18%;
+  transition: all 0.5s ease-in-out;
+}
+.disabled {
+  pointer-events: none;
+}
+
+.heading2 {
+  margin-left: 15%;
+}
+.heading3 {
+  display: flex;
+  margin-left: 15%;
+  margin-right: 15%;
+  border-bottom: 1px solid black;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.editrider {
+  border: 1px solid black;
+  border-radius: 5px;
+  padding: 5%;
+  margin-top: 20px;
+  margin-bottom: 30px;
+  margin-left: 3px;
+  animation: slide-in 0.5s;
+}
+@keyframes slide-in {
+  0% {
+    transform: translateY(-10%);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.editbutton {
+  width: 25%;
+}
+
+.savebtn {
+  justify-self: end;
+  width: 25%;
+}

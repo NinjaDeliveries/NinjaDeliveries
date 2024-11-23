@@ -10,6 +10,7 @@ export default function RiderRegistration() {
   const [outTime, setoutTime] = useState("");
   const [osAmount, setosAmount] = useState();
   const [number, setnumber] = useState("");
+  const [order, setOrder] = useState("");
   const [isAvailable, setisAvailable] = useState(false);
 
   const show = (e) => {
@@ -28,6 +29,8 @@ export default function RiderRegistration() {
       outstandingAmount: parseFloat(osAmount),
       isAvailable: isAvailable,
       ridesRejected: parseInt(0),
+      currentOrder: order,
+      currentOrderStatus: order,
     });
   };
   return (

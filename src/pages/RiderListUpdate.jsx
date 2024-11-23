@@ -3,7 +3,7 @@ import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../context/Firebase";
 
 function RiderListUpdate({ item, setEditbox }) {
-  const [Edit, setEdit] = useState(false);
+  const [Edit, setEdit] = useState(true);
   const [name, setname] = useState(item.name);
   const [username, setusername] = useState(item.username);
   const [inTime, setinTime] = useState(item.inTime);
@@ -30,11 +30,8 @@ function RiderListUpdate({ item, setEditbox }) {
 
   return (
     <div>
-      <div key={item.id}>
-        <form
-          className="row g-3 pb-3 my-4 mx-5 pt-3 container position-relative"
-          style={{ transition: " margin-right 2s ease-in-out .5s" }}
-        >
+      <div className="editrider" key={item.id}>
+        <form className="row g-3  container position-relative">
           <button
             type="button"
             onClick={() => setEditbox(false)}
@@ -171,17 +168,9 @@ function RiderListUpdate({ item, setEditbox }) {
 
           <button
             type="button"
-            onClick={() => setEdit(true)}
-            disabled={Edit === true}
-            className="btn btn-secondary"
-          >
-            Edit
-          </button>
-          <button
-            type="button"
             onClick={editDoc}
             disabled={Edit === false}
-            className="btn btn-primary"
+            className="savebtn btn btn-success"
           >
             Save Changes
           </button>
