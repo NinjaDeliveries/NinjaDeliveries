@@ -27,7 +27,15 @@ const BusinessDataFetch = () => {
 
   return (
     <div>
-      {Loader === false && data.map((item) => <BusinessList item={item} />)}
+      <h1 className="heading"> Businesses </h1>
+      <h5 className="heading2 mb-5 ">Store List</h5>
+      <div className="heading3">
+        <span className="mx-4 p-3">Store Name</span>
+        <span className="mx-5">Edit</span>
+      </div>
+      <div className="my-4">
+        {Loader === false && data.map((item) => <BusinessList item={item} />)}
+      </div>
     </div>
   );
 };

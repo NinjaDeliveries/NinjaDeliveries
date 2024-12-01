@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import firebase from "firebase/app";
-
+import "../context/style.css";
 import {
   getFirestore,
   collection,
@@ -47,17 +47,19 @@ export default function AddTransaction(value) {
   };
 
   return (
-    <div key={value.value.id}>
-      <form className="row container mx-5 my-5  g-3">
-        <div className="col-md-12">
-          <label htmlFor="validationDefault02" className="form-label"></label>
+    <div className="form1" key={value.value.id}>
+      <form className="row container   g-3">
+        <div class="input-group mb-1">
+          <span class="input-group-text" id="basic-addon1">
+            @
+          </span>
           <input
             type="text"
-            disabled
-            className="form-control"
-            id="validationDefault02"
             value={value.value.username}
-            required
+            class="form-control"
+            disabled
+            aria-label="Username"
+            aria-describedby="basic-addon1"
           />
         </div>
         <div className="col-md-4">
@@ -103,14 +105,14 @@ export default function AddTransaction(value) {
         </div>
         <div className="col-12">
           <button
-            className="btn btn-primary"
+            className="btn btn-success"
             onClick={(e) => {
               e.preventDefault();
               handleSubmit();
             }}
             type="submit"
           >
-            Submit form
+            Add Transaction
           </button>
         </div>
       </form>

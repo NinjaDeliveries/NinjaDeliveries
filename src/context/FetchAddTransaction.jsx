@@ -4,7 +4,7 @@ import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "./Firebase";
 import TextField from "@mui/material/TextField";
 import Autocomplete from "@mui/material/Autocomplete";
-import RiderDataFetch from "./RiderDataFetch";
+import "./style.css";
 import AddTransaction from "../pages/AddTransaction";
 
 export default function FetchAddTransaction() {
@@ -45,8 +45,9 @@ export default function FetchAddTransaction() {
   };
   return (
     <>
+      <h2 className="heading">Add Transaction</h2>
       <Autocomplete
-        className="my-5 mx-5"
+        className="heading2"
         {...defprops}
         // options={item.name}
         sx={{ width: 300 }}

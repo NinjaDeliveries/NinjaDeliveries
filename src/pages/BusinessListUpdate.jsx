@@ -3,7 +3,7 @@ import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../context/Firebase";
 
 function BusinessListUpdate({ item, setEditbox }) {
-  const [Edit, setEdit] = useState(false);
+  const [Edit, setEdit] = useState(true);
   const [inTime, setinTime] = useState(item.inTime);
   const [outTime, setoutTime] = useState(item.outTime);
   const [contact, setcontact] = useState(item.phoneNumber);
@@ -23,8 +23,8 @@ function BusinessListUpdate({ item, setEditbox }) {
 
   return (
     <div>
-      <div key={item.id}>
-        <form className="row g-3 mb-5 my-4 mx-5 container position-relative">
+      <div className="editrider" key={item.id}>
+        <form className="row g-3  container position-relative">
           <button
             type="button"
             onClick={() => setEditbox(false)}
@@ -137,17 +137,9 @@ function BusinessListUpdate({ item, setEditbox }) {
 
           <button
             type="button"
-            onClick={() => setEdit(true)}
-            disabled={Edit === true}
-            className="btn btn-secondary"
-          >
-            Edit
-          </button>
-          <button
-            type="button"
             onClick={editDoc}
             disabled={Edit === false}
-            className="btn btn-primary"
+            className="savebtn btn btn-success"
           >
             Save Changes
           </button>

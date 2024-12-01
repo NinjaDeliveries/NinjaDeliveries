@@ -7,7 +7,7 @@ function RiderList({ item }) {
   return (
     <>
       <div key={item.id} className={Editbox ? "editclicked" : "list"}>
-        <div className="list-group w-100 my-2 ">
+        <div className="list-group w-100 my-1 ">
           <li className="list-group-item d-flex justify-content-between align-items-center">
             {item.username}
             <button

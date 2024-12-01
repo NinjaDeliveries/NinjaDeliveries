@@ -7,7 +7,10 @@ import BusinessDataFetch from "./context/BusinessDataFetch";
 import RiderRegistration from "./pages/RiderRegistration";
 import RiderDataFetch from "./context/RiderDataFetch";
 import FetchAddTransaction from "./context/FetchAddTransaction";
+import PromoCode from "./pages/PromoCode";
+import ReferralCode from "./pages/ReferralCode";
 import Login from "./pages/login";
+import "react-toastify/dist/ReactToastify.css";
 import { useState } from "react";
 
 function App() {
@@ -73,6 +76,18 @@ function App() {
             ) : (
               <Navigate to="/NinjaDeliveries" />
             )
+          }
+        />
+        <Route
+          path="/promocode"
+          element={
+            nav === true ? <PromoCode /> : <Navigate to="/NinjaDeliveries" />
+          }
+        />
+        <Route
+          path="/referralcode"
+          element={
+            nav === true ? <ReferralCode /> : <Navigate to="/NinjaDeliveries" />
           }
         />
       </Routes>

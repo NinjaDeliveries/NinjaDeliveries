@@ -1,6 +1,7 @@
 import React from "react";
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
+import { getStorage, ref, uploadBytes } from "firebase/storage";
 import {
   getFirestore,
   collection,
@@ -28,29 +29,10 @@ const firebaseConfig = {
 
 const firebaseApp = initializeApp(firebaseConfig);
 export const firestore = getFirestore(firebaseApp);
+export const storage = getStorage(firebaseApp);
 export const auth = getAuth();
 export const db = getFirestore(firebaseApp);
-
-// const handleCreateNewRider = async (Name, AadharCard, MobileNumber) => {
-//   return await addDoc(collection(firestore, "Rider"), {
-//     Name,
-//     AadharCard,
-//     MobileNumber,
-//   });
-// };
-
-// const updateRider = async (Name, AadharCard, item) => {
-//   return await setDoc(collection(firestore, "Rider", item.id), {
-//     Name,
-//     AadharCard,
-//   });
-// };
-
-// const listRiders = () => {
-//   return getDocs(collection(firestore, "Rider"));
-// };
-
-export const ref = collection(db, "Rider");
+export const refStorage = ref();
 
 export const FirebaseProvider = (props) => {
   return (

@@ -68,3 +68,23 @@
   justify-self: end;
   width: 25%;
 }
+.form1 {
+  margin: 3% 10% 5% 10%;
+  padding: 3% 3% 3% 3%;
+  border: 1px solid black;
+  border-radius: 5px;
+  animation: slide-in 0.8s;
+}
+@keyframes slide-in {
+  0% {
+    transform: translateY(-10%);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.heading2 {
+  margin-left: 10%;
+  margin-top: 5rem;
+}

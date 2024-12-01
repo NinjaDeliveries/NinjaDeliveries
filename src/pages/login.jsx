@@ -12,9 +12,10 @@ export default function Login({ setNav }) {
     e.preventDefault();
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      // toast.success("Admin Logged In", {
-      //   position: "top-center",
-      // });
+      toast("Admin Logged In!", {
+        type: "success",
+        position: "top-center",
+      });
       setNav(true);
       <Navigate to="/home" />;
     } catch (error) {
