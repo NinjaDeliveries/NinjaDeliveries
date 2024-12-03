@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { firestore } from "../context/Firebase";
 import { collection, addDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 export default function RiderRegistration() {
   const [name, setname] = useState("");
   const [username, setusername] = useState("");
@@ -30,8 +31,11 @@ export default function RiderRegistration() {
         currentOrder: order,
         currentOrderStatus: order,
       });
+      toast("Rider Registration Successful!", {
+        type: "success",
+        position: "top-center",
+      });
       navigate("/home");
-      alert("Rider Registration Successful");
     } catch (error) {
       console.error("Error sending data : ", error);
     }

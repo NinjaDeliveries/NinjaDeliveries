@@ -8,10 +8,29 @@ function BusinessListUpdate({ item, setEditbox }) {
   const [outTime, setoutTime] = useState(item.outTime);
   const [contact, setcontact] = useState(item.phoneNumber);
   const [isAvailable, setisAvailable] = useState(item.isAvailable);
+  const [Image, setImage] = useState(null);
+  const [menuImage, setmenuImage] = useState(null);
+  const [imageUrl, setImageUrl] = useState(item.image);
+  const [menuImageUrl, setMenuImageUrl] = useState(item.menuImage);
+  const handleImageChange = (event) => {
+    setImage(event.target.files[0]);
+  };
+
+  const handleMenuImageChange = (event) => {
+    setmenuImage(event.target.files[0]);
+  };
 
   const editDoc = async () => {
     setEditbox(false);
     setEdit(false);
+    // const imageRef = ref(storage, `images/${Image.name}`);
+    // const menuImageRef = ref(storage, `menu-images/${menuImage.name}`);
+    // await uploadBytes(imageRef, Image);
+    // await uploadBytes(menuImageRef, menuImage);
+    // const imageUrl = await getDownloadURL(imageRef);
+    // const menuImageUrl = await getDownloadURL(menuImageRef);
+    // setImageUrl(imageUrl);
+    // setMenuImageUrl(menuImageUrl);
     const docRef = doc(db, "businessDetails", item.id);
     await updateDoc(docRef, {
       phoneNumber: contact,
@@ -109,6 +128,28 @@ function BusinessListUpdate({ item, setEditbox }) {
               required
             />
           </div>
+          {/* <div className="">
+            <label htmlFor="formFile" className="form-label">
+              Update Business Image
+            </label>
+            <input
+              className="form-control"
+              onChange={handleImageChange}
+              type="file"
+              id="formFile"
+            />
+          </div>
+          <div className="">
+            <label htmlFor="formFile" className="form-label">
+              Update Menu Image
+            </label>
+            <input
+              className="form-control"
+              onChange={handleMenuImageChange}
+              type="file"
+              id="formFile"
+            />
+          </div> */}
 
           <div className="form-check form-switch mx-2">
             <input

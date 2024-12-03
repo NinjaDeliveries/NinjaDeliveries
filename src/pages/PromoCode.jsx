@@ -1,6 +1,7 @@
 import React from "react";
 import { useState } from "react";
 import "../style/promocode.css";
+import { toast } from "react-toastify";
 import { firestore } from "../context/Firebase";
 import { collection, addDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
@@ -17,20 +18,7 @@ function PromoCode() {
   const handleSelect = (e) => {
     setType(e.target.value);
   };
-  //   const handleSubmit = async (e) => {
-  //     e.preventDefault();
-  //     alert("Success");
-  //     history.push("/home");
-  //     return await addDoc(collection(firestore, "promoCodes"), {
-  //       code: Code,
-  //       description: Description,
-  //       discountType: Type,
-  //       discountValue: Value,
-  //       isActive: isAvailable,
-  //       promoLabel: promoLabel,
-  //       usedBy: usedBy,
-  //     });
-  //   };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -43,8 +31,11 @@ function PromoCode() {
         promoLabel: promoLabel,
         usedBy: usedBy,
       });
+      toast("PromoCode Added!", {
+        type: "success",
+        position: "top-center",
+      });
       navigate("/home");
-      alert("Promocode Added");
     } catch (error) {
       console.error("Error sending data : ", error);
     }

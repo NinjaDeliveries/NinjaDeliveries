@@ -5,6 +5,7 @@ import { db } from "../context/Firebase";
 import TextField from "@mui/material/TextField";
 import Autocomplete from "@mui/material/Autocomplete";
 import "../context/style.css";
+import { toast } from "react-toastify";
 import { firestore } from "../context/Firebase";
 
 function ReferralCode() {
@@ -78,7 +79,10 @@ function AddingReferralCode(value) {
         username: value.value.username,
       });
 
-      alert("Success");
+      toast("Referral Code Added!", {
+        type: "success",
+        position: "top-center",
+      });
     } catch (error) {
       console.error("Error sending data : ", error);
     }

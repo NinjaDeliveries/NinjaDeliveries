@@ -2,9 +2,9 @@ import { useState } from "react";
 import { firestore } from "../context/Firebase";
 import "../style/promocode.css";
 import { collection, addDoc } from "firebase/firestore";
+import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import { ref, uploadBytes, getDownloadURL, getStorage } from "firebase/storage";
-//import TimeInput from './TimeInput'
 
 export default function BusinessRegistration() {
   const [Name, setName] = useState("");
@@ -36,24 +36,19 @@ export default function BusinessRegistration() {
   const handleMenuImageChange = (event) => {
     setmenuImage(event.target.files[0]);
   };
-  const show = (e) => {
-    console.log(Name);
-    console.log(Image);
-    console.log(menuImageUrl);
-    handleSubmit(e);
-  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     try {
-      const imageRef = ref(storage, `images/${Image.name}`);
-      const menuImageRef = ref(storage, `menu-images/${menuImage.name}`);
-      await uploadBytes(imageRef, Image);
-      await uploadBytes(menuImageRef, menuImage);
-      const imageUrl = await getDownloadURL(imageRef);
-      const menuImageUrl = await getDownloadURL(menuImageRef);
-      setImageUrl(imageUrl);
-      setMenuImageUrl(menuImageUrl);
+      // const imageRef = ref(storage, `images/${Image.name}`);
+      // const menuImageRef = ref(storage, `menu-images/${menuImage.name}`);
+      // await uploadBytes(imageRef, Image);
+      // await uploadBytes(menuImageRef, menuImage);
+      // const imageUrl = await getDownloadURL(imageRef);
+      // const menuImageUrl = await getDownloadURL(menuImageRef);
+      // setImageUrl(imageUrl);
+      // setMenuImageUrl(menuImageUrl);
       await addDoc(collection(firestore, "businessDetails"), {
         name: Name,
         type: Type,
@@ -61,11 +56,14 @@ export default function BusinessRegistration() {
         inTime: In,
         outTime: Out,
         isAvailable: isAvailable,
-        Image: imageUrl,
-        menuImage: menuImageUrl,
+        // image: imageUrl,
+        // menuImage: menuImageUrl,
+      });
+      toast("Business Registration is Successful!", {
+        type: "success",
+        position: "top-center",
       });
       navigate("/home");
-      alert("Business Registration is Successful");
     } catch (error) {
       console.error("Error sending data : ", error);
     }
@@ -150,7 +148,7 @@ export default function BusinessRegistration() {
               required
             />
           </div>
-          <div className="">
+          {/* <div className="">
             <label htmlFor="formFile" className="form-label">
               Upload Business Image
             </label>
@@ -171,7 +169,7 @@ export default function BusinessRegistration() {
               type="file"
               id="formFile"
             />
-          </div>
+          </div> */}
           <div className="form-check form-switch mx-2">
             <input
               className="form-check-input"
@@ -197,7 +195,7 @@ export default function BusinessRegistration() {
           <div className="col-12">
             <button
               className="btn btn-primary"
-              onClick={show}
+              onClick={handleSubmit}
               type="submit"
               disabled={
                 Name.length === 0 ||

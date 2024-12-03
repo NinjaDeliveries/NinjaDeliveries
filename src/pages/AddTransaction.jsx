@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import firebase from "firebase/app";
+import { toast } from "react-toastify";
 import "../context/style.css";
 import {
   getFirestore,
@@ -37,7 +38,10 @@ export default function AddTransaction(value) {
           Transactions,
         });
 
-        alert("Transaction Added");
+        toast("Transaction Added!", {
+          type: "success",
+          position: "top-center",
+        });
       } else {
         console.log("Rider not found!");
       }
