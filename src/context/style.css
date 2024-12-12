@@ -41,7 +41,16 @@
   justify-content: space-between;
   align-items: center;
 }
-
+.delRider {
+  position: relative;
+  border: 1px solid black;
+  border-radius: 5px;
+  padding: 2%;
+  margin-top: 20px;
+  margin-bottom: 30px;
+  margin-left: 3px;
+  animation: slide-in 0.5s;
+}
 .editrider {
   border: 1px solid black;
   border-radius: 5px;
@@ -61,7 +70,8 @@
 }
 
 .editbutton {
-  width: 25%;
+  width: 5rem;
+  margin-right: 1rem;
 }
 
 .savebtn {
@@ -86,5 +96,10 @@
 
 .heading2 {
   margin-left: 10%;
-  margin-top: 5rem;
+}
+.buttons {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1rem;
 }

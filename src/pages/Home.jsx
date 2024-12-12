@@ -6,7 +6,7 @@ export default function Home() {
     <div class=" container text-center">
       <h2 className="heading">Ninja Deliveries</h2>
       <div class="cards row row-cols-4">
-        <div className="card col ">
+        <div className="card col-1 ">
           <img
             src="https://th.bing.com/th/id/OIP.G2s3Ca53tkLfcC2k-QhCtwHaHa?rs=1&pid=ImgDetMain"
             className="card-img-top"
@@ -21,7 +21,7 @@ export default function Home() {
             </Link>
           </div>
         </div>
-        <div className="card col ">
+        <div className="card col-2 ">
           <img
             src="https://th.bing.com/th/id/OIP.iqECocLdMWBmaE8bYs_lmgHaHa?rs=1&pid=ImgDetMain"
             className="card-img-top"
@@ -36,7 +36,7 @@ export default function Home() {
             </Link>
           </div>
         </div>
-        <div className="card col">
+        <div className="card col-3">
           <img
             src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRy0mxFWath8sVF7DEyGuyEtIpErJ1cwxo9JA&s"
             className="card-img-top"
@@ -51,7 +51,7 @@ export default function Home() {
             </Link>
           </div>
         </div>
-        <div className="card col">
+        <div className="card col-4">
           <img
             src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQeTZkjHNkkAET-yG5iCmvG4JMxmu2BTbSm0Q&s"
             className="card-img-top"
@@ -63,6 +63,23 @@ export default function Home() {
             <Link to="/referralcode" className="btn btn-success">
               {" "}
               Add Referral Code{" "}
+            </Link>
+          </div>
+        </div>
+        <div className="card col-1">
+          <img
+            src="https://uxwing.com/wp-content/themes/uxwing/download/brands-and-social-media/upi-icon.png"
+            className="card-img-top"
+            alt="..."
+          />
+          <div className="card-body">
+            <h5 className="card-title">Transaction</h5>
+            <p className="card-text">
+              Click below to Add Transaction to Riders
+            </p>
+            <Link to="/addtransaction" className="btn btn-success">
+              {" "}
+              Add Transactions{" "}
             </Link>
           </div>
         </div>

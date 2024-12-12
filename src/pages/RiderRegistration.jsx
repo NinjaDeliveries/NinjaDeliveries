@@ -42,7 +42,7 @@ export default function RiderRegistration() {
   };
   return (
     <div>
-      <h2 className="heading1">Rider Registration</h2>
+      <h2 className="heading1promo">Rider Registration</h2>
       <div className="form1">
         <form className="row g-3 container">
           <div className="col-md-4">

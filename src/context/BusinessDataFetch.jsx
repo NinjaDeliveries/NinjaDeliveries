@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "./Firebase";
-
+import "./style.css";
 import BusinessList from "../pages/BusinessList";
 
 const BusinessDataFetch = () => {

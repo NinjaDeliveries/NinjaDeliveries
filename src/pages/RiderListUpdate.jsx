@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../context/Firebase";
-
+import "../context/style.css";
 function RiderListUpdate({ item, setEditbox }) {
   const [Edit, setEdit] = useState(true);
   const [name, setname] = useState(item.name);

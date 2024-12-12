@@ -6,7 +6,7 @@ function DataBlock({ item }) {
 
   return (
     <div key={item.id} className={Editbox ? "editclicked" : "list"}>
-      <ul className="list-group  w-100 my-1">
+      <ul className="list-group  w-100 my-2">
         <li className="list-group-item d-flex justify-content-between align-items-center">
           {item.name}
           <button
@@ -17,9 +17,9 @@ function DataBlock({ item }) {
                 setEditbox(false);
               }
             }}
-            className="editbutton btn btn-primary"
+            className="editbutton btn btn-secondary"
           >
-            More Information
+            Edit
           </button>
         </li>
       </ul>

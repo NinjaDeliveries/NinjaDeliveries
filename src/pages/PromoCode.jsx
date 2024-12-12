@@ -42,7 +42,7 @@ function PromoCode() {
   };
   return (
     <div>
-      <h2 className="heading1">PromoCode</h2>
+      <h2 className="heading1promo ">PromoCode</h2>
       <div className="form1">
         <form className="row g-3">
           <div className="input-group  mb-3">

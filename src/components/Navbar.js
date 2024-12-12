@@ -39,9 +39,9 @@ export default function Navbar() {
                 <Link
                   className="nav-link active text-white"
                   aria-current="page"
-                  to="/addtransaction"
+                  to="/report"
                 >
-                  Add Transaction{" "}
+                  Data Reports{" "}
                 </Link>
               </li>
 

@@ -10,6 +10,7 @@ import FetchAddTransaction from "./context/FetchAddTransaction";
 import PromoCode from "./pages/PromoCode";
 import ReferralCode from "./pages/ReferralCode";
 import Login from "./pages/login";
+import Report from "./pages/Report";
 import "react-toastify/dist/ReactToastify.css";
 import { useState } from "react";
 
@@ -88,6 +89,12 @@ function App() {
           path="/referralcode"
           element={
             nav === true ? <ReferralCode /> : <Navigate to="/NinjaDeliveries" />
+          }
+        />
+        <Route
+          path="/report"
+          element={
+            nav === true ? <Report /> : <Navigate to="/NinjaDeliveries" />
           }
         />
       </Routes>

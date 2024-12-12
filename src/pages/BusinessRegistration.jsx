@@ -71,7 +71,7 @@ export default function BusinessRegistration() {
 
   return (
     <div>
-      <h2 className="heading1">Business Registration</h2>
+      <h2 className="heading1promo">Business Registration</h2>
       <div className="form1">
         <form className="row g-3 container">
           <div className="col-md-4">
