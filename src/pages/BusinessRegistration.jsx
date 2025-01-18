@@ -41,10 +41,10 @@ export default function BusinessRegistration() {
     e.preventDefault();
 
     try {
-      // const imageRef = ref(storage, `images/${Image.name}`);
-      // const menuImageRef = ref(storage, `menu-images/${menuImage.name}`);
-      // await uploadBytes(imageRef, Image);
-      // await uploadBytes(menuImageRef, menuImage);
+      const imageRef = ref(storage, `images`);
+      const menuImageRef = ref(storage, `menu-images`);
+      await uploadBytes(imageRef, Image);
+      await uploadBytes(menuImageRef, menuImage);
       // const imageUrl = await getDownloadURL(imageRef);
       // const menuImageUrl = await getDownloadURL(menuImageRef);
       // setImageUrl(imageUrl);
@@ -148,7 +148,7 @@ export default function BusinessRegistration() {
               required
             />
           </div>
-          {/* <div className="">
+          <div className="">
             <label htmlFor="formFile" className="form-label">
               Upload Business Image
             </label>
@@ -169,7 +169,7 @@ export default function BusinessRegistration() {
               type="file"
               id="formFile"
             />
-          </div> */}
+          </div>
           <div className="form-check form-switch mx-2">
             <input
               className="form-check-input"

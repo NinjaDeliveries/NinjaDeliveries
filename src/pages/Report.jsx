@@ -1,57 +1,112 @@
 import React, { useState, useEffect } from "react";
 import { db } from "../context/Firebase";
-import { Doughnut, Bar } from "react-chartjs-2";
-import { collection, getDocs, query, orderBy } from "firebase/firestore";
+import { Pie, Bar, Line } from "react-chartjs-2";
+import { collection, getDocs, query, orderBy, where } from "firebase/firestore";
 import { Chart, registerables } from "chart.js";
 import "../style/Report.css";
 Chart.register(...registerables);
 
-function Report() {
-  const [chartData, setChartData] = useState({});
-  const [orders, setOrders] = useState([]);
+const TotalUsersPerMonth = () => {
+  const [chartData, setChartData] = useState({
+    labels: [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ],
+    datasets: [
+      {
+        label: "Total Users",
+        data: [],
+        backgroundColor: "rgba(255, 99, 132, 0.2)",
+        borderColor: "rgba(255, 99, 132, 1)",
+        borderWidth: 1,
+      },
+    ],
+  });
 
   useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        const querySnapshot = await getDocs(collection(db, "orders"));
-        const ordersData = querySnapshot.docs.map((doc) => doc.data());
-        setOrders(ordersData);
+    const fetchUsers = async () => {
+      const usersRef = collection(db, "users");
+      console.log(usersRef);
+      const q = query(usersRef, orderBy("createdAt", "asc"));
+      const querySnapshot = await getDocs(q);
+      console.log(querySnapshot);
+      const users = querySnapshot.docs.map((doc) => doc.data());
+      const userCounts = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
-        const cancelledOrders = ordersData.filter(
-          (order) => order.status === "cancelled"
-        ).length;
-        const acceptedOrders = ordersData.filter(
-          (order) => order.status === "tripEnded"
-        ).length;
+      users.forEach((user) => {
+        const date = new Date(user.createdAt);
+        const month = date.getMonth();
+        userCounts[month]++;
+      });
 
-        const RunningOrders = ordersData.filter(
-          (order) => order.status === "tripStarted"
-        ).length;
-
-        setChartData({
-          labels: ["Cancelled Orders", "Successful Orders", "RunningOrders"],
-          datasets: [
-            {
-              label: "Order Status",
-              data: [cancelledOrders, acceptedOrders, RunningOrders],
-              backgroundColor: [
-                "rgb(255, 99, 132)",
-                "rgb(144, 238, 144)",
-                "rgb(255, 205, 86)",
-              ],
-
-              borderWidth: 2,
-              hoverOffset: 4,
-            },
-          ],
-        });
-      } catch (error) {
-        console.error("Error fetching orders:", error);
-      }
+      setChartData({
+        labels: [
+          "Jan",
+          "Feb",
+          "Mar",
+          "Apr",
+          "May",
+          "Jun",
+          "Jul",
+          "Aug",
+          "Sep",
+          "Oct",
+          "Nov",
+          "Dec",
+        ],
+        datasets: [
+          {
+            label: "Total Users",
+            data: userCounts,
+            backgroundColor: "rgba(255, 99, 132, 0.2)",
+            borderColor: "rgba(255, 99, 132, 1)",
+            borderWidth: 1,
+          },
+        ],
+      });
     };
-    fetchOrders();
+
+    fetchUsers();
   }, []);
-  const [monthChartData, setMonthChartData] = useState({
+
+  return (
+    <div>
+      <Line
+        data={chartData}
+        options={{
+          scales: {
+            x: {
+              title: {
+                display: true,
+                text: "Month",
+              },
+            },
+            y: {
+              title: {
+                display: true,
+                text: "Total Users",
+              },
+            },
+          },
+          responsive: true,
+          maintainAspectRatio: false,
+        }}
+      />
+    </div>
+  );
+};
+function OrderReport() {
+  const [chartData, setChartData] = useState({
     labels: [],
     datasets: [
       {
@@ -64,7 +119,7 @@ function Report() {
       {
         label: "Successful Orders",
         data: [],
-        backgroundColor: "rgb(144, 238, 144, 1)",
+        backgroundColor: "rgba(54, 162, 235, 0.2)",
         borderColor: "rgba(54, 162, 235, 1)",
         borderWidth: 1,
       },
@@ -75,8 +130,10 @@ function Report() {
     const fetchOrders = async () => {
       try {
         const ordersRef = collection(db, "orders");
+        console.log(ordersRef);
         const q = query(ordersRef, orderBy("createdAt", "asc"));
         const querySnapshot = await getDocs(q);
+        console.log(querySnapshot);
         const ordersData = querySnapshot.docs.map((doc) => doc.data());
 
         const months = [
@@ -115,7 +172,7 @@ function Report() {
           return successfulOrdersInMonth.length;
         });
 
-        setMonthChartData({
+        setChartData({
           labels: months,
           datasets: [
             {
@@ -128,8 +185,8 @@ function Report() {
             {
               label: "Successful Orders",
               data: successfulOrdersPerMonth,
-              backgroundColor: "rgb(144, 238, 144)",
-              borderColor: "rgba(54, 162, 235, 1)",
+              backgroundColor: "rgba(144, 238, 144, 0.2)",
+              borderColor: "rgba(144, 238, 144, 1)",
               borderWidth: 1,
             },
           ],
@@ -143,38 +200,176 @@ function Report() {
 
   return (
     <div>
-      <h1 className="heading">Data Report</h1>
-      <div className="outerChart">
-        <div className="chart">
-          <Bar
-            data={monthChartData}
-            options={{ responsive: true, maintainAspectRatio: false }}
-            style={{ width: "800px", height: "600px" }}
-          />
-        </div>
-        <div>
-          <h2 className="reportHeading">Monthly Orders/</h2>
-          <p> It Compares Orders on Monthly basis! </p>
-          <li>Cancelled Orders</li>
-          <li>Successful Orders</li>
-        </div>
-      </div>
-      <div className="outerChart">
-        <div className=" ">
-          <h2 className="reportHeading">Total Orders/</h2>
-          <p>It Compares All Orders Till Now </p>
-          <li>Cancelled Orders</li>
-          <li>Successful Orders</li>
-          <li>Running Orders</li>
-        </div>
-        <div className="chart">
-          {orders.length > 0 && (
-            <Doughnut
-              data={chartData}
-              options={{ responsive: true, maintainAspectRatio: false }}
-              style={{ width: "800px", height: "600px" }}
-            />
-          )}
+      <Bar
+        data={chartData}
+        options={{ responsive: true, maintainAspectRatio: false }}
+        style={{ width: "90vw", height: "70vh" }}
+      />
+    </div>
+  );
+}
+function OrderCompare() {
+  const [chartData, setChartData] = useState({});
+  const [orders, setOrders] = useState([]);
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "orders"));
+        const ordersData = querySnapshot.docs.map((doc) => doc.data());
+        setOrders(ordersData);
+
+        const cancelledOrders = ordersData.filter(
+          (order) => order.status === "cancelled"
+        ).length;
+        const acceptedOrders = ordersData.filter(
+          (order) => order.status === "tripEnded"
+        ).length;
+
+        setChartData({
+          labels: ["Cancelled Orders", "Accepted Orders"],
+          datasets: [
+            {
+              label: "Order Status",
+              data: [cancelledOrders, acceptedOrders],
+              backgroundColor: [
+                "rgba(255, 99, 132, 0.2)",
+                "rgba(54, 162, 235, 0.2)",
+              ],
+              borderColor: ["rgba(255, 99, 132, 1)", "rgba(54, 162, 235, 1)"],
+              borderWidth: 1,
+            },
+          ],
+        });
+      } catch (error) {
+        console.error("Error fetching orders:", error);
+      }
+    };
+    fetchOrders();
+  }, []);
+
+  return (
+    <div>
+      {orders.length > 0 && (
+        <Pie
+          data={chartData}
+          options={{ responsive: true, maintainAspectRatio: false }}
+        />
+      )}
+    </div>
+  );
+}
+
+function Report() {
+  const [orders, setOrders] = useState([]);
+  const [RunOrder, setRunOrder] = useState("");
+  const [CancelledOrder, setCancelledOrder] = useState("");
+  const [SuccessOrder, setSuccessOrder] = useState("");
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "orders"));
+        const ordersData = querySnapshot.docs.map((doc) => doc.data());
+        setOrders(ordersData);
+
+        const cancelledOrders = ordersData.filter(
+          (order) => order.status === "cancelled"
+        ).length;
+        const acceptedOrders = ordersData.filter(
+          (order) => order.status === "tripEnded"
+        ).length;
+
+        const RunningOrders = ordersData.filter(
+          (order) => order.status === "tripStarted"
+        ).length;
+        setRunOrder(RunningOrders);
+        setCancelledOrder(cancelledOrders);
+        setSuccessOrder(acceptedOrders);
+      } catch (error) {
+        console.error("Error fetching orders:", error);
+      }
+    };
+    fetchOrders();
+  }, []);
+
+  return (
+    <div class="background">
+      <div class="row ">
+        <div className="outerdiv">
+          <div class="mb-8">
+            <h2 class="mb-2">Ninja Deliveries Dashboard</h2>
+            <h5 class="text-body-tertiary fw-semibold">
+              Here’s what’s going on our business right now
+            </h5>
+          </div>
+          <div class="row align-items-center mt-5 ">
+            <div class="col-12 col-md-auto">
+              <div class="d-flex align-items-center">
+                <img
+                  class="smallImg"
+                  alt=""
+                  src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQQEw67YU_UWyHhcccV0joTiZ9bJaSIRXtLfA&s"
+                ></img>
+                <div class="ms-3">
+                  <h4 class="mb-0">{RunOrder} new orders</h4>
+                  <p class="text-body-secondary fs-9 mb-0">
+                    Awating processing
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div class="col-12 col-md-auto">
+              <div class="d-flex align-items-center">
+                <img
+                  class="smallImg"
+                  alt=""
+                  src="https://img.freepik.com/premium-vector/dirty-grunge-hand-drawn-with-brush-strokes-tick-v-vector-illustration-isolated-white-background-mark-graphic-design-check-mark-symbol-tick-yes-button-vote-check-box-web-etc_549897-1625.jpg?ga=GA1.1.1187541894.1734269784&semt=ais_hybrid"
+                ></img>
+                <div class="ms-3">
+                  <h4 class="mb-0">{SuccessOrder} orders</h4>
+                  <p class="text-body-secondary fs-9 mb-0">Success orders</p>
+                </div>
+              </div>
+            </div>
+            <div class="col-12 col-md-auto">
+              <div class="d-flex align-items-center">
+                <img
+                  class="smallImg"
+                  alt=""
+                  src="https://img.freepik.com/free-psd/x-symbol-isolated_23-2150500369.jpg?ga=GA1.1.1187541894.1734269784&semt=ais_hybrid"
+                ></img>
+                <div class="ms-3">
+                  <h4 class="mb-0">{CancelledOrder} orders</h4>
+                  <p class="text-body-secondary fs-9 mb-0">Cancelled orders</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <hr class="bg-body-secondary "></hr>
+          <div class="row flex-between-center mt-5">
+            <div class="col-auto">
+              <h3>Orders Per Month</h3>
+              <p class="text-body-tertiary lh-sm mb-0">
+                Cancelled or Successful Orders in a Month..
+              </p>
+            </div>
+          </div>
+          <div className="chart">
+            <OrderReport />
+          </div>
+          <div className="cardReport-container">
+            <div className="cardReport">
+              <h2>Users</h2>
+              <p>New users per Month.</p>
+              <TotalUsersPerMonth />
+            </div>
+            <div className="cardReport">
+              <h2>Orders</h2>
+              <p>This chart compares Cancelled and Successful Orders.</p>
+              <OrderCompare />
+            </div>
+          </div>
         </div>
       </div>
     </div>

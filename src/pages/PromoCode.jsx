@@ -98,6 +98,7 @@ function PromoCode() {
               id="inputCity"
             />
           </div>
+
           <div className="col-md-6">
             <label htmlFor="inputState" className="form-label">
               Discount Type

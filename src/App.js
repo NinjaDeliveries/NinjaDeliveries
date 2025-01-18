@@ -14,10 +14,15 @@ import Report from "./pages/Report";
 import "react-toastify/dist/ReactToastify.css";
 import { useState } from "react";
 
+import ListingNewItems from "./pages/ListingNewItems";
+import FetchListedItems from "./pages/FetchListedItems";
+import AddCategory from "./pages/AddCategory";
+import UpdateData from "./pages/UpdateData";
+
 function App() {
   const [nav, setNav] = useState(false);
   return (
-    <>
+    <div>
       {nav && <Navbar />}
       <Routes>
         <Route
@@ -40,10 +45,10 @@ function App() {
           }
         />
         <Route
-          path="/businesslist"
+          path="/productslist"
           element={
             nav === true ? (
-              <BusinessDataFetch />
+              <FetchListedItems />
             ) : (
               <Navigate to="/NinjaDeliveries" />
             )
@@ -97,8 +102,30 @@ function App() {
             nav === true ? <Report /> : <Navigate to="/NinjaDeliveries" />
           }
         />
+        <Route
+          path="/itemAdd"
+          element={
+            nav === true ? (
+              <ListingNewItems />
+            ) : (
+              <Navigate to="/NinjaDeliveries" />
+            )
+          }
+        />
+        <Route
+          path="/addcategories"
+          element={
+            nav === true ? <AddCategory /> : <Navigate to="/NinjaDeliveries" />
+          }
+        />
+        <Route
+          path="/update"
+          element={
+            nav === true ? <UpdateData /> : <Navigate to="/NinjaDeliveries" />
+          }
+        />
       </Routes>
-    </>
+    </div>
   );
 }
 

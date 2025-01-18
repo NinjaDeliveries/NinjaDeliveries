@@ -1,0 +1,44 @@
+.ADCcontainer {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.ADCcard {
+  border: none;
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.ADCcard-body {
+  padding: 20px;
+}
+
+.ADCform-label {
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.ADCform-select,
+.ADCform-control {
+  padding: 10px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+.ADCform-select:focus,
+.ADCform-control:focus {
+  border-color: #aaa;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.ADCbtn-outline-success {
+  padding: 10px 20px;
+  font-size: 16px;
+  border-radius: 5px;
+}
+
+.ADCbtn-outline-success:hover {
+  background-color: #3e8e41;
+  color: #fff;
+}

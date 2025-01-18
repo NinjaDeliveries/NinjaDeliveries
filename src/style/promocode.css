@@ -10,3 +10,9 @@
   align-items: center;
   margin-top: 4rem;
 }
+.buttonCenter {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 2rem;
+}

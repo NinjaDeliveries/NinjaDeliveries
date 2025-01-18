@@ -3,78 +3,101 @@ import { Link } from "react-router-dom";
 import "../style/home.css";
 export default function Home() {
   return (
-    <div class=" container text-center">
+    <div className="container text-center mt-5">
       <h2 className="heading">Ninja Deliveries</h2>
-      <div class="cards row row-cols-4">
-        <div className="card col-1 ">
+      <div className="homeCards row row-cols-4 justify-content-center">
+        <div className="homeCard col mx-2 my-3" style={{ width: "18rem" }}>
           <img
-            src="https://th.bing.com/th/id/OIP.G2s3Ca53tkLfcC2k-QhCtwHaHa?rs=1&pid=ImgDetMain"
-            className="card-img-top"
+            src="https://www.shutterstock.com/image-vector/shopping-cart-icon-flat-design-260nw-570153007.jpg"
+            className="homeCard-img-top"
             alt="..."
           />
-          <div className="card-body">
-            <h5 className="card-title">Register Business</h5>
-            <p className="card-text">Click below to Register a new business </p>
-            <Link to="/bussinessregistration" className="btn btn-success">
+          <div className="homeCard-body">
+            <h5 className="homeCard-title">Add Product</h5>
+            <p className="homeCard-text">
+              Click below to Add a new product or a new Item
+            </p>
+            <Link to="/itemAdd" className="btn btn-success">
               {" "}
-              Register Business{" "}
+              Add Item{" "}
             </Link>
           </div>
         </div>
-        <div className="card col-2 ">
+        <div className="homeCard col mx-2 my-3" style={{ width: "18rem" }}>
           <img
-            src="https://th.bing.com/th/id/OIP.iqECocLdMWBmaE8bYs_lmgHaHa?rs=1&pid=ImgDetMain"
-            className="card-img-top"
+            src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSlSjpT0YPXyFzHpBKIPoedcq1J-G-9c25Jxw&s"
+            className="homeCard-img-top"
             alt="..."
           />
-          <div className="card-body">
-            <h5 className="card-title">Register Riders</h5>
-            <p className="card-text">Click below to Register a new Rider </p>
+          <div className="homeCard-body">
+            <h5 className="homeCard-title">Category</h5>
+            <p className="homeCard-text">
+              Click below to Add New Category or Sub-category
+            </p>
+            <Link to="/addcategories" className="btn btn-success">
+              {" "}
+              Add{" "}
+            </Link>
+          </div>
+        </div>
+        <div className="homeCard col mx-2 my-3" style={{ width: "18rem" }}>
+          <img
+            src="https://th.bing.com/th/id/OIP.iqECocLdMWBmaE8bYs_lmgHaHa?rs=1&pid=ImgDetMain"
+            className="homeCard-img-top"
+            alt="..."
+          />
+          <div className="homeCard-body">
+            <h5 className="homeCard-title">Register Riders</h5>
+            <p className="homeCard-text">
+              Click below to Register a new Rider ........
+            </p>
             <Link to="/riderregistration" className="btn btn-success">
               {" "}
               Register Rider{" "}
             </Link>
           </div>
         </div>
-        <div className="card col-3">
+        <div className="homeCard col mx-2 my-3" style={{ width: "18rem" }}>
           <img
             src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRy0mxFWath8sVF7DEyGuyEtIpErJ1cwxo9JA&s"
-            className="card-img-top"
+            className="homeCard-img-top"
             alt="..."
           />
-          <div className="card-body">
-            <h5 className="card-title">PromoCode</h5>
-            <p className="card-text">Click below to Add New PromoCode </p>
+          <div className="homeCard-body">
+            <h5 className="homeCard-title">PromoCode</h5>
+            <p className="homeCard-text">Click below to Add New PromoCode</p>
             <Link to="/promocode" className="btn btn-success">
               {" "}
               Add PromoCode{" "}
             </Link>
           </div>
         </div>
-        <div className="card col-4">
+        <div className="homeCard col mx-2 my-3" style={{ width: "18rem" }}>
           <img
             src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQeTZkjHNkkAET-yG5iCmvG4JMxmu2BTbSm0Q&s"
-            className="card-img-top"
+            className="homeCard-img-top"
             alt="..."
           />
-          <div className="card-body">
-            <h5 className="card-title">Referral Code</h5>
-            <p className="card-text">Click below to Add New Refer Code</p>
+          <div className="homeCard-body">
+            <h5 className="homeCard-title">Referral Code</h5>
+            <p className="homeCard-text">
+              Click below to Add a New Referral Code{" "}
+            </p>
             <Link to="/referralcode" className="btn btn-success">
               {" "}
               Add Referral Code{" "}
             </Link>
           </div>
         </div>
-        <div className="card col-1">
+        <div className="homeCard col mx-2 my-3" style={{ width: "18rem" }}>
           <img
             src="https://uxwing.com/wp-content/themes/uxwing/download/brands-and-social-media/upi-icon.png"
-            className="card-img-top"
+            className="homeCard-img-top"
             alt="..."
           />
-          <div className="card-body">
-            <h5 className="card-title">Transaction</h5>
-            <p className="card-text">
+          <div className="homeCard-body">
+            <h5 className="homeCard-title">Transaction</h5>
+            <p className="homeCard-text">
               Click below to Add Transaction to Riders
             </p>
             <Link to="/addtransaction" className="btn btn-success">
