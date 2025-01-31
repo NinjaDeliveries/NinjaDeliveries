@@ -4,22 +4,39 @@ import { FirebaseProvider } from "./context/Firebase";
 import { HashRouter as BrowserRouter } from "react-router-dom";
 import "./index.css";
 import App from "./App";
+import App2 from "./App2";
 import reportWebVitals from "./reportWebVitals";
 import { ToastContainer } from "react-toastify";
-const root = ReactDOM.createRoot(document.getElementById("root"));
+const rootElement = document.getElementById("root");
+const rootElement2 = document.getElementById("root2");
 
-root.render(
-  <React.StrictMode>
-    <BrowserRouter>
-      <FirebaseProvider>
-        <ToastContainer />
-        <App />
-      </FirebaseProvider>
-    </BrowserRouter>
-  </React.StrictMode>
-);
+// Create the first root and render App
+if (rootElement) {
+  const root = ReactDOM.createRoot(rootElement);
+  root.render(
+    <React.StrictMode>
+      <BrowserRouter>
+        <FirebaseProvider>
+          <ToastContainer />
+          <App />
+        </FirebaseProvider>
+      </BrowserRouter>
+    </React.StrictMode>
+  );
+}
 
-// If you want to start measuring performance in your app, pass a function
-// to log results (for example: reportWebVitals(console.log))
-// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
+// Create the second root and render App2
+if (rootElement2) {
+  const root2 = ReactDOM.createRoot(rootElement2);
+  root2.render(
+    <React.StrictMode>
+      <BrowserRouter>
+        <FirebaseProvider>
+          <ToastContainer />
+          <App2 />
+        </FirebaseProvider>
+      </BrowserRouter>
+    </React.StrictMode>
+  );
+}
 reportWebVitals();

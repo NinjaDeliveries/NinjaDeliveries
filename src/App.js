@@ -3,7 +3,6 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Home from "./pages/Home";
 import BusinessRegistration from "./pages/BusinessRegistration";
-import BusinessDataFetch from "./context/BusinessDataFetch";
 import RiderRegistration from "./pages/RiderRegistration";
 import RiderDataFetch from "./context/RiderDataFetch";
 import FetchAddTransaction from "./context/FetchAddTransaction";
@@ -13,7 +12,6 @@ import Login from "./pages/login";
 import Report from "./pages/Report";
 import "react-toastify/dist/ReactToastify.css";
 import { useState } from "react";
-
 import ListingNewItems from "./pages/ListingNewItems";
 import FetchListedItems from "./pages/FetchListedItems";
 import AddCategory from "./pages/AddCategory";
@@ -21,12 +19,13 @@ import UpdateData from "./pages/UpdateData";
 
 function App() {
   const [nav, setNav] = useState(false);
+
   return (
     <div>
       {nav && <Navbar />}
       <Routes>
         <Route
-          path="/NinjaDeliveries"
+          path="/ninjadeliveries"
           element={nav === true ? <Home /> : <Login setNav={setNav} />}
         />
 
@@ -40,17 +39,18 @@ function App() {
             nav === true ? (
               <BusinessRegistration />
             ) : (
-              <Navigate to="/NinjaDeliveries" />
+              <Navigate to="/ninjadeliveries" />
             )
           }
         />
+
         <Route
           path="/productslist"
           element={
             nav === true ? (
               <FetchListedItems />
             ) : (
-              <Navigate to="/NinjaDeliveries" />
+              <Navigate to="/ninjadeliveries" />
             )
           }
         />
@@ -60,7 +60,7 @@ function App() {
             nav === true ? (
               <RiderRegistration />
             ) : (
-              <Navigate to="/NinjaDeliveries" />
+              <Navigate to="/ninjadeliveries" />
             )
           }
         />
@@ -70,7 +70,7 @@ function App() {
             nav === true ? (
               <RiderDataFetch />
             ) : (
-              <Navigate to="/NinjaDeliveries" />
+              <Navigate to="/ninjadeliveries" />
             )
           }
         />
@@ -80,26 +80,26 @@ function App() {
             nav === true ? (
               <FetchAddTransaction />
             ) : (
-              <Navigate to="/NinjaDeliveries" />
+              <Navigate to="/ninjadeliveries" />
             )
           }
         />
         <Route
           path="/promocode"
           element={
-            nav === true ? <PromoCode /> : <Navigate to="/NinjaDeliveries" />
+            nav === true ? <PromoCode /> : <Navigate to="/ninjadeliveries" />
           }
         />
         <Route
           path="/referralcode"
           element={
-            nav === true ? <ReferralCode /> : <Navigate to="/NinjaDeliveries" />
+            nav === true ? <ReferralCode /> : <Navigate to="/ninjadeliveries" />
           }
         />
         <Route
           path="/report"
           element={
-            nav === true ? <Report /> : <Navigate to="/NinjaDeliveries" />
+            nav === true ? <Report /> : <Navigate to="/ninjadeliveries" />
           }
         />
         <Route
@@ -108,20 +108,20 @@ function App() {
             nav === true ? (
               <ListingNewItems />
             ) : (
-              <Navigate to="/NinjaDeliveries" />
+              <Navigate to="/ninjadeliveries" />
             )
           }
         />
         <Route
           path="/addcategories"
           element={
-            nav === true ? <AddCategory /> : <Navigate to="/NinjaDeliveries" />
+            nav === true ? <AddCategory /> : <Navigate to="/ninjadeliveries" />
           }
         />
         <Route
           path="/update"
           element={
-            nav === true ? <UpdateData /> : <Navigate to="/NinjaDeliveries" />
+            nav === false ? <UpdateData /> : <Navigate to="/ninjadeliveries" />
           }
         />
       </Routes>

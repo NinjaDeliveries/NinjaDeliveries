@@ -31,6 +31,7 @@ function ProductUpdate({ item, setEditbox }) {
   const [CGST, setCGST] = useState(item.CGST);
   const [SGST, setSGST] = useState(item.SGST);
   const [SubType, setSubType] = useState(item.subcategoryId);
+  const [CESS, setCESS] = useState(item.CESS || "");
 
   const [data, setData] = useState({ categories: [], products: [] });
   const [loading, setLoading] = useState(true);
@@ -98,12 +99,13 @@ function ProductUpdate({ item, setEditbox }) {
       name: name,
       categoryId: Type,
       description: description || "",
-      price: price,
-      discount: discount || "",
+      price: parseFloat(price),
+      discount: parseFloat(discount) || "",
       shelfLife: shelfLife,
       quantity: quantity,
       CGST: CGST,
       SGST: SGST,
+      CESS: CESS,
       subcategoryId: SubType || "",
     });
   };
@@ -259,6 +261,18 @@ function ProductUpdate({ item, setEditbox }) {
               placeholder="0%"
             />
           </div>
+          <div className="col-4">
+            <label htmlFor="inputAddress" className="form-label">
+              CESS
+            </label>
+            <input
+              type="number"
+              value={CESS}
+              onChange={(e) => setCESS(e.target.value)}
+              className="form-control"
+              id="inputAddress"
+            />
+          </div>
 
           <div className="form-floating">
             <textarea
@@ -326,6 +340,7 @@ function ProductUpdateSearchBar({ value, setEditbox }) {
   const [SubType, setSubType] = useState(value.subcategoryId);
   const [data, setData] = useState({ categories: [], products: [] });
   const [loading, setLoading] = useState(true);
+  const [CESS, setCESS] = useState(value.CESS || "");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -391,12 +406,13 @@ function ProductUpdateSearchBar({ value, setEditbox }) {
       name: name,
       categoryId: Type,
       description: description || "",
-      price: price,
-      discount: discount || "",
+      price: parseFloat(price),
+      discount: parseFloat(discount) || "",
       shelfLife: shelfLife,
       quantity: quantity,
       CGST: CGST,
       SGST: SGST,
+      CESS: CESS,
       subcategoryId: SubType,
     });
   };
@@ -548,6 +564,19 @@ function ProductUpdateSearchBar({ value, setEditbox }) {
               placeholder="0%"
             />
           </div>
+          <div className="col-4">
+            <label htmlFor="inputAddress" className="form-label">
+              CESS
+            </label>
+            <input
+              type="number"
+              value={CESS}
+              onChange={(e) => setCESS(e.target.value)}
+              className="form-control"
+              id="inputAddress"
+            />
+          </div>
+
           <div className="form-floating">
             <textarea
               className="form-control"

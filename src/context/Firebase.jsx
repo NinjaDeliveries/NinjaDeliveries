@@ -21,16 +21,20 @@ const firebaseConfig = {
   authDomain: "ninjadeliveries-91007.firebaseapp.com",
   databaseURL: "https://ninjadeliveries-91007-default-rtdb.firebaseio.com",
   projectId: "ninjadeliveries-91007",
-  storageBucket: "ninjadeliveries-91007.appspot.com",
+  storageBucket: "ninjadeliveries-91007.firebasestorage.app",
   messagingSenderId: "1047234268136",
   appId: "1:1047234268136:web:b0c45fb632a7a3a0bf325d",
   measurementId: "G-DBTMJRGSR9",
 };
 
+// const firebaseApp = initializeApp(firebaseConfig, {
+//   appVerificationDisabledForTesting: true,
+// });
+// export default firebaseApp;
 const firebaseApp = initializeApp(firebaseConfig);
 export const firestore = getFirestore(firebaseApp);
 export const storage = getStorage(firebaseApp);
-export const auth = getAuth();
+export const auth = getAuth(firebaseApp);
 export const db = getFirestore(firebaseApp);
 export const refStorage = ref();
 

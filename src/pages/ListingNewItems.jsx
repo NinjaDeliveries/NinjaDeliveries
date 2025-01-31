@@ -15,6 +15,7 @@ export default function ListingNewItems() {
   const [quantity, setQuantity] = useState("");
   const [shelfLife, setShelfLife] = useState("");
   const [GST, setGST] = useState("");
+  const [CESS, setCESS] = useState("");
 
   const [SubType, setSubType] = useState("Choose...");
   const [data, setData] = useState({ categories: [], products: [] });
@@ -70,12 +71,13 @@ export default function ListingNewItems() {
         name: name,
         categoryId: Type,
         description: description,
-        price: price,
-        discount: discount,
+        price: parseFloat(price),
+        discount: parseFloat(discount),
         shelfLife: shelfLife,
         quantity: quantity,
         CGST: GST / 2,
         SGST: GST / 2,
+        CESS: CESS,
         subcategoryId: SubType,
       });
       toast("Product listed Successful!", {
@@ -214,19 +216,18 @@ export default function ListingNewItems() {
               placeholder="0%"
             />
           </div>
-          {/* <div className="col-4">
+          <div className="col-4">
             <label htmlFor="inputAddress" className="form-label">
-              SGST
+              CESS
             </label>
             <input
               type="number"
-              value={SGST}
-              onChange={(e) => setSGST(e.target.value)}
+              value={CESS}
+              onChange={(e) => setCESS(e.target.value)}
               className="form-control"
               id="inputAddress"
-              placeholder="0%"
             />
-          </div> */}
+          </div>
           <div className="form-floating">
             <textarea
               className="form-control"
