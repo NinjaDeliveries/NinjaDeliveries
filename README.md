@@ -1,5 +1,3 @@
-Here's a sample README file for the Ninja Deliveries backend website:
-
 Ninja Deliveries Backend Website
 
 Overview
