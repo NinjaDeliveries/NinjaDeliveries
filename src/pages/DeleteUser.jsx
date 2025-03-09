@@ -101,6 +101,25 @@ const DeleteAccount = () => {
   };
 
   return (
+    <div>
+      <div class="container">
+        <div class="delete-section">
+          <h2 class="heading ">Delete Your Account</h2>
+          <p>
+            We’re sorry to see you go. Please let us know why you’re deleting
+            your account. You will be asked to verify your
+            identity!
+          </p>
+          <p>
+            Deleting your account will permanently remove all your data,
+            including your profile, orders, and data. This action cannot
+            be undone. Please make sure you want to proceed before filling the information below.
+          </p>
+        </div>
+        <br />
+        {/* <!-- end of cards-1 -->
+    <!-- end of Process --> */}
+      </div>
     <div className="max-w-md mx-auto p-4 border rounded-lg shadow bg-light transition duration-300 ease-in-out transform hover:scale-105 hover:shadow-xl">
       {!isAuthenticated ? (
         !isOtpSent ? (
@@ -169,6 +188,7 @@ const DeleteAccount = () => {
           {error && <p className="text-red-500 mt-2 text-sm">{error}</p>}
         </>
       )}
+    </div>
     </div>
   );
 };

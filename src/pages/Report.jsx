@@ -4,6 +4,7 @@ import { Pie, Bar, Line } from "react-chartjs-2";
 import { collection, getDocs, query, orderBy, where } from "firebase/firestore";
 import { Chart, registerables } from "chart.js";
 import "../style/Report.css";
+import Dashboard from "./Dashboard";
 Chart.register(...registerables);
 
 const TotalUsersPerMonth = () => {
@@ -347,17 +348,7 @@ function Report() {
             </div>
           </div>
           <hr class="bg-body-secondary "></hr>
-          <div class="row flex-between-center mt-5">
-            <div class="col-auto">
-              <h3>Orders Per Month</h3>
-              <p class="text-body-tertiary lh-sm mb-0">
-                Cancelled or Successful Orders in a Month..
-              </p>
-            </div>
-          </div>
-          <div className="chart">
-            <OrderReport />
-          </div>
+          <Dashboard />
           <div className="cardReport-container">
             <div className="cardReport">
               <h2>Users</h2>

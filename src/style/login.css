@@ -1,9 +1,12 @@
+.background {
+  background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+}
 .login-container {
   display: flex;
   justify-content: center;
   align-items: center;
   height: 100vh;
-  background-image: url("../image/15185804_5564526.jpg");
+  /* background-image: url("../image/15185804_5564526.jpg"); */
   background-position: center;
   background-size: cover;
   height: 100vh;

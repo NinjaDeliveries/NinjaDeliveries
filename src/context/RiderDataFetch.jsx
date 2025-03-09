@@ -28,7 +28,7 @@ const RiderDataFetch = () => {
   return (
     <div>
       <h1 className="heading"> Riders </h1>
-      <h5 className="heading2 mb-5 mt-3">RiderList</h5>
+      <h5 className="heading2 mb-5 ">RiderList</h5>
       <div className="heading3">
         <span className="mx-4 p-3">Username</span>
         <span className="mx-5">Edit</span>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import React from "react";
 import { toast } from "react-toastify";
-import { db, firestore } from "../context/Firebase";
+import { db } from "../context/Firebase";
 import "../style/AddCategory.css";
 import { useNavigate } from "react-router-dom";
 import {

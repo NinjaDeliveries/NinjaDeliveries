@@ -1,5 +1,5 @@
-import React from "react";
 import ReactDOM from "react-dom/client";
+import React from "react";
 import { FirebaseProvider } from "./context/Firebase";
 import { HashRouter as BrowserRouter } from "react-router-dom";
 import "./index.css";

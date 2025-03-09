@@ -2,6 +2,7 @@ import React from "react";
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getStorage, ref, uploadBytes } from "firebase/storage";
+
 import {
   getFirestore,
   collection,

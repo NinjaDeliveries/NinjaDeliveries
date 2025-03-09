@@ -1,10 +1,10 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import "../style/home.css";
+import event from "../image/event.jpg";
 export default function Home() {
   return (
-    <div className="container text-center mt-5">
-      <h2 className="heading">Ninja Deliveries</h2>
+    <div className="container text-center ">
       <div className="homeCards row row-cols-4 justify-content-center">
         <div className="homeCard col mx-2 my-3" style={{ width: "18rem" }}>
           <img
@@ -37,6 +37,19 @@ export default function Home() {
             <Link to="/addcategories" className="btn btn-success">
               {" "}
               Add{" "}
+            </Link>
+          </div>
+        </div>
+        <div className="homeCard col mx-2 my-3" style={{ width: "18rem" }}>
+          <img src={event} className="homeCard-img-top" alt="..." />
+          <div className="homeCard-body">
+            <h5 className="homeCard-title">Update Event</h5>
+            <p className="homeCard-text">
+              Click below to Update Event in Sub categories
+            </p>
+            <Link to="/updatesubcategory" className="btn btn-success">
+              {" "}
+              Update Event{" "}
             </Link>
           </div>
         </div>
@@ -103,6 +116,21 @@ export default function Home() {
             <Link to="/addtransaction" className="btn btn-success">
               {" "}
               Add Transactions{" "}
+            </Link>
+          </div>
+        </div>
+        <div className="homeCard col mx-2 my-3" style={{ width: "18rem" }}>
+          <img
+            src="https://img.freepik.com/free-vector/flat-payment-receipt_23-2147922105.jpg?ga=GA1.1.1187541894.1734269784&semt=ais_hybrid"
+            className="homeCard-img-top"
+            alt="..."
+          />
+          <div className="homeCard-body">
+            <h5 className="homeCard-title">Download Bills</h5>
+            <p className="homeCard-text">Click below to Download Orders bill</p>
+            <Link to="/downloadbill" className="btn btn-success">
+              {" "}
+              Go to Order{" "}
             </Link>
           </div>
         </div>

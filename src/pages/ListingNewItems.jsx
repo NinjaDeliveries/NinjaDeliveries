@@ -4,6 +4,8 @@ import { collection, setDoc, getDocs, doc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import "../style/promocode.css";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { storage } from "../context/Firebase";
 
 export default function ListingNewItems() {
   const navigate = useNavigate();
@@ -16,15 +18,17 @@ export default function ListingNewItems() {
   const [shelfLife, setShelfLife] = useState("");
   const [GST, setGST] = useState("");
   const [CESS, setCESS] = useState("");
-
+  const [image, setImage] = useState(null);
+  const [imageUrl, setImageUrl] = useState("");
+  const [imagePreview, setImagePreview] = useState(""); 
   const [SubType, setSubType] = useState("Choose...");
+  const [isStoreAvailable, setIsStoreAvailable] = useState(false);
   const [data, setData] = useState({ categories: [], products: [] });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch categories
         const categoriesQuerySnapshot = await getDocs(
           collection(db, "categories")
         );
@@ -32,7 +36,6 @@ export default function ListingNewItems() {
           ...doc.data(),
         }));
 
-        // Fetch products
         const productsQuerySnapshot = await getDocs(
           collection(db, "subcategories")
         );
@@ -62,32 +65,48 @@ export default function ListingNewItems() {
   const handleSelect = (e) => {
     setType(e.target.value);
   };
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setImage(file);
+      setImagePreview(URL.createObjectURL(file)); // Create a preview URL
+    }
+  };
 
   const handleSubmit = async (e) => {
-    console.log(Type);
     e.preventDefault();
-    try {
-      await setDoc(doc(db, "products", name), {
-        name: name,
-        categoryId: Type,
-        description: description,
-        price: parseFloat(price),
-        discount: parseFloat(discount),
-        shelfLife: shelfLife,
-        quantity: quantity,
-        CGST: GST / 2,
-        SGST: GST / 2,
-        CESS: CESS,
-        subcategoryId: SubType,
-      });
-      toast("Product listed Successful!", {
-        type: "success",
-        position: "top-center",
-      });
-      navigate("/home");
-    } catch (error) {
-      console.error("Error sending data : ", error);
+    if (image) {
+      const imageName = `images/${name}`; 
+      const imageRef = ref(storage, imageName);
+        await uploadBytes(imageRef, image);
+        const url = await getDownloadURL(imageRef);
+        setImageUrl(url);
     }
+        try {
+        await setDoc(doc(db, "products", name), {
+          name: name,
+          categoryId: Type,
+          description: description,
+          price: parseFloat(price),
+          discount: parseFloat(discount),
+          shelfLife: shelfLife,
+          quantity: quantity,
+          image: imageUrl,
+          isStoreAvailable: isStoreAvailable,
+          CGST: GST / 2,
+          SGST: GST / 2,
+          CESS: CESS,
+          subcategoryId: SubType,
+        });
+        toast("Product listed Successful!", {
+          type: "success",
+          position: "top-center",
+        });
+        navigate("/home");
+      } catch (error) {
+        console.error("Error sending data : ", error);
+      }
+    
   };
   return (
     <div>
@@ -228,6 +247,32 @@ export default function ListingNewItems() {
               id="inputAddress"
             />
           </div>
+          <div className="">
+            <label htmlFor="formFile" className="form-label">
+              Upload Product Image
+            </label>
+            <input
+              className="form-control"
+              onChange={handleImageChange}
+              type="file"
+              id="formFile"
+            />
+            {/* Image preview */}
+            {imagePreview && (
+              <div style={{ marginTop: "20px" }}>
+                <h3> Image :</h3>
+                <img
+                  src={imagePreview}
+                  alt="Selected"
+                  style={{
+                    width: "300px",
+                    height: "auto",
+                    border: "1px solid #ccc",
+                  }}
+                />
+              </div>
+            )}
+          </div>
           <div className="form-floating">
             <textarea
               className="form-control"
@@ -238,6 +283,28 @@ export default function ListingNewItems() {
               style={{ height: "100px" }}
             ></textarea>
             <label htmlFor="floatingTextarea2 mx-2">Description</label>
+          </div>
+          <div className="form-check form-switch mx-2">
+            <input
+              className="form-check-input"
+              type="checkbox"
+              role="switch"
+              id="flexSwitchCheckChecked"
+              onChange={() => {
+                if (isStoreAvailable === false) {
+                  setIsStoreAvailable(true);
+                } else {
+                  setIsStoreAvailable(false);
+                }
+              }}
+              checked={isStoreAvailable === true}
+            />
+            <label
+              className="form-check-label"
+              htmlFor="flexSwitchCheckChecked"
+            >
+              Store Available
+            </label>
           </div>
 
           <div className="col-12 buttonCenter">

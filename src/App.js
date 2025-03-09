@@ -15,7 +15,8 @@ import { useState } from "react";
 import ListingNewItems from "./pages/ListingNewItems";
 import FetchListedItems from "./pages/FetchListedItems";
 import AddCategory from "./pages/AddCategory";
-import UpdateData from "./pages/UpdateData";
+import UpdateSubCategory from "./pages/UpdateSubCategory";
+import OrdersBill from "./pages/OrdersBill";
 
 function App() {
   const [nav, setNav] = useState(false);
@@ -25,7 +26,7 @@ function App() {
       {nav && <Navbar />}
       <Routes>
         <Route
-          path="/ninjadeliveries"
+          path="/"
           element={nav === true ? <Home /> : <Login setNav={setNav} />}
         />
 
@@ -36,93 +37,53 @@ function App() {
         <Route
           path="/bussinessregistration"
           element={
-            nav === true ? (
-              <BusinessRegistration />
-            ) : (
-              <Navigate to="/ninjadeliveries" />
-            )
+            nav === true ? <BusinessRegistration /> : <Navigate to="/" />
           }
         />
 
         <Route
           path="/productslist"
-          element={
-            nav === true ? (
-              <FetchListedItems />
-            ) : (
-              <Navigate to="/ninjadeliveries" />
-            )
-          }
+          element={nav === true ? <FetchListedItems /> : <Navigate to="/" />}
         />
         <Route
           path="/riderregistration"
-          element={
-            nav === true ? (
-              <RiderRegistration />
-            ) : (
-              <Navigate to="/ninjadeliveries" />
-            )
-          }
+          element={nav === true ? <RiderRegistration /> : <Navigate to="/" />}
         />
         <Route
           path="/riderlist"
-          element={
-            nav === true ? (
-              <RiderDataFetch />
-            ) : (
-              <Navigate to="/ninjadeliveries" />
-            )
-          }
+          element={nav === true ? <RiderDataFetch /> : <Navigate to="/" />}
         />
         <Route
           path="/addtransaction"
-          element={
-            nav === true ? (
-              <FetchAddTransaction />
-            ) : (
-              <Navigate to="/ninjadeliveries" />
-            )
-          }
+          element={nav === true ? <FetchAddTransaction /> : <Navigate to="/" />}
         />
         <Route
           path="/promocode"
-          element={
-            nav === true ? <PromoCode /> : <Navigate to="/ninjadeliveries" />
-          }
+          element={nav === true ? <PromoCode /> : <Navigate to="/" />}
         />
         <Route
           path="/referralcode"
-          element={
-            nav === true ? <ReferralCode /> : <Navigate to="/ninjadeliveries" />
-          }
+          element={nav === true ? <ReferralCode /> : <Navigate to="/" />}
         />
         <Route
           path="/report"
-          element={
-            nav === true ? <Report /> : <Navigate to="/ninjadeliveries" />
-          }
+          element={nav === true ? <Report /> : <Navigate to="/" />}
         />
         <Route
           path="/itemAdd"
-          element={
-            nav === true ? (
-              <ListingNewItems />
-            ) : (
-              <Navigate to="/ninjadeliveries" />
-            )
-          }
+          element={nav === true ? <ListingNewItems /> : <Navigate to="/" />}
+        />
+        <Route
+          path="/updatesubcategory"
+          element={nav === true ? <UpdateSubCategory /> : <Navigate to="/" />}
         />
         <Route
           path="/addcategories"
-          element={
-            nav === true ? <AddCategory /> : <Navigate to="/ninjadeliveries" />
-          }
+          element={nav === true ? <AddCategory /> : <Navigate to="/" />}
         />
         <Route
-          path="/update"
-          element={
-            nav === false ? <UpdateData /> : <Navigate to="/ninjadeliveries" />
-          }
+          path="/downloadbill"
+          element={nav === true ? <OrdersBill /> : <Navigate to="/" />}
         />
       </Routes>
     </div>

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { storage } from "../context/Firebase";
 import { db } from "../context/Firebase";
 import TextField from "@mui/material/TextField";
 import Autocomplete from "@mui/material/Autocomplete";
@@ -22,17 +23,18 @@ function ProductUpdate({ item, setEditbox }) {
   const [price, setPrice] = useState(item.price);
   const [description, setDescription] = useState(item.description);
   const [Type, setType] = useState(item.categoryId);
-  // const [Image, setImage] = useState(null);
-  // const [menuImage, setmenuImage] = useState(null);
-  // const [imageUrl, setImageUrl] = useState(item.image);
-  // const [menuImageUrl, setMenuImageUrl] = useState(item.menuImage);
+  const [imagePreview, setImagePreview] = useState(item.image); // Image preview URL
+  const [image, setImage] = useState(null);
+  const [imageUrl, setImageUrl] = useState("");
   const [quantity, setQuantity] = useState(item.quantity);
   const [shelfLife, setShelfLife] = useState(item.shelfLife);
   const [CGST, setCGST] = useState(item.CGST);
   const [SGST, setSGST] = useState(item.SGST);
   const [SubType, setSubType] = useState(item.subcategoryId);
   const [CESS, setCESS] = useState(item.CESS || "");
-
+  const [isStoreAvailable, setIsStoreAvailable] = useState(
+    item.isStoreAvailable
+  );
   const [data, setData] = useState({ categories: [], products: [] });
   const [loading, setLoading] = useState(true);
 
@@ -66,34 +68,38 @@ function ProductUpdate({ item, setEditbox }) {
 
   if (loading) {
     return (
-      <div class="loader-container">
-        <div class="loader">
-          <div class="loader-spinner"></div>
-          <div class="loader-text"></div>
+      <div className="loader-container">
+        <div className="loader">
+          <div className="loader-spinner"></div>
+          <div className="loader-text"></div>
         </div>
       </div>
     );
   }
-  // const handleImageChange = (event) => {
-  //   setImage(event.target.files[0]);
-  // };
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setImage(file);
+      setImagePreview(URL.createObjectURL(file)); // Create a preview URL
+    }
+  };
 
-  // const handleMenuImageChange = (event) => {
-  //   setmenuImage(event.target.files[0]);
-  // };
-
-  const editDoc = async () => {
+  const editDoc = async (e) => {
+    e.preventDefault();
     setEditbox(false);
     setEdit(false);
+    if (image) {
+      // Create a reference to the specific file path
+      const imageName = `images/${name}`; // Path: images/filename.jpg
+      const imageRef = ref(storage, imageName);
 
-    // const imageRef = ref(storage, `images/${Image.name}`);
-    // const menuImageRef = ref(storage, `menu-images/${menuImage.name}`);
-    // await uploadBytes(imageRef, Image);
-    // await uploadBytes(menuImageRef, menuImage);
-    // const imageUrl = await getDownloadURL(imageRef);
-    // const menuImageUrl = await getDownloadURL(menuImageRef);
-    // setImageUrl(imageUrl);
-    // setMenuImageUrl(menuImageUrl);
+      // Upload the file
+      await uploadBytes(imageRef, image);
+
+      // Get the download URL for the specific file
+      const url = await getDownloadURL(imageRef);
+      setImageUrl(url);
+    }
     const docRef = doc(db, "products", item.id);
     await updateDoc(docRef, {
       name: name,
@@ -103,7 +109,9 @@ function ProductUpdate({ item, setEditbox }) {
       discount: parseFloat(discount) || "",
       shelfLife: shelfLife,
       quantity: quantity,
+      image: imageUrl || item.image,
       CGST: CGST,
+      isStoreAvailable: isStoreAvailable,
       SGST: SGST,
       CESS: CESS,
       subcategoryId: SubType || "",
@@ -216,7 +224,9 @@ function ProductUpdate({ item, setEditbox }) {
             <input
               type="number"
               value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
+              onChange={(e) => {
+                setQuantity(e.target.value);
+              }}
               className="form-control"
               id="inputAddress"
               placeholder=""
@@ -284,28 +294,52 @@ function ProductUpdate({ item, setEditbox }) {
             ></textarea>
             <label htmlFor="floatingTextarea2 mx-2">Description</label>
           </div>
-          {/* <div className="">
-              <label htmlFor="formFile" className="form-label">
-                Update Business Image
-              </label>
-              <input
-                className="form-control"
-                onChange={handleImageChange}
-                type="file"
-                id="formFile"
-              />
-            </div>
-            <div className="">
-              <label htmlFor="formFile" className="form-label">
-                Update Menu Image
-              </label>
-              <input
-                className="form-control"
-                onChange={handleMenuImageChange}
-                type="file"
-                id="formFile"
-              />
-            </div> */}
+          <div className="">
+            {/* Image preview and text layout */}
+            {imagePreview && (
+              <div className="img-container" style={{ marginTop: "20px" }}>
+                <div className="text-container">
+                  <h3>Update Image :</h3>
+                  <input
+                    className="form-control"
+                    onChange={handleImageChange}
+                    type="file"
+                    id="formFile"
+                  />
+                </div>
+                <div className="products-image-container">
+                  <img
+                    src={imagePreview}
+                    alt="Selected"
+                    className="Fetch-image"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="form-check form-switch mx-2">
+            <input
+              className="form-check-input"
+              type="checkbox"
+              role="switch"
+              id="flexSwitchCheckChecked"
+              onChange={() => {
+                if (isStoreAvailable === false) {
+                  setIsStoreAvailable(true);
+                } else {
+                  setIsStoreAvailable(false);
+                }
+              }}
+              checked={isStoreAvailable === true}
+            />
+            <label
+              className="form-check-label"
+              htmlFor="flexSwitchCheckChecked"
+            >
+              Store Available
+            </label>
+          </div>
 
           <button
             type="button"
@@ -329,10 +363,8 @@ function ProductUpdateSearchBar({ value, setEditbox }) {
   const [price, setPrice] = useState(value.price);
   const [description, setDescription] = useState(value.description);
   const [Type, setType] = useState(value.categoryId);
-  // const [Image, setImage] = useState(null);
-  // const [menuImage, setmenuImage] = useState(null);
-  // const [imageUrl, setImageUrl] = useState(value.image);
-  // const [menuImageUrl, setMenuImageUrl] = useState(value.menuImage);
+  const [image, setImage] = useState(null);
+  const [imageUrl, setImageUrl] = useState("");
   const [quantity, setQuantity] = useState(value.quantity);
   const [shelfLife, setShelfLife] = useState(value.shelfLife);
   const [CGST, setCGST] = useState(value.CGST);
@@ -341,6 +373,10 @@ function ProductUpdateSearchBar({ value, setEditbox }) {
   const [data, setData] = useState({ categories: [], products: [] });
   const [loading, setLoading] = useState(true);
   const [CESS, setCESS] = useState(value.CESS || "");
+  const [imagePreview, setImagePreview] = useState(value.image); // Image preview URL
+  const [isStoreAvailable, setIsStoreAvailable] = useState(
+    value.isStoreAvailable
+  );
 
   useEffect(() => {
     const fetchData = async () => {
@@ -371,10 +407,10 @@ function ProductUpdateSearchBar({ value, setEditbox }) {
   }, []);
   if (loading) {
     return (
-      <div class="loader-container">
-        <div class="loader">
-          <div class="loader-spinner"></div>
-          <div class="loader-text"></div>
+      <div className="loader-container">
+        <div className="loader">
+          <div className="loader-spinner"></div>
+          <div className="loader-text"></div>
         </div>
       </div>
     );
@@ -389,18 +425,28 @@ function ProductUpdateSearchBar({ value, setEditbox }) {
       alert("Error deleting field:", error);
     }
   };
-
-  const editDoc = async () => {
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setImage(file);
+      setImagePreview(URL.createObjectURL(file)); // Create a preview URL
+    }
+  };
+  const editDoc = async (e) => {
     setEdit(false);
+    if (image) {
+      // Create a reference to the specific file path
+      const imageName = `images/${name}`; // Path: images/filename.jpg
+      const imageRef = ref(storage, imageName);
+      e.preventDefault();
 
-    // const imageRef = ref(storage, `images/${Image.name}`);
-    // const menuImageRef = ref(storage, `menu-images/${menuImage.name}`);
-    // await uploadBytes(imageRef, Image);
-    // await uploadBytes(menuImageRef, menuImage);
-    // const imageUrl = await getDownloadURL(imageRef);
-    // const menuImageUrl = await getDownloadURL(menuImageRef);
-    // setImageUrl(imageUrl);
-    // setMenuImageUrl(menuImageUrl);
+      // Upload the file
+      await uploadBytes(imageRef, image);
+
+      // Get the download URL for the specific file
+      const url = await getDownloadURL(imageRef);
+      setImageUrl(url);
+    }
     const docRef = doc(db, "products", value.id);
     await updateDoc(docRef, {
       name: name,
@@ -410,10 +456,12 @@ function ProductUpdateSearchBar({ value, setEditbox }) {
       discount: parseFloat(discount) || "",
       shelfLife: shelfLife,
       quantity: quantity,
+      image: imageUrl || value.image,
       CGST: CGST,
       SGST: SGST,
       CESS: CESS,
       subcategoryId: SubType,
+      isStoreAvailable: isStoreAvailable,
     });
   };
 
@@ -587,28 +635,52 @@ function ProductUpdateSearchBar({ value, setEditbox }) {
             ></textarea>
             <label htmlFor="floatingTextarea2 mx-2">Description</label>
           </div>
-          {/* <div className="">
-              <label htmlFor="formFile" className="form-label">
-                Update Business Image
-              </label>
-              <input
-                className="form-control"
-                onChange={handleImageChange}
-                type="file"
-                id="formFile"
-              />
-            </div>
-            <div className="">
-              <label htmlFor="formFile" className="form-label">
-                Update Menu Image
-              </label>
-              <input
-                className="form-control"
-                onChange={handleMenuImageChange}
-                type="file"
-                id="formFile"
-              />
-            </div> */}
+          <div className="">
+            {/* Image preview and text layout */}
+            {imagePreview && (
+              <div className="img-container" style={{ marginTop: "20px" }}>
+                <div className="text-container">
+                  <h3>Image :</h3>
+                  <input
+                    className="form-control"
+                    onChange={handleImageChange}
+                    type="file"
+                    id="formFile"
+                  />
+                </div>
+                <div className="products-image-container">
+                  <img
+                    src={imagePreview}
+                    alt="Selected"
+                    className="Fetch-image"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="form-check form-switch mx-2">
+            <input
+              className="form-check-input"
+              type="checkbox"
+              role="switch"
+              id="flexSwitchCheckChecked"
+              onChange={() => {
+                if (isStoreAvailable === false) {
+                  setIsStoreAvailable(true);
+                } else {
+                  setIsStoreAvailable(false);
+                }
+              }}
+              checked={isStoreAvailable === true}
+            />
+            <label
+              className="form-check-label"
+              htmlFor="flexSwitchCheckChecked"
+            >
+              Store Available
+            </label>
+          </div>
+
           <span className="spacebtw">
             <button
               type="button"
@@ -681,8 +753,9 @@ function DataBlock({ item }) {
   return (
     <div
       key={item.id}
-      className={Editbox ? "editclicked" : "list"}
-      class={DelRider ? "editclicked" : "list"}
+      className={
+        Editbox ? "editclicked" : "list" && DelRider ? "editclicked" : "list"
+      }
     >
       <ul className="list-group  w-100 my-2">
         <li className="list-group-item d-flex justify-content-between align-items-center">
@@ -748,7 +821,6 @@ function SearchBar() {
   const handleChange = (event, newValue) => {
     setValue(newValue);
     setEditbox(true);
-    console.log("Selected value:", newValue);
   };
 
   const defprops = {

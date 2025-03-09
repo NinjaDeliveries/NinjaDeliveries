@@ -5,6 +5,7 @@ import { toast } from "react-toastify";
 import { firestore } from "../context/Firebase";
 import { collection, addDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
+import { Button } from "@mui/material";
 
 function PromoCode() {
   const [Code, setCode] = useState("");
@@ -18,7 +19,17 @@ function PromoCode() {
   const handleSelect = (e) => {
     setType(e.target.value);
   };
+  const generateCode = (e) => {
+    e.preventDefault();
 
+    const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    let promoCode = "";
+    for (let i = 0; i < 6; i++) {
+      const randomIndex = Math.floor(Math.random() * characters.length);
+      promoCode += characters[randomIndex];
+    }
+    setCode(promoCode);
+  };
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -26,7 +37,7 @@ function PromoCode() {
         code: Code,
         description: Description,
         discountType: Type,
-        discountValue: Value,
+        discountValue: parseFloat(Value),
         isActive: isAvailable,
         promoLabel: promoLabel,
         usedBy: usedBy,
@@ -46,9 +57,13 @@ function PromoCode() {
       <div className="form1">
         <form className="row g-3">
           <div className="input-group  mb-3">
-            <span className="input-group-text" id="basic-addon1">
+            <button
+              className="input-group-text"
+              onClick={generateCode}
+              id="basic-addon1"
+            >
               Code
-            </span>
+            </button>
             <input
               type="text"
               className="form-control"

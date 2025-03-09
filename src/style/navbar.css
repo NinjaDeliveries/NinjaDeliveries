@@ -1,4 +1,4 @@
-.navbar {
+.admin-navbar {
   background-color: #fff;
   padding: 0.5rem;
   display: flex;
@@ -10,14 +10,14 @@
   z-index: 1000;
 }
 
-.navbar-brand {
+.admin-navbar-brand {
   font-size: 1.5rem;
   font-weight: bold;
   color: #333;
   margin-right: 20px;
 }
 
-.navbar-nav {
+.admin-navbar-nav {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -31,17 +31,17 @@
   height: 3rem;
   width: 3rem;
 }
-.navbar-item {
+.admin-navbar-item {
   margin-right: 20px;
   display: inline-block;
 }
 
-.navbar-item a {
+.admin-navbar-item a {
   text-decoration: none;
   color: #333;
   transition: color 0.2s ease;
 }
 
-.navbar-item a:hover {
+.admin-navbar-item a:hover {
   color: #666;
 }

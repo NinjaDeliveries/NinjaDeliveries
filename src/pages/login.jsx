@@ -26,7 +26,7 @@ export default function Login({ setNav }) {
   };
 
   return (
-    <div className="background">
+    <div className="background" >
       <div className="login-container">
         <div className="login-card">
           <div className="login-header">

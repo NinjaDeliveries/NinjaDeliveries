@@ -54,7 +54,6 @@
     
   </head>
   <body data-spy="scroll" data-target=".fixed-top">
-    <div id="root"></div>
     <!-- Preloader -->
     <div class="spinner-wrapper">
       <div class="spinner">
@@ -105,11 +104,11 @@
               <a class="nav-link page-scroll" href="#aboutus">ABOUT US</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link page-scroll" href="#/ninjadeliveries">Admin</a>
+              <a class="nav-link page-scroll" href="admin.html?#/">Admin Login</a>
             </li>
 
           <span class="nav-item">
-            <a class="btn-outline-sm" href="#">Download Now</a>
+            <a class="btn-outline-sm" href="https://play.google.com/store/apps/details?id=com.ninjadeliveries.customer" >Download Now</a>
           </span>
         </div>
       </div>
@@ -130,13 +129,13 @@
                   Fast & reliable, Ninja Deliveries offers instant delivery of
                   goods to your doorstep, anytime!
                 </p>
-                <a class="btn-solid-lg page-scroll" href="#">Download Now</a>
+                <a class="btn-solid-lg page-scroll" href="https://play.google.com/store/apps/details?id=com.ninjadeliveries.customer">Download Now</a>
               </div>
               <!-- end of text-container -->
             </div>
             <!-- end of col -->
             <div class="col-lg-6 col-xl-7">
-              <div class="image-container">
+              <div class="image-container ">
                 <div class="img-wrapper">
                   <img
                     class="img-fluid Ng_banner_img"
@@ -234,21 +233,10 @@
       <!-- end of container -->
     </div>
     <div class="container">
-    <div class="delete-section">
-      <h2 class="heading ">Delete Your Account</h2>
-      <P>We’re sorry to see you go. Please let us know why you’re deleting your account. If you proceed, you will be asked to verify your identity!</P>
-      <p>
-          Deleting your account will permanently remove all your data, including your profile, posts, and preferences. 
-          This action cannot be undone. Please make sure you want to proceed before clicking the button below.
-      </p>
-      <br>
-      <a class="nav-link page-scroll" href="#/deleteuser"> <button class="btn-solid-lg page-scroll delete-button ">Delete My Account</button></a>
-  </div>
-<br>
-    <!-- end of cards-1 -->
-    <!-- end of Process -->
-    <div id="root2"></div>
-  </div>
+
+      <div id="root2"></div>
+   <br/>
+    </div>
     <!-- Details -->
     <div id="aboutus" class="tabs">
       <div class="container">
@@ -277,7 +265,7 @@
                   </div>
                 </li>
               </ul>
-              <a class="btn-solid-reg page-scroll" href="#"
+              <a class="btn-solid-reg page-scroll" href="https://play.google.com/store/apps/details?id=com.ninjadeliveries.customer"
                 >Download Now</a
               >
             </div>
@@ -427,7 +415,28 @@
     <!-- Validator.js - Bootstrap plugin that validates forms -->
     <script src="js/scripts.js"></script>
     <!-- Custom scripts -->
-    <script  src="../src/index.js"></script>
+    <!-- <script  src="../src/index.js"></script> -->
+    
+    
+    <script>
+      window.addEventListener("load", function () {
+        if (window.location.hash === "#/deleteuser") {
+          var element = document.getElementById("root2");
+          if (element) {
+            element.scrollIntoView({ behavior: "smooth", block: "start" });
+          }
+        }
+      });
+    
+      window.addEventListener("hashchange", function () {
+        if (window.location.hash === "#/deleteuser") {
+          var element = document.getElementById("root2");
+          if (element) {
+            element.scrollIntoView({ behavior: "smooth", block: "start" });
+          }
+        }
+      });
+    </script>
 
     <script
     src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
