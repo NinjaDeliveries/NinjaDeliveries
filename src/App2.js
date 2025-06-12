@@ -5,7 +5,6 @@ import Test from "./pages/Test";
 function App2() {
   // const timestamp = new Date().getTime();
   // window.location.href = `/admin.html?cache=${timestamp}`;
-
   return (
     <div>
       <Routes>

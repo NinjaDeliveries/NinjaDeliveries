@@ -1,140 +1,122 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Link } from "react-router-dom";
+import AOS from "aos";
+import "aos/dist/aos.css";
+import Map from "./Map";
 import "../style/home.css";
-import event from "../image/event.jpg";
-export default function Home() {
+
+const Home = () => {
+  useEffect(() => {
+    AOS.init({ duration: 1000 });
+  }, []);
+
+  const adminFunctions = [
+    {
+      title: "Add Product",
+      text: "Click below to Add a new product.",
+      link: "/itemAdd",
+      image:
+        "https://www.shutterstock.com/image-vector/shopping-cart-icon-flat-design-260nw-570153007.jpg",
+    },
+    {
+      title: "Categories Management",
+      text: "Add & Update Category or Sub-category",
+      link: "/categories_management",
+      image:
+        "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSlSjpT0YPXyFzHpBKIPoedcq1J-G-9c25Jxw&s",
+    },
+    {
+      title: "Update Event",
+      text: "Update Event in Sub categories",
+      link: "/updatesubcategory",
+      image: require("../image/event.jpg"),
+    },
+    {
+      title: "Register Riders",
+      text: "Register a new Rider",
+      link: "/riderregistration",
+      image:
+        "https://th.bing.com/th/id/OIP.iqECocLdMWBmaE8bYs_lmgHaHa?rs=1&pid=ImgDetMain",
+    },
+    {
+      title: "PromoCode",
+      text: "Add New PromoCode",
+      link: "/promocode",
+      image:
+        "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRy0mxFWath8sVF7DEyGuyEtIpErJ1cwxo9JA&s",
+    },
+    {
+      title: "Referral Code",
+      text: "Add a New Referral Code",
+      link: "/referralcode",
+      image:
+        "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQeTZkjHNkkAET-yG5iCmvG4JMxmu2BTbSm0Q&s",
+    },
+    {
+      title: "Transaction",
+      text: "Add Transaction to Riders",
+      link: "/addtransaction",
+      image:
+        "https://m.economictimes.com/thumb/msid-74960608,width-1200,height-900,resizemode-4,imgsize-49172/upi-twitter.jpg",
+    },
+    {
+      title: "Download Bills",
+      text: "Download Orders bill",
+      link: "/downloadbill",
+      image:
+        "https://img.freepik.com/free-vector/flat-payment-receipt_23-2147922105.jpg",
+    },
+    {
+      title: "Push Notification",
+      text: "Push a new Notification",
+      link: "/pushNotification",
+      image:
+        "https://www.pushengage.com/wp-content/uploads/2023/03/Waterfall-Push-Campaigns.png",
+    },
+  ];
+
   return (
-    <div className="container text-center ">
-      <div className="homeCards row row-cols-4 justify-content-center">
-        <div className="homeCard col mx-2 my-3" style={{ width: "18rem" }}>
-          <img
-            src="https://www.shutterstock.com/image-vector/shopping-cart-icon-flat-design-260nw-570153007.jpg"
-            className="homeCard-img-top"
-            alt="..."
-          />
-          <div className="homeCard-body">
-            <h5 className="homeCard-title">Add Product</h5>
-            <p className="homeCard-text">
-              Click below to Add a new product or a new Item
-            </p>
-            <Link to="/itemAdd" className="btn btn-success">
-              {" "}
-              Add Item{" "}
-            </Link>
-          </div>
+    <div className="min-h-screen bg-gray-50">
+      {/* Enhanced Header Section */}
+      <div className="ninja-header text-center">
+        <h1 className="ninja-title">Ninja Deliveries Admin</h1>
+        <p className="ninja-subtitle">
+          Manage your delivery operations in Dharamshala
+        </p>
+        <span className="ninja-tagline">
+          Fastest Grocery Delivery in the Hills ⚡
+        </span>
+      </div>
+
+      {/* Admin Functions Cards */}
+      <div className="container mx-auto px-4">
+        <div className="card-grid">
+          {adminFunctions.map((card, index) => (
+            <div
+              key={index}
+              className="admin-card"
+              data-aos="fade-up"
+              data-aos-delay={index * 100}
+            >
+              <img src={card.image} alt={card.title} className="card-image" />
+              <div className="card-content">
+                <h3 className="card-title">{card.title}</h3>
+                <p className="card-text">{card.text}</p>
+                <Link to={card.link}>
+                  <button className="card-button">{card.title}</button>
+                </Link>
+              </div>
+            </div>
+          ))}
         </div>
-        <div className="homeCard col mx-2 my-3" style={{ width: "18rem" }}>
-          <img
-            src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSlSjpT0YPXyFzHpBKIPoedcq1J-G-9c25Jxw&s"
-            className="homeCard-img-top"
-            alt="..."
-          />
-          <div className="homeCard-body">
-            <h5 className="homeCard-title">Category</h5>
-            <p className="homeCard-text">
-              Click below to Add New Category or Sub-category
-            </p>
-            <Link to="/addcategories" className="btn btn-success">
-              {" "}
-              Add{" "}
-            </Link>
-          </div>
-        </div>
-        <div className="homeCard col mx-2 my-3" style={{ width: "18rem" }}>
-          <img src={event} className="homeCard-img-top" alt="..." />
-          <div className="homeCard-body">
-            <h5 className="homeCard-title">Update Event</h5>
-            <p className="homeCard-text">
-              Click below to Update Event in Sub categories
-            </p>
-            <Link to="/updatesubcategory" className="btn btn-success">
-              {" "}
-              Update Event{" "}
-            </Link>
-          </div>
-        </div>
-        <div className="homeCard col mx-2 my-3" style={{ width: "18rem" }}>
-          <img
-            src="https://th.bing.com/th/id/OIP.iqECocLdMWBmaE8bYs_lmgHaHa?rs=1&pid=ImgDetMain"
-            className="homeCard-img-top"
-            alt="..."
-          />
-          <div className="homeCard-body">
-            <h5 className="homeCard-title">Register Riders</h5>
-            <p className="homeCard-text">
-              Click below to Register a new Rider ........
-            </p>
-            <Link to="/riderregistration" className="btn btn-success">
-              {" "}
-              Register Rider{" "}
-            </Link>
-          </div>
-        </div>
-        <div className="homeCard col mx-2 my-3" style={{ width: "18rem" }}>
-          <img
-            src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRy0mxFWath8sVF7DEyGuyEtIpErJ1cwxo9JA&s"
-            className="homeCard-img-top"
-            alt="..."
-          />
-          <div className="homeCard-body">
-            <h5 className="homeCard-title">PromoCode</h5>
-            <p className="homeCard-text">Click below to Add New PromoCode</p>
-            <Link to="/promocode" className="btn btn-success">
-              {" "}
-              Add PromoCode{" "}
-            </Link>
-          </div>
-        </div>
-        <div className="homeCard col mx-2 my-3" style={{ width: "18rem" }}>
-          <img
-            src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQeTZkjHNkkAET-yG5iCmvG4JMxmu2BTbSm0Q&s"
-            className="homeCard-img-top"
-            alt="..."
-          />
-          <div className="homeCard-body">
-            <h5 className="homeCard-title">Referral Code</h5>
-            <p className="homeCard-text">
-              Click below to Add a New Referral Code{" "}
-            </p>
-            <Link to="/referralcode" className="btn btn-success">
-              {" "}
-              Add Referral Code{" "}
-            </Link>
-          </div>
-        </div>
-        <div className="homeCard col mx-2 my-3" style={{ width: "18rem" }}>
-          <img
-            src="https://uxwing.com/wp-content/themes/uxwing/download/brands-and-social-media/upi-icon.png"
-            className="homeCard-img-top"
-            alt="..."
-          />
-          <div className="homeCard-body">
-            <h5 className="homeCard-title">Transaction</h5>
-            <p className="homeCard-text">
-              Click below to Add Transaction to Riders
-            </p>
-            <Link to="/addtransaction" className="btn btn-success">
-              {" "}
-              Add Transactions{" "}
-            </Link>
-          </div>
-        </div>
-        <div className="homeCard col mx-2 my-3" style={{ width: "18rem" }}>
-          <img
-            src="https://img.freepik.com/free-vector/flat-payment-receipt_23-2147922105.jpg?ga=GA1.1.1187541894.1734269784&semt=ais_hybrid"
-            className="homeCard-img-top"
-            alt="..."
-          />
-          <div className="homeCard-body">
-            <h5 className="homeCard-title">Download Bills</h5>
-            <p className="homeCard-text">Click below to Download Orders bill</p>
-            <Link to="/downloadbill" className="btn btn-success">
-              {" "}
-              Go to Order{" "}
-            </Link>
-          </div>
+
+        {/* Map Section */}
+        <div className="map-container">
+          <Map />
         </div>
       </div>
     </div>
   );
-}
+};
+
+export default Home;

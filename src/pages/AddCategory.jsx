@@ -1,23 +1,32 @@
 import { useState, useEffect } from "react";
 import React from "react";
 import { toast } from "react-toastify";
-import { db } from "../context/Firebase";
+import { db, storage } from "../context/Firebase"; // Ensure storage is imported
 import "../style/AddCategory.css";
 import { useNavigate } from "react-router-dom";
 import {
   collection,
   onSnapshot,
   doc,
+  query,
+  where,
   setDoc,
   getDocs,
 } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { useUser } from "../context/adminContext";
+
 function AddCategory() {
   const navigate = useNavigate();
+  const { user } = useUser();
   const [data, setData] = useState([]);
   const [selectedOption, setSelectedOption] = useState("");
   const [inputValue, setInputValue] = useState("");
   const [loading, setLoading] = useState(true);
   const [subcategories, setSubcategories] = useState("");
+  const [categoryImage, setCategoryImage] = useState(null);
+  const [subCategoryImage, setSubCategoryImage] = useState(null);
+
   const handleInputChange = (event) => {
     setInputValue(event.target.value);
   };
@@ -25,14 +34,35 @@ function AddCategory() {
   const handleSelectChange = (event) => {
     setSelectedOption(event.target.value);
     setInputValue(event.target.value);
+    console.log(selectedOption);
+  };
+
+  const handleCategoryImageChange = (event) => {
+    setCategoryImage(event.target.files[0]);
+  };
+
+  const handleSubCategoryImageChange = (event) => {
+    setSubCategoryImage(event.target.files[0]);
+  };
+
+  const uploadImage = async (imageFile, path) => {
+    const storageRef = ref(storage, path);
+    await uploadBytes(storageRef, imageFile);
+    return getDownloadURL(storageRef);
   };
 
   const AddNewCategory = async (e) => {
     e.preventDefault();
 
     try {
+      const imageUrl = await uploadImage(
+        categoryImage,
+        `categories/${inputValue}`
+      );
       await setDoc(doc(db, "categories", inputValue), {
         name: inputValue,
+        image: imageUrl,
+        storeId: user.storeId,
       });
       toast("Category Added!", {
         type: "success",
@@ -42,15 +72,22 @@ function AddCategory() {
       console.error("Error sending data : ", error);
     }
   };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     try {
+      const imageUrl = await uploadImage(
+        subCategoryImage,
+        `subcategories/${subcategories}`
+      );
       await setDoc(doc(db, "subcategories", subcategories), {
         categoryId: inputValue,
         name: subcategories,
+        image: imageUrl,
+        storeId: user.storeId,
       });
-      toast("Category Added!", {
+      toast("Sub-Category Added!", {
         type: "success",
         position: "top-center",
       });
@@ -61,10 +98,18 @@ function AddCategory() {
   };
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(
+    const q = query(
       collection(db, "categories"),
+      where("storeId", "==", user.storeId)
+    );
+
+    const unsubscribe = onSnapshot(
+      q,
       (querySnapshot) => {
-        const dataArray = querySnapshot.docs.map((doc) => ({ ...doc.data() }));
+        const dataArray = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
         setData(dataArray);
         setLoading(false);
       },
@@ -95,7 +140,7 @@ function AddCategory() {
                   >
                     <option value="">Choose...</option>
                     {data.map((item) => (
-                      <option key={item.id} value={item.name}>
+                      <option key={item.id} value={item.id}>
                         {item.name}
                       </option>
                     ))}
@@ -107,6 +152,12 @@ function AddCategory() {
                     placeholder="Type New Category"
                     className="ADCform-control "
                     style={{ marginTop: "5rem" }}
+                  />
+                  <input
+                    type="file"
+                    onChange={handleCategoryImageChange}
+                    className="ADCform-control "
+                    style={{ marginTop: "1rem" }}
                   />
                   <button
                     type="button"
@@ -131,6 +182,12 @@ function AddCategory() {
                     value={subcategories}
                     onChange={(e) => setSubcategories(e.target.value)}
                     placeholder="Type Sub-Category"
+                  />
+                  <input
+                    type="file"
+                    onChange={handleSubCategoryImageChange}
+                    className="ADCform-control "
+                    style={{ marginTop: "1rem" }}
                   />
                 </div>
               </div>

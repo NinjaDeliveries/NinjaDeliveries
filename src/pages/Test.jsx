@@ -1,214 +1,338 @@
-import React, { useEffect, useState } from "react";
-import jsPDF from "jspdf";
-import "jspdf-autotable";
-import { db } from "../context/Firebase";
-import { getStorage, ref, uploadBytes } from "firebase/storage";
-import {
-  collection,
-  query,
-  where,
-  getDocs,
-  doc,
-  setDoc,
-  Timestamp,
-} from "firebase/firestore";
+import { useState } from "react";
+import { serverTimestamp } from "firebase/firestore";
 
-const PDFGenerator = () => {
-  const [topSoldItems, setTopSoldItems] = useState([]);
-  const [loading, setLoading] = useState(true);
+const EditProductForm = ({ value, setEditbox, editDoc, data }) => {
+  // Existing state variables
+  const [name, setName] = useState(value.name || "");
+  const [categoryId, setCategoryId] = useState(value.categoryId || "");
+  const [SubType, setSubType] = useState(value.subcategoryId || "");
+  const [price, setPrice] = useState(value.price || "");
+  const [discount, setDiscount] = useState(value.discount || 0);
+  const [quantity, setQuantity] = useState(value.quantity || 0);
+  const [shelfLife, setShelfLife] = useState(value.shelfLife || "");
+  const [CGST, setCGST] = useState(value.CGST || 0);
+  const [SGST, setSGST] = useState(value.SGST || 0);
+  const [CESS, setCESS] = useState(value.CESS || 0);
+  const [description, setDescription] = useState(value.description || "");
+  const [isStoreAvailable, setIsStoreAvailable] = useState(
+    value.isStoreAvailable || false
+  );
+  const [imagePreview, setImagePreview] = useState(value.image || "");
+  const [Edit, setEdit] = useState(true);
 
-  // Check if the current time is 11:30 PM on Sunday
-  const isSunday1130PM = () => {
-    const now = new Date();
-    const isSunday = now.getDay() === 0; // Sunday is day 0
-    const is1130PM = now.getHours() === 21 && now.getMinutes() === 20; // 11:30 PM
-    return isSunday && is1130PM;
+  // Additional fields state
+  const [isNew, setIsNew] = useState(value.isNew || true);
+  const [weeklySold, setWeeklySold] = useState(value.weeklySold || 0);
+  // createdAt will be handled automatically during save
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
-  // Upload PDF to Firebase Storage
-  const uploadPDFToStorage = async (pdfBlob) => {
-    const storage = getStorage();
-    const storageRef = ref(
-      storage,
-      `reports/last_week_report_${Date.now()}.pdf`
-    );
-    await uploadBytes(storageRef, pdfBlob);
-    return storageRef.fullPath; // Return the file path for later use
-  };
+  return (
+    <div className="container-fluid p-4">
+      <div className="card shadow-sm border-0">
+        <div className="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+          <h4 className="mb-0">Edit Product</h4>
+          <button
+            type="button"
+            onClick={() => setEditbox(false)}
+            className="btn-close btn-close-white"
+            aria-label="Close"
+          ></button>
+        </div>
 
-  const sendEmailWithPDF = async (filePath) => {
-    const reportsRef = doc(collection(db, "reports"));
-    await setDoc(reportsRef, { filePath, createdAt: new Date() });
-  };
-  // Fetch data from Firestore for the last week
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Calculate the start and end timestamps for the last week
-        const now = new Date();
-        const startOfLastWeek = new Date(
-          now.setDate(now.getDate() - now.getDay() - 6)
-        ); // Start of last week (Monday)
-        const endOfLastWeek = new Date(now.setDate(now.getDate() + 6)); // End of last week (Sunday)
+        <div className="card-body">
+          <form className="row g-3">
+            {/* Left Column - Product Details */}
+            <div className="col-md-6">
+              <div className="row g-3">
+                {/* Basic Information */}
+                <div className="col-12">
+                  <h5 className="border-bottom pb-2 mb-3">
+                    Product Information
+                  </h5>
+                </div>
 
-        const ordersRef = collection(db, "orders");
-        const q = query(
-          ordersRef,
-          where("status", "==", "tripEnded"),
-          where("createdAt", ">=", Timestamp.fromDate(startOfLastWeek)),
-          where("createdAt", "<=", Timestamp.fromDate(endOfLastWeek))
-        );
+                <div className="col-md-12">
+                  <label className="form-label fw-bold">Name*</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                  />
+                </div>
 
-        const querySnapshot = await getDocs(q);
+                <div className="col-md-6">
+                  <label className="form-label fw-bold">Category*</label>
+                  <select
+                    value={categoryId}
+                    onChange={(e) => setCategoryId(e.target.value)}
+                    className="form-select"
+                    required
+                  >
+                    <option disabled value="">
+                      Select Category...
+                    </option>
+                    {data.categories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-        const itemsMap = new Map(); // To aggregate items by productId
-        const productIds = new Set(); // To store unique product IDs
+                <div className="col-md-6">
+                  <label className="form-label fw-bold">Sub Category*</label>
+                  <select
+                    value={SubType}
+                    onChange={(e) => setSubType(e.target.value)}
+                    className="form-select"
+                    required
+                    disabled={!categoryId}
+                  >
+                    <option value="">Select Sub Category...</option>
+                    {data.products
+                      .filter((subcat) => subcat.categoryId === categoryId)
+                      .map((subcat) => (
+                        <option key={subcat.id} value={subcat.id}>
+                          {subcat.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
 
-        // Collect all product IDs from orders
-        querySnapshot.forEach((orderDoc) => {
-          const order = orderDoc.data();
-          if (order.items && Array.isArray(order.items)) {
-            order.items.forEach((item) => {
-              productIds.add(item.productId); // Add productId to the set
-              const itemKey = `${item.productId}`; // Unique key for each item
+                <div className="col-12">
+                  <label className="form-label fw-bold">Description</label>
+                  <textarea
+                    className="form-control"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    rows="3"
+                  ></textarea>
+                </div>
 
-              if (itemsMap.has(itemKey)) {
-                itemsMap.set(itemKey, {
-                  ...itemsMap.get(itemKey),
-                  quantity: itemsMap.get(itemKey).quantity + item.quantity,
-                });
-              } else {
-                itemsMap.set(itemKey, {
-                  productId: item.productId,
-                  quantity: item.quantity,
-                });
-              }
-            });
-          }
-        });
+                {/* Image Upload */}
+                <div className="col-12">
+                  <label className="form-label fw-bold">Product Image</label>
+                  <input
+                    className="form-control mb-2"
+                    onChange={handleImageChange}
+                    type="file"
+                    accept="image/*"
+                  />
+                  {imagePreview && (
+                    <div className="border p-2 rounded d-inline-block">
+                      <img
+                        src={imagePreview}
+                        alt="Current"
+                        className="img-thumbnail"
+                        style={{ maxHeight: "100px" }}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
 
-        // Fetch all product details in a single batch
-        const productsRef = collection(db, "products");
-        const productsQuery = query(
-          productsRef,
-          where("__name__", "in", Array.from(productIds))
-        );
-        const productsSnapshot = await getDocs(productsQuery);
+            {/* Right Column - Pricing & Additional Fields */}
+            <div className="col-md-6">
+              <div className="row g-3">
+                {/* Pricing Information */}
+                <div className="col-12">
+                  <h5 className="border-bottom pb-2 mb-3">
+                    Pricing & Inventory
+                  </h5>
+                </div>
 
-        // Map product details to items
-        const productsMap = new Map();
-        productsSnapshot.forEach((productDoc) => {
-          productsMap.set(productDoc.id, productDoc.data());
-        });
+                <div className="col-md-4">
+                  <label className="form-label fw-bold">Price*</label>
+                  <div className="input-group">
+                    <span className="input-group-text">₹</span>
+                    <input
+                      type="number"
+                      className="form-control"
+                      value={price}
+                      onChange={(e) => setPrice(e.target.value)}
+                      disabled={!Edit}
+                      min="0"
+                      step="0.01"
+                      required
+                    />
+                  </div>
+                </div>
 
-        // Combine item data with product details
-        const itemsArray = Array.from(itemsMap.values()).map((item) => ({
-          ...item,
-          name: productsMap.get(item.productId)?.name || "Unknown",
-          image: productsMap.get(item.productId)?.image || "",
-        }));
+                <div className="col-md-4">
+                  <label className="form-label fw-bold">Discount</label>
+                  <div className="input-group">
+                    <span className="input-group-text">%</span>
+                    <input
+                      type="number"
+                      className="form-control"
+                      value={discount}
+                      onChange={(e) => setDiscount(e.target.value)}
+                      disabled={!Edit}
+                      min="0"
+                      max="100"
+                    />
+                  </div>
+                </div>
 
-        // Sort by quantity in descending order
-        itemsArray.sort((a, b) => b.quantity - a.quantity);
+                <div className="col-md-4">
+                  <label className="form-label fw-bold">Quantity*</label>
+                  <input
+                    type="number"
+                    className="form-control"
+                    value={quantity}
+                    onChange={(e) => setQuantity(e.target.value)}
+                    min="0"
+                    required
+                  />
+                </div>
 
-        setTopSoldItems(itemsArray.slice(0, 3)); // Get top 3 items
-        setLoading(false);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        setLoading(false);
-      }
-    };
+                <div className="col-md-6">
+                  <label className="form-label fw-bold">Shelf Life</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={shelfLife}
+                    onChange={(e) => setShelfLife(e.target.value)}
+                    placeholder="e.g. 6 months"
+                  />
+                </div>
 
-    fetchData();
-  }, []);
+                <div className="col-md-6">
+                  <label className="form-label fw-bold">Weekly Sold</label>
+                  <input
+                    type="number"
+                    className="form-control"
+                    value={weeklySold}
+                    onChange={(e) => setWeeklySold(e.target.value)}
+                    min="0"
+                  />
+                </div>
 
-  const generatePDF = async () => {
-    if (loading || topSoldItems.length === 0) return;
+                {/* Tax Information */}
+                <div className="col-12 mt-3">
+                  <h5 className="border-bottom pb-2 mb-3">Tax Information</h5>
+                </div>
 
-    const doc = new jsPDF();
+                <div className="col-md-4">
+                  <label className="form-label fw-bold">CGST</label>
+                  <div className="input-group">
+                    <span className="input-group-text">%</span>
+                    <input
+                      type="number"
+                      className="form-control"
+                      value={CGST}
+                      onChange={(e) => setCGST(e.target.value)}
+                      min="0"
+                    />
+                  </div>
+                </div>
 
-    // Add header
-    doc.setFontSize(22);
-    doc.text("Ninja Deliveries", 10, 20);
+                <div className="col-md-4">
+                  <label className="form-label fw-bold">SGST</label>
+                  <div className="input-group">
+                    <span className="input-group-text">%</span>
+                    <input
+                      type="number"
+                      className="form-control"
+                      value={SGST}
+                      onChange={(e) => setSGST(e.target.value)}
+                      min="0"
+                    />
+                  </div>
+                </div>
 
-    // Add Top 3 most sold items for the last week
-    doc.setFontSize(16);
-    doc.text("Top 3 Most Sold Items (Last Week):", 10, 40);
+                <div className="col-md-4">
+                  <label className="form-label fw-bold">CESS</label>
+                  <div className="input-group">
+                    <span className="input-group-text">%</span>
+                    <input
+                      type="number"
+                      className="form-control"
+                      value={CESS}
+                      onChange={(e) => setCESS(e.target.value)}
+                      min="0"
+                    />
+                  </div>
+                </div>
 
-    // Prepare table data
-    const tableData = topSoldItems.map((item, index) => [
-      index + 1, // Rank
-      item.name, // Item Name
-      { content: "", image: item.image }, // Image placeholder
-      item.quantity, // Quantity Sold
-    ]);
+                {/* Status & Actions */}
+                <div className="col-12 mt-3">
+                  <h5 className="border-bottom pb-2 mb-3">Status & Actions</h5>
+                </div>
 
-    // Load images asynchronously
-    const imagePromises = topSoldItems.map((item) => {
-      return new Promise((resolve) => {
-        const img = new Image();
-        img.src = item.image;
-        img.onload = () => resolve(img);
-      });
-    });
+                <div className="col-md-4">
+                  <div className="form-check form-switch">
+                    <input
+                      className="form-check-input"
+                      type="checkbox"
+                      id="isNewSwitch"
+                      checked={isNew}
+                      onChange={() => setIsNew(!isNew)}
+                    />
+                    <label
+                      className="form-check-label fw-bold"
+                      htmlFor="isNewSwitch"
+                    >
+                      Mark as New
+                    </label>
+                  </div>
+                </div>
 
-    // Wait for all images to load
-    const images = await Promise.all(imagePromises);
+                <div className="col-md-4">
+                  <div className="form-check form-switch">
+                    <input
+                      className="form-check-input"
+                      type="checkbox"
+                      id="storeAvailableSwitch"
+                      checked={isStoreAvailable}
+                      onChange={() => setIsStoreAvailable(!isStoreAvailable)}
+                    />
+                    <label
+                      className="form-check-label fw-bold"
+                      htmlFor="storeAvailableSwitch"
+                    >
+                      Store Available
+                    </label>
+                  </div>
+                </div>
 
-    // Generate the table
-    doc.autoTable({
-      startY: 50,
-      head: [["Rank", "Item Name", "Image", "Quantity Sold"]],
-      body: tableData,
-      styles: { cellPadding: 10, minCellHeight: 30 }, // Add padding and set row height
-      didDrawCell: (data) => {
-        // Draw images in the table cells
-        if (data.column.index === 2 && data.cell.section === "body") {
-          const img = images[data.row.index]; // Get the corresponding image
-          doc.addImage(img, "JPEG", data.cell.x + 5, data.cell.y + 5, 20, 20); // Adjust image size and position
-        }
-      },
-    });
-
-    // Add total units sold
-    const totalUnitsSold = topSoldItems.reduce(
-      (total, item) => total + item.quantity,
-      0
-    );
-    doc.setFontSize(16);
-    doc.text(
-      `Total Units Sold: ${totalUnitsSold}`,
-      10,
-      doc.autoTable.previous.finalY + 20
-    );
-
-    // Save the PDF as a Blob
-    const pdfBlob = doc.output("blob");
-
-    // Upload the PDF to Firebase Storage
-    const filePath = await uploadPDFToStorage(pdfBlob);
-    console.log("PDF uploaded to:", filePath);
-    // Save the PDF locally (optional)
-    doc.save("Ninja_Deliveries_Last_Week_Report.pdf");
-    sendEmailWithPDF(filePath);
-  };
-
-  // Schedule the task to run at 11:30 PM on Sunday
-  useEffect(() => {
-    const checkTimeAndGeneratePDF = () => {
-      if (isSunday1130PM()) {
-        generatePDF();
-      }
-    };
-
-    // Check the time every minute
-    const interval = setInterval(checkTimeAndGeneratePDF, 60 * 1000); // 60 seconds
-
-    // Cleanup the interval on component unmount
-    return () => clearInterval(interval);
-  }, []); // Run when topSoldItems changes
-
-  return <div></div>;
+                <div className="col-12 d-flex justify-content-end gap-2 mt-4">
+                  <button
+                    type="button"
+                    onClick={() => setEditbox(false)}
+                    className="btn btn-outline-secondary px-4"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={editDoc}
+                    disabled={!Edit}
+                    className="btn btn-success px-4"
+                  >
+                    Save Changes
+                  </button>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
 };
 
-export default PDFGenerator;
+export default EditProductForm;

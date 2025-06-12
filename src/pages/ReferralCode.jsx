@@ -1,27 +1,36 @@
 import React from "react";
 import { useEffect, useState } from "react";
-import { collection, onSnapshot, addDoc } from "firebase/firestore";
+import {
+  collection,
+  onSnapshot,
+  addDoc,
+  query,
+  where,
+} from "firebase/firestore";
 import { db } from "../context/Firebase";
 import TextField from "@mui/material/TextField";
 import Autocomplete from "@mui/material/Autocomplete";
 import "../context/style.css";
 import { toast } from "react-toastify";
 import { firestore } from "../context/Firebase";
-
+import { useUser } from "../context/adminContext";
 function ReferralCode() {
   const [data, setData] = useState([]);
+  const { user } = useUser();
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(
+    const q = query(
       collection(db, "riderDetails"),
-      (snapshot) => {
-        const newData = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setData(newData);
-      }
+      where("storeId", "==", user.storeId)
     );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const newData = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setData(newData);
+    });
 
     // Cleanup subscription on unmount
     return () => unsubscribe();
@@ -39,8 +48,8 @@ function ReferralCode() {
     getOptionLabel: (options) => options.username,
   };
   return (
-    <div>
-      <h2 className="heading">Referral Codes</h2>
+    <div className="containerReferral">
+      <h2 className="heading my-5 mx-5">Referral Codes</h2>
 
       <Autocomplete
         className="heading2"

@@ -6,7 +6,9 @@ import "./index.css";
 import App from "./App";
 import App2 from "./App2";
 import reportWebVitals from "./reportWebVitals";
+import "aos/dist/aos.css";
 import { ToastContainer } from "react-toastify";
+import { UserProvider } from "./context/adminContext";
 const rootElement = document.getElementById("root");
 const rootElement2 = document.getElementById("root2");
 
@@ -15,12 +17,14 @@ if (rootElement) {
   const root = ReactDOM.createRoot(rootElement);
   root.render(
     <React.StrictMode>
-      <BrowserRouter>
-        <FirebaseProvider>
-          <ToastContainer />
-          <App />
-        </FirebaseProvider>
-      </BrowserRouter>
+      <UserProvider>
+        <BrowserRouter>
+          <FirebaseProvider>
+            <ToastContainer />
+            <App />
+          </FirebaseProvider>
+        </BrowserRouter>
+      </UserProvider>
     </React.StrictMode>
   );
 }

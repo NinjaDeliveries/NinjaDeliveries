@@ -25,6 +25,11 @@ export default function navbar() {
           </Link>
         </li>
         <li className="admin-navbar-item">
+          <Link aria-current="page" to="/orderlist">
+            Order List{" "}
+          </Link>
+        </li>
+        <li className="admin-navbar-item">
           <Link aria-current="page" to="/report">
             Data Reports{" "}
           </Link>

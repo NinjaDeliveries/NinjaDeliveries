@@ -1,31 +1,68 @@
 import React, { useState } from "react";
 import RiderListUpdate from "./RiderListUpdate";
 import "../context/style.css";
-import { doc, deleteDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import { db } from "../context/Firebase";
 function RiderList({ item }) {
   const [Editbox, setEditbox] = useState(false);
   const [DelRider, setDelRider] = useState(false);
+
+  const handleTripEnd = async () => {
+    try {
+      if (!item.currentOrder) return;
+
+      // Update order status
+      const orderRef = doc(db, "orders", item.currentOrder);
+      const orderSnap = await getDoc(orderRef);
+      if (orderSnap.exists()) {
+        await updateDoc(orderRef, { status: "tripEnded" });
+      }
+
+      // Update rider info
+      const riderRef = doc(db, "riderDetails", item.id);
+      await updateDoc(riderRef, {
+        currentOrder: "",
+        currentOrderStatus: "",
+        isAvailable: true,
+      });
+    } catch (error) {
+      console.error("Error ending trip:", error);
+    }
+  };
+
   return (
     <>
-      <div
-        key={item.id}
-        className={Editbox ? "editclicked" : "list"}
-        class={DelRider ? "editclicked" : "list"}
-      >
-        <div className="list-group w-100 my-1 ">
+      <div key={item.id} className={Editbox || DelRider}>
+        <div className="list-group w-100 my-1">
           <li className="list-group-item d-flex justify-content-between align-items-center">
-            {item.username}
-            <span className="buttons">
-              {" "}
+            <div className="d-flex align-items-center">
+              {item.currentOrderStatus === "accepted" && (
+                <span
+                  className="me-2"
+                  style={{
+                    width: "10px",
+                    height: "10px",
+                    backgroundColor: "green",
+                    borderRadius: "50%",
+                    display: "inline-block",
+                  }}
+                ></span>
+              )}
+              {item.username}
+            </div>
+            <span className="buttons d-flex gap-2">
+              {item.currentOrderStatus === "accepted" && (
+                <button
+                  onClick={handleTripEnd}
+                  className="btn mx-3 btn-outline-success"
+                >
+                  Trip End
+                </button>
+              )}
               <button
                 onClick={() => {
-                  if (Editbox === false) {
-                    setEditbox(true);
-                    setDelRider(false);
-                  } else {
-                    setEditbox(false);
-                  }
+                  setEditbox(!Editbox);
+                  if (DelRider) setDelRider(false);
                 }}
                 className="editbutton btn btn-secondary"
               >
@@ -34,12 +71,8 @@ function RiderList({ item }) {
               <button
                 className="editbutton btn btn-danger"
                 onClick={() => {
-                  if (DelRider === false) {
-                    setDelRider(true);
-                    setEditbox(false);
-                  } else {
-                    setDelRider(false);
-                  }
+                  setDelRider(!DelRider);
+                  if (Editbox) setEditbox(false);
                 }}
               >
                 Delete
@@ -47,12 +80,8 @@ function RiderList({ item }) {
             </span>
           </li>
         </div>
-        {Editbox === true && (
-          <RiderListUpdate item={item} setEditbox={setEditbox} />
-        )}
-        {DelRider === true && (
-          <DeleteRider item={item} setDelRider={setDelRider} />
-        )}
+        {Editbox && <RiderListUpdate item={item} setEditbox={setEditbox} />}
+        {DelRider && <DeleteRider item={item} setDelRider={setDelRider} />}
       </div>
     </>
   );

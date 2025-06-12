@@ -13,7 +13,11 @@ export default function Login({ setNav }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await signInWithEmailAndPassword(auth, email, password).then(
+        (userCredential) => {
+          const user = userCredential.user;
+        }
+      );
       toast("Admin Logged In!", {
         type: "success",
         position: "top-center",
@@ -26,7 +30,7 @@ export default function Login({ setNav }) {
   };
 
   return (
-    <div className="background" >
+    <div className="background">
       <div className="login-container">
         <div className="login-card">
           <div className="login-header">

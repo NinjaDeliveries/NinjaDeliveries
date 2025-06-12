@@ -3,6 +3,8 @@ import { firestore } from "../context/Firebase";
 import { collection, addDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import { useUser } from "../context/adminContext";
+
 export default function RiderRegistration() {
   const [name, setname] = useState("");
   const [username, setusername] = useState("");
@@ -14,6 +16,7 @@ export default function RiderRegistration() {
   const [order, setOrder] = useState("");
   const [isAvailable, setisAvailable] = useState(false);
   const navigate = useNavigate();
+  const { user } = useUser();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -30,12 +33,13 @@ export default function RiderRegistration() {
         ridesRejected: parseInt(0),
         currentOrder: order,
         currentOrderStatus: order,
+        storeId: user.storeId,
       });
       toast("Rider Registration Successful!", {
         type: "success",
         position: "top-center",
       });
-      navigate("/home");
+      navigate("/riderlist");
     } catch (error) {
       console.error("Error sending data : ", error);
     }
@@ -62,10 +66,7 @@ export default function RiderRegistration() {
             <label htmlFor="validationDefaultUsername" className="form-label">
               Username
             </label>
-            <div className="input-group">
-              <span className="input-group-text" id="inputGroupPrepend2">
-                @
-              </span>
+            <div className="flex">
               <input
                 type={username}
                 className="form-control"

@@ -1,0 +1,80 @@
+/* Background and layout */
+.notification-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(to top right, #e0e7ff, #e9d5ff);
+  padding: 1.5rem;
+}
+
+/* Card styling */
+.notification-card {
+  background-color: white;
+  border-radius: 1rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  padding: 2rem;
+  width: 100%;
+  max-width: 400px;
+}
+
+/* Title */
+.notification-title {
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #7c3aed;
+  margin-bottom: 1.5rem;
+}
+
+/* Labels */
+.notification-label {
+  display: block;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 0.5rem;
+}
+
+/* Inputs */
+.notification-input,
+.notification-textarea {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
+  font-size: 1rem;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.notification-input:focus,
+.notification-textarea:focus {
+  border-color: #a78bfa;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.3);
+}
+
+/* Button */
+.notification-button {
+  width: 100%;
+  background-color: #7c3aed;
+  color: white;
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.notification-button:hover {
+  background-color: #6d28d9;
+}
+
+/* Success Message */
+.notification-success {
+  text-align: center;
+  margin-top: 1rem;
+  color: #10b981;
+  font-weight: 500;
+}

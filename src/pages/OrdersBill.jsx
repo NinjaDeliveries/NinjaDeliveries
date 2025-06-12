@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { db } from "../context/Firebase"; // Ensure you have Firebase configured
-import { collection, query, orderBy, getDocs } from "firebase/firestore";
+import { collection, query, where, orderBy, getDocs } from "firebase/firestore";
 import {
   Button,
   List,
@@ -11,8 +11,7 @@ import {
 import { getDoc, doc } from "firebase/firestore";
 import { jsPDF } from "jspdf";
 import "jspdf-autotable";
-console.log();
-
+import { useUser } from "../context/adminContext";
 const generateBill = async (order, phoneNumber) => {
   const companyRef = doc(db, "company", "cgwqfmBd4GDEFv4lUsHX"); // Fetch the single document
   const companySnap = await getDoc(companyRef);
@@ -149,6 +148,7 @@ const generateBill = async (order, phoneNumber) => {
 };
 
 const OrdersBill = () => {
+  const { user } = useUser();
   const [orders, setOrders] = useState([]);
   const [groupedOrders, setGroupedOrders] = useState({});
   const [currentPage, setCurrentPage] = useState(1);
@@ -158,6 +158,13 @@ const OrdersBill = () => {
     const fetchOrders = async () => {
       try {
         const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
+
+        // const q = query(
+        //   collection(db, "orders"),
+        //   where("storeId", "==", user.storeId),
+        //   orderBy("createdAt", "desc")
+        // );
+
         const querySnapshot = await getDocs(q);
         const ordersData = querySnapshot.docs.map((doc) => ({
           id: doc.id,

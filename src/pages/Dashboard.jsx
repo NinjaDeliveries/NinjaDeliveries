@@ -11,9 +11,34 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { db } from "../context/Firebase"; // Ensure you have your Firebase config imported
 import "../style/promocode.css";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  Timestamp,
+} from "firebase/firestore";
+import { useUser } from "../context/adminContext";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  ResponsiveContainer,
+} from "recharts";
+
+import {
+  startOfWeek,
+  startOfMonth,
+  endOfMonth,
+  subMonths,
+  format,
+} from "date-fns";
 
 const MostOrders = () => {
+  const { user } = useUser();
   const [timeframe, setTimeframe] = useState("week");
   const [mostOrdersDay, setMostOrdersDay] = useState("");
   const [orderCount, setOrderCount] = useState(0);
@@ -27,11 +52,16 @@ const MostOrders = () => {
     if (timeframe === "week") {
       startDate = new Date(now.setDate(now.getDate() - now.getDay()));
     } else {
-      startDate = new Date(now.getFullYear(), now.getMonth(), 10);
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
     }
 
     const ordersRef = collection(db, "orders");
-    const q = query(ordersRef, where("createdAt", ">=", startDate));
+    const q = query(
+      ordersRef,
+      where("createdAt", ">=", startDate),
+      where("storeId", "==", user.storeId),
+      where("status", "==", "tripEnded") // Filter orders with status 'tripEnded'
+    );
     const querySnapshot = await getDocs(q);
     const dayCount = {};
 
@@ -96,16 +126,21 @@ const getStartOfPeriod = (period) => {
     start.setDate(now.getDate() - now.getDay()); // Start of the week (Sunday)
     start.setHours(0, 0, 0, 0);
   } else if (period === "month") {
-    start = new Date(now.getFullYear(), now.getMonth(), 10); // Start of the month
+    start = new Date(now.getFullYear(), now.getMonth(), 1); // Start of the month
   }
 
   return start;
 };
 
-const fetchOrders = async (period) => {
+const fetchOrders = async (period, { user }) => {
   const startTime = getStartOfPeriod(period);
   const ordersRef = collection(db, "orders");
-  const q = query(ordersRef, where("createdAt", ">=", startTime));
+  const q = query(
+    ordersRef,
+    where("storeId", "==", user.storeId),
+    where("createdAt", ">=", startTime),
+    where("status", "==", "tripEnded") // Filter orders with status 'tripEnded'
+  );
   const querySnapshot = await getDocs(q);
 
   let totals = [];
@@ -124,14 +159,18 @@ const fetchOrders = async (period) => {
 const AverageOrderPrice = () => {
   const [selected, setSelected] = useState("today");
   const [average, setAverage] = useState("0.00");
+  const { user } = useUser(); // ✅ Move hook here
 
   useEffect(() => {
     const getAverage = async () => {
-      const avg = await fetchOrders(selected);
+      if (!user?.storeId) return;
+
+      const avg = await fetchOrders(selected, { user });
       setAverage(avg);
     };
+
     getAverage();
-  }, [selected]);
+  }, [selected, user]); // ✅ Add `user` to dependency array
 
   return (
     <Box className="container-avg">
@@ -172,6 +211,8 @@ const AverageOrderPrice = () => {
 };
 
 const ProductList = () => {
+  const { user } = useUser();
+
   const [selected, setSelected] = useState("today");
   const [products, setProducts] = useState({ today: [], week: [], month: [] });
   const [loading, setLoading] = useState(true);
@@ -188,10 +229,18 @@ const ProductList = () => {
         } else if (timeframe === "week") {
           startDate = new Date(now.setDate(now.getDate() - now.getDay())); // Start of the week (Sunday)
         } else if (timeframe === "month") {
-          startDate = new Date(now.getFullYear(), now.getMonth(), 10); // Start of the month
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1); // Start of the month
         }
 
-        const ordersSnapshot = await getDocs(collection(db, "orders"));
+        // Fetch orders with status "tripEnded"
+        const ordersSnapshot = await getDocs(
+          query(
+            collection(db, "orders"),
+            where("storeId", "==", user.storeId),
+            where("status", "==", "tripEnded")
+          )
+        );
+
         const orders = ordersSnapshot.docs
           .map((doc) => {
             const data = doc.data();
@@ -350,6 +399,118 @@ const ProductList = () => {
     </>
   );
 };
+const OrderChart = () => {
+  const [data, setData] = useState([]);
+  const [filter, setFilter] = useState("weekly");
+  const [selected, setSelected] = useState("weekly");
+
+  const formatHourLabel = (hour) => {
+    const suffix = hour >= 12 ? "PM" : "AM";
+    const displayHour = hour % 12 === 0 ? 12 : hour % 12;
+    return `${displayHour} ${suffix}`;
+  };
+
+  const generateHourlyLabels = () => {
+    const labels = [];
+    for (let hour = 0; hour < 24; hour++) {
+      labels.push(formatHourLabel(hour));
+    }
+    return labels;
+  };
+  const fetchOrders = async () => {
+    const ordersRef = collection(db, "orders");
+
+    const now = new Date();
+    let start, end;
+
+    if (filter === "weekly") {
+      start = startOfWeek(now, { weekStartsOn: 1 });
+      end = now;
+    } else if (filter === "thisMonth") {
+      start = startOfMonth(now);
+      end = now;
+    } else if (filter === "previousMonth") {
+      const prevMonth = subMonths(now, 1);
+      start = startOfMonth(prevMonth);
+      end = endOfMonth(prevMonth);
+    }
+
+    const q = query(
+      ordersRef,
+      where("createdAt", ">=", Timestamp.fromDate(start)),
+      where("createdAt", "<=", Timestamp.fromDate(end))
+    );
+
+    const snapshot = await getDocs(q);
+
+    const hourlyCounts = Array(24).fill(0);
+
+    snapshot.forEach((doc) => {
+      const createdAt = doc.data().createdAt?.toDate?.();
+      if (createdAt) {
+        const hour = createdAt.getHours(); // 0 to 23
+        hourlyCounts[hour]++;
+      }
+    });
+
+    const labels = generateHourlyLabels();
+    const chartData = labels.map((label, index) => ({
+      time: label,
+      orders: hourlyCounts[index],
+    }));
+
+    setData(chartData);
+  };
+
+  useEffect(() => {
+    fetchOrders();
+  }, [filter]);
+
+  return (
+    <div className="p-4 max-w-4xl mx-auto">
+      <Typography variant="h4" className="my-4 text-xl font-bold heading">
+        Orders By Hour
+      </Typography>
+      <div className="flex Orderlist-button justify-center space-x-2 mb-4">
+        <Button
+          variant={filter === "weekly" ? "contained" : "outlined"}
+          onClick={() => setFilter("weekly")}
+        >
+          Weekly
+        </Button>
+        <Button
+          variant={filter === "thisMonth" ? "contained" : "outlined"}
+          onClick={() => setFilter("thisMonth")}
+        >
+          This Month
+        </Button>
+        <Button
+          variant={filter === "previousMonth" ? "contained" : "outlined"}
+          onClick={() => setFilter("previousMonth")}
+        >
+          Previous Month
+        </Button>
+      </div>
+
+      <ResponsiveContainer width="100%" height={350}>
+        <BarChart data={data}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis
+            dataKey="time"
+            angle={-30}
+            textAnchor="end"
+            height={50}
+            interval={0}
+            tick={{ fontSize: 12 }}
+          />
+          <YAxis allowDecimals={false} />
+          <Tooltip />
+          <Bar dataKey="orders" fill="#4f46e5" />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+};
 
 function Dashboard() {
   return (
@@ -366,6 +527,9 @@ function Dashboard() {
             <MostOrders />
           </div>
         </div>
+      </div>
+      <div className="max-w-3xl orderschart mx-auto mt-10 p-6 bg-white rounded-3xl shadow-lg border border-gray-200">
+        <OrderChart />
       </div>
     </div>
   );

@@ -5,8 +5,12 @@ import {
   getDocs,
   doc,
   getDoc,
+  query,
+  where,
   updateDoc,
 } from "firebase/firestore";
+import { useUser } from "../context/adminContext";
+
 import {
   FormControl,
   InputLabel,
@@ -18,13 +22,18 @@ import {
 } from "@mui/material";
 
 const UpdateSubCategory = () => {
+  const { user } = useUser();
   const [subcategories, setSubcategories] = useState([]);
   const [selectedSubcategory, setSelectedSubcategory] = useState("");
   const [eventEnabled, setEventEnabled] = useState(false);
 
   useEffect(() => {
     const fetchSubcategories = async () => {
-      const querySnapshot = await getDocs(collection(db, "subcategories"));
+      const q = query(
+        collection(db, "subcategories"),
+        where("storeId", "==", user.storeId)
+      );
+      const querySnapshot = await getDocs(q);
       const items = querySnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
@@ -79,22 +88,35 @@ const UpdateSubCategory = () => {
   };
 
   return (
-    <div className="container" style={{ padding: "20px", maxWidth: "400px" }}>
-      <Typography variant="h6">Select Subcategory</Typography>
-      <FormControl fullWidth>
-        <InputLabel>Subcategory</InputLabel>
-        <Select value={selectedSubcategory} onChange={handleSubcategoryChange}>
+    <div className="container p-5 max-w-md mx-auto bg-white rounded-lg shadow-md">
+      <Typography variant="h6" className="mb-4 text-gray-800 font-semibold">
+        Select Subcategory
+      </Typography>
+
+      <FormControl fullWidth className="mb-6">
+        <InputLabel className="text-gray-600">Subcategory</InputLabel>
+        <Select
+          value={selectedSubcategory}
+          onChange={handleSubcategoryChange}
+          className="bg-gray-50 rounded-md"
+        >
           {subcategories.map((sub) => (
-            <MenuItem key={sub.id} value={sub.id}>
+            <MenuItem key={sub.id} value={sub.id} className="hover:bg-gray-100">
               {sub.name}
             </MenuItem>
           ))}
         </Select>
       </FormControl>
 
-      <div style={{ display: "flex", alignItems: "center", marginTop: "20px" }}>
-        <Typography>Event Enabled</Typography>
-        <Switch checked={eventEnabled} onChange={handleToggleChange} />
+      <div className="flex items-center justify-between mb-6 p-3 bg-gray-50 rounded-lg">
+        <Typography className="text-gray-700 font-medium">
+          Event Enabled
+        </Typography>
+        <Switch
+          checked={eventEnabled}
+          onChange={handleToggleChange}
+          color="primary"
+        />
       </div>
 
       <Button
@@ -102,7 +124,7 @@ const UpdateSubCategory = () => {
         color="primary"
         fullWidth
         onClick={handleSave}
-        style={{ marginTop: "20px" }}
+        className="py-3 text-lg font-medium rounded-lg shadow hover:shadow-md transition-all"
       >
         Save Changes
       </Button>

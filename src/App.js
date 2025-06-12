@@ -17,6 +17,9 @@ import FetchListedItems from "./pages/FetchListedItems";
 import AddCategory from "./pages/AddCategory";
 import UpdateSubCategory from "./pages/UpdateSubCategory";
 import OrdersBill from "./pages/OrdersBill";
+import UpdateCategories from "./pages/UpdateCategory";
+import PushNotificationPage from "./pages/pushNotifications";
+import OrderList from "./pages/OrderList";
 
 function App() {
   const [nav, setNav] = useState(false);
@@ -70,6 +73,10 @@ function App() {
           element={nav === true ? <Report /> : <Navigate to="/" />}
         />
         <Route
+          path="/orderlist"
+          element={nav === true ? <OrderList /> : <Navigate to="/" />}
+        />
+        <Route
           path="/itemAdd"
           element={nav === true ? <ListingNewItems /> : <Navigate to="/" />}
         />
@@ -84,6 +91,16 @@ function App() {
         <Route
           path="/downloadbill"
           element={nav === true ? <OrdersBill /> : <Navigate to="/" />}
+        />
+        <Route
+          path="/categories_management"
+          element={nav === true ? <UpdateCategories /> : <Navigate to="/" />}
+        />
+        <Route
+          path="/pushNotification"
+          element={
+            nav === true ? <PushNotificationPage /> : <Navigate to="/" />
+          }
         />
       </Routes>
     </div>

@@ -1,160 +1,117 @@
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
+/* Home.css */
+.ninja-header {
+  background: linear-gradient(135deg, #4b6cb7 0%, #182848 100%);
+  color: white;
+  padding: 2rem 1rem;
+  border-radius: 0 0 20px 20px;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  position: relative;
+  overflow: hidden;
 }
 
-.heading {
-  font-weight: bold;
-  font-size: 36px;
-  margin-bottom: 20px;
+.ninja-header::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 5px;
+  background: linear-gradient(90deg, #ff8a00, #e52e71, #4b6cb7);
 }
 
-.homeCards {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
+.ninja-title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  margin-bottom: 0.5rem;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
 }
 
-.homeCard {
-  margin: 20px;
-  width: calc(25% - 40px);
-  background-color: #fff;
-  border-radius: 10px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-  transition: box-shadow 0.3s ease-in-out;
+.ninja-subtitle {
+  font-size: 1.2rem;
+  opacity: 0.9;
+  margin-bottom: 1rem;
 }
 
-.homeCard:hover {
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+.ninja-tagline {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0.5rem 1rem;
+  border-radius: 50px;
+  font-size: 0.9rem;
+  margin-top: 1rem;
+  backdrop-filter: blur(5px);
 }
 
-.homeCard-img-top {
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  padding: 1rem;
+}
+
+.admin-card {
+  background: white;
+  border-radius: 15px;
+  overflow: hidden;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.admin-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
+}
+
+.card-image {
   width: 100%;
-  height: 150px;
+  height: 180px;
   object-fit: cover;
-  border-top-left-radius: 10px;
-  border-top-right-radius: 10px;
+  border-bottom: 1px solid #eee;
 }
 
-.homeCard-body {
-  padding: 20px;
+.card-content {
+  padding: 1.5rem;
 }
 
-.homeCard-title {
-  font-weight: bold;
-  font-size: 18px;
-  margin-bottom: 10px;
+.card-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  color: #2d3748;
 }
 
-.homeCard-text {
-  font-size: 14px;
-  color: #666;
+.card-text {
+  color: #4a5568;
+  margin-bottom: 1.5rem;
+  line-height: 1.5;
 }
 
-.btn-success {
-  padding: 10px 20px;
-  font-size: 16px;
-  border-radius: 5px;
-  background-color: #3e8e41;
+.card-button {
+  display: inline-block;
+  background: linear-gradient(135deg, #4b6cb7 0%, #182848 100%);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 50px;
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.3s ease;
   border: none;
-  color: #fff;
   cursor: pointer;
-}
-
-.btn-success:hover {
-  background-color: #2f6d31;
-}
-
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
-}
-
-.heading {
-  font-weight: bold;
-  font-size: 36px;
-  margin-bottom: 10px;
-}
-
-.homeCards {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
-.homeCard {
-  margin: 20px;
-  width: calc(25% - 40px);
-  background-color: #fff;
-  border-radius: 10px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-  transition: box-shadow 0.3s ease-in-out;
-}
-
-.homeCard:hover {
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
-}
-
-.homeCard-img-top {
   width: 100%;
-  height: 150px;
-  object-fit: cover;
-  border-top-left-radius: 10px;
-  border-top-right-radius: 10px;
+  text-align: center;
 }
 
-.homeCard-body {
-  padding: 20px;
+.card-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(75, 108, 183, 0.4);
 }
 
-.homeCard-title {
-  font-weight: bold;
-  font-size: 18px;
-  margin-bottom: 10px;
-}
-
-.homeCard-text {
-  font-size: 14px;
-  color: #666;
-}
-
-.btn-success {
-  padding: 10px 20px;
-  font-size: 16px;
-  border-radius: 5px;
-  background-color: #3e8e41;
-  border: none;
-  color: #fff;
-  cursor: pointer;
-}
-
-.btn-success:hover {
-  background-color: #2f6d31;
-}
-
-/* Make 4 homeCards per row */
-@media (min-width: 992px) {
-  .homeCard {
-    width: calc(25% - 40px);
-  }
-}
-
-@media (max-width: 991px) and (min-width: 768px) {
-  .homeCard {
-    width: calc(33.33% - 40px);
-  }
-}
-
-@media (max-width: 767px) {
-  .homeCard {
-    width: calc(50% - 40px);
-  }
-}
-
-@media (max-width: 575px) {
-  .homeCard {
-    width: 100%;
-  }
+.map-container {
+  margin-top: 3rem;
+  border-radius: 15px;
+  overflow: hidden;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  border: 1px solid #eee;
 }
