@@ -32,6 +32,18 @@ const Home = () => {
       image: require("../image/event.jpg"),
     },
     {
+      title: "Question Management",
+      text: "Manage quiz questions and answers",
+      link: "/questions",
+      image: "https://cdn-icons-png.flaticon.com/512/711/711191.png",
+    },
+    {
+      title: "LeaderBoard",
+      text: "LeaderBoard",
+      link: "/leaderboard",
+      image: "https://cdn-icons-png.flaticon.com/512/3150/3150115.png",
+    },
+    {
       title: "Register Riders",
       text: "Register a new Rider",
       link: "/riderregistration",
@@ -72,6 +84,13 @@ const Home = () => {
       link: "/pushNotification",
       image:
         "https://www.pushengage.com/wp-content/uploads/2023/03/Waterfall-Push-Campaigns.png",
+    },
+    {
+      title: "Add Hotspot Areas",
+      text: "Add hotspot to apply extra charge",
+      link: "/hotspot",
+      image:
+        "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR-UA1171fBWRqYWcXTe3Dutocy4I_CaIQzog&s",
     },
   ];
 

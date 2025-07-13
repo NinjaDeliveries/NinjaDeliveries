@@ -34,12 +34,14 @@ if (rootElement2) {
   const root2 = ReactDOM.createRoot(rootElement2);
   root2.render(
     <React.StrictMode>
-      <BrowserRouter>
-        <FirebaseProvider>
-          <ToastContainer />
-          <App2 />
-        </FirebaseProvider>
-      </BrowserRouter>
+      <UserProvider>
+        <BrowserRouter>
+          <FirebaseProvider>
+            <ToastContainer />
+            <App2 />
+          </FirebaseProvider>
+        </BrowserRouter>
+      </UserProvider>
     </React.StrictMode>
   );
 }

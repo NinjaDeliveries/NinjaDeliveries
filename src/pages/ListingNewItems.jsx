@@ -15,6 +15,8 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "../context/Firebase";
 import { serverTimestamp } from "firebase/firestore";
 import { useUser } from "../context/adminContext";
+import { TextField, Autocomplete, Chip } from "@mui/material";
+
 export default function ListingNewItems() {
   const { user } = useUser();
   const navigate = useNavigate();
@@ -35,41 +37,64 @@ export default function ListingNewItems() {
   const [isNew, setIsNew] = useState(false);
   const [SubType, setSubType] = useState("Choose...");
   const [isStoreAvailable, setIsStoreAvailable] = useState(false);
-  const [data, setData] = useState({ categories: [], products: [] });
+  const [keywords, setKeywords] = useState([]);
+  const [matchingProducts, setMatchingProducts] = useState([]);
+
+  const [data, setData] = useState({
+    categories: [],
+    subcategories: [],
+    allProducts: [],
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const q = query(
+        // Fetch categories
+        const categoriesQuery = query(
           collection(db, "categories"),
           where("storeId", "==", user.storeId)
         );
-
-        const categoriesQuerySnapshot = await getDocs(q);
-        const categoriesArray = categoriesQuerySnapshot.docs.map((doc) => ({
-          id: doc.id, // Store Firestore document ID
+        const categoriesSnapshot = await getDocs(categoriesQuery);
+        const categoriesArray = categoriesSnapshot.docs.map((doc) => ({
+          id: doc.id,
           ...doc.data(),
         }));
-        const p = query(
+
+        // Fetch subcategories
+        const subcategoriesQuery = query(
           collection(db, "subcategories"),
           where("storeId", "==", user.storeId)
         );
-
-        const productsQuerySnapshot = await getDocs(p);
-
-        const productsArray = productsQuerySnapshot.docs.map((doc) => ({
-          id: doc.id, // Store Firestore document ID
+        const subcategoriesSnapshot = await getDocs(subcategoriesQuery);
+        const subcategoriesArray = subcategoriesSnapshot.docs.map((doc) => ({
+          id: doc.id,
           ...doc.data(),
         }));
-        setData({ categories: categoriesArray, products: productsArray });
+
+        // Fetch all products for matching products selector
+        const productsQuery = query(
+          collection(db, "products"),
+          where("storeId", "==", user.storeId)
+        );
+        const productsSnapshot = await getDocs(productsQuery);
+        const productsArray = productsSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+
+        setData({
+          categories: categoriesArray,
+          subcategories: subcategoriesArray,
+          allProducts: productsArray,
+        });
         setLoading(false);
       } catch (error) {
         console.error("Error fetching data:", error);
       }
     };
     fetchData();
-  }, []);
+  }, [user.storeId]);
 
   if (loading) {
     return (
@@ -81,14 +106,16 @@ export default function ListingNewItems() {
       </div>
     );
   }
+
   const handleSelect = (e) => {
     setType(e.target.value);
   };
+
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
       setImage(file);
-      setImagePreview(URL.createObjectURL(file)); // Create a preview URL
+      setImagePreview(URL.createObjectURL(file));
     }
   };
 
@@ -120,8 +147,11 @@ export default function ListingNewItems() {
         storeId: user.storeId,
         createdAt: serverTimestamp(),
         isNew: true,
-        weeklySold: 0,
+        weeklySold: parseFloat(weeklySold) || 0,
+        keywords: keywords,
+        matchingProducts: matchingProducts,
       });
+
       toast("Product listed Successful!", {
         type: "success",
         position: "top-center",
@@ -131,7 +161,6 @@ export default function ListingNewItems() {
       console.error("Error sending data : ", error);
     }
   };
-
   return (
     <div style={{ padding: "50px 40px" }} className="container-fluid ">
       <div className="card shadow-sm border-1">
@@ -172,7 +201,7 @@ export default function ListingNewItems() {
                 <option disabled value="Choose...">
                   Select Sub Category...
                 </option>
-                {data.products
+                {data.subcategories
                   .filter((subcat) => subcat.categoryId === Type)
                   .map((subcat) => (
                     <option key={subcat.id} value={subcat.id}>
@@ -192,7 +221,6 @@ export default function ListingNewItems() {
                 placeholder="Enter product name"
               />
             </div>
-
             {/* Second Row */}
             <div className="col-md-3">
               <label className="form-label fw-bold">Price (₹)*</label>
@@ -310,7 +338,7 @@ export default function ListingNewItems() {
             </div>
 
             {/* Image Upload */}
-            <div className="col-12">
+            <div className="col-6">
               <label className="form-label fw-bold">Product Image</label>
               <input
                 className="form-control"
@@ -330,9 +358,46 @@ export default function ListingNewItems() {
                 </div>
               )}
             </div>
+            {/* Matching Products Selector */}
+            <div className="col-6">
+              <label className="form-label fw-bold">
+                Related Products (Max 3)
+              </label>
+              <Autocomplete
+                multiple
+                options={data.allProducts}
+                getOptionLabel={(option) => option.name}
+                value={data.allProducts.filter((p) =>
+                  matchingProducts.includes(p.id)
+                )}
+                onChange={(event, newValue) => {
+                  if (newValue.length <= 3) {
+                    setMatchingProducts(newValue.map((item) => item.id));
+                  } else {
+                    toast.warn("Only 3 products allowed in matching list.");
+                  }
+                }}
+                renderTags={(value, getTagProps) =>
+                  value.map((option, index) => (
+                    <Chip
+                      key={option.id}
+                      label={option.name}
+                      {...getTagProps({ index })}
+                    />
+                  ))
+                }
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    variant="outlined"
+                    placeholder="Search Products..."
+                  />
+                )}
+              />
+            </div>
 
             {/* Description */}
-            <div className="col-12">
+            <div className="col-6">
               <label className="form-label fw-bold">Description</label>
               <textarea
                 className="form-control"
@@ -341,6 +406,32 @@ export default function ListingNewItems() {
                 placeholder="Enter product description..."
                 rows="4"
               ></textarea>
+            </div>
+            <div className="col-6">
+              <label className="form-label fw-bold">Search Keywords</label>
+              <Autocomplete
+                multiple
+                freeSolo
+                options={[]} // No predefined options
+                value={keywords}
+                onChange={(event, newValue) => setKeywords(newValue)}
+                renderTags={(value, getTagProps) =>
+                  value.map((option, index) => (
+                    <Chip
+                      variant="outlined"
+                      label={option}
+                      {...getTagProps({ index })}
+                    />
+                  ))
+                }
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    variant="outlined"
+                    placeholder="Add keywords"
+                  />
+                )}
+              />
             </div>
 
             {/* Toggle Switches */}

@@ -2,10 +2,8 @@ import React, { useEffect, useState } from "react";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "../context/Firebase";
 import { db } from "../context/Firebase";
-import TextField from "@mui/material/TextField";
-import Autocomplete from "@mui/material/Autocomplete";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-
+import { toast } from "react-toastify";
 import {
   collection,
   onSnapshot,
@@ -19,6 +17,8 @@ import {
 import "../context/style.css";
 import "../style/ProductManage.css";
 import { useNavigate } from "react-router-dom";
+import { TextField, Autocomplete, Chip } from "@mui/material";
+
 import { useUser } from "../context/adminContext";
 const auth = getAuth();
 
@@ -41,47 +41,85 @@ function ProductUpdate({ item, setEditbox }) {
   const [isStoreAvailable, setIsStoreAvailable] = useState(
     item.isStoreAvailable
   );
-  const [data, setData] = useState({ categories: [], products: [] });
-  const [loading, setLoading] = useState(true);
   const [categoryId, setCategoryId] = useState(item.categoryId);
-  // New state variables for additional fields
+  const [keywords, setKeywords] = useState([]);
+  const [matchingProducts, setMatchingProducts] = useState([]);
+  const [isNew, setIsNew] = useState(item?.isNew || false);
+  const [weeklySold, setWeeklySold] = useState(item?.weeklySold || 0);
 
-  // Additional fields state
-  const [isNew, setIsNew] = useState(item.isNew || false);
-  const [weeklySold, setWeeklySold] = useState(item.weeklySold || 0);
+  const [data, setData] = useState({
+    categories: [],
+    subcategories: [],
+    allProducts: [],
+  });
+
+  const [loading, setLoading] = useState(true);
+
+  // Fetching categories, subcategories, and products
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const categoriesQuery = query(
-          collection(db, "categories"),
-          where("storeId", "==", user.storeId)
-        );
-        const categoriesSnapshot = await getDocs(categoriesQuery);
+        const [categoriesSnapshot, subcategoriesSnapshot, productsSnapshot] =
+          await Promise.all([
+            getDocs(
+              query(
+                collection(db, "categories"),
+                where("storeId", "==", user.storeId)
+              )
+            ),
+            getDocs(
+              query(
+                collection(db, "subcategories"),
+                where("storeId", "==", user.storeId)
+              )
+            ),
+            getDocs(
+              query(
+                collection(db, "products"),
+                where("storeId", "==", user.storeId)
+              )
+            ),
+          ]);
+
         const categoriesArray = categoriesSnapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
         }));
 
-        const productsQuery = query(
-          collection(db, "subcategories"),
-          where("storeId", "==", user.storeId)
-        );
-        const productsSnapshot = await getDocs(productsQuery);
+        const subcategoriesArray = subcategoriesSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+
         const productsArray = productsSnapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
         }));
 
-        setData({ categories: categoriesArray, products: productsArray });
-      } catch (error) {
-        console.error("Error fetching filtered data:", error);
-      } finally {
+        setData({
+          categories: categoriesArray,
+          subcategories: subcategoriesArray,
+          allProducts: productsArray,
+        });
+
         setLoading(false);
+      } catch (error) {
+        console.error("Error fetching data:", error);
       }
     };
 
-    fetchData();
-  }, [user]);
+    if (user?.storeId) {
+      fetchData();
+    }
+  }, [user?.storeId]);
+
+  // Initialize keywords and matchingProducts from item
+  useEffect(() => {
+    if (item) {
+      setKeywords(item.keywords || []);
+      setMatchingProducts(item.matchingProducts || []);
+    }
+  }, [item]);
 
   if (loading) {
     return (
@@ -107,10 +145,16 @@ function ProductUpdate({ item, setEditbox }) {
     setEdit(false);
 
     let updatedImageUrl = imageUrl; // Keep the current image URL
+    let imageCdn = false;
+
+    // Check if name has changed to trigger imageCdn
+    if (name !== item.name) {
+      imageCdn = true;
+    }
 
     if (image) {
       try {
-        const imageName = `images/${item.name}`; // File path
+        const imageName = `images/${name}`; // use the updated name here
         const imageRef = ref(storage, imageName);
 
         // Upload the file
@@ -136,7 +180,7 @@ function ProductUpdate({ item, setEditbox }) {
       discount: parseFloat(discount) || "",
       shelfLife: shelfLife,
       quantity: parseFloat(quantity),
-      image: updatedImageUrl, // Use the updated URL here
+      image: updatedImageUrl,
       CGST: CGST,
       isStoreAvailable: isStoreAvailable,
       isNew: isNew,
@@ -144,6 +188,9 @@ function ProductUpdate({ item, setEditbox }) {
       SGST: SGST,
       CESS: CESS,
       subcategoryId: SubType || "",
+      keywords: keywords,
+      matchingProducts: matchingProducts,
+      ...(imageCdn && { imageCdn: true }), // Only set if name has changed
     });
   };
 
@@ -212,7 +259,7 @@ function ProductUpdate({ item, setEditbox }) {
                     disabled={!categoryId}
                   >
                     <option value="">Select Sub Category...</option>
-                    {data.products
+                    {data.subcategories
                       .filter((subcat) => subcat.categoryId === categoryId)
                       .map((subcat) => (
                         <option key={subcat.id} value={subcat.id}>
@@ -251,6 +298,43 @@ function ProductUpdate({ item, setEditbox }) {
                       />
                     </div>
                   )}
+                </div>
+                {/* Matching Products Selector */}
+                <div className="col-12">
+                  <label className="form-label fw-bold">
+                    Matching Products (Max 3)
+                  </label>
+                  <Autocomplete
+                    multiple
+                    options={data.allProducts ?? []}
+                    getOptionLabel={(option) => option.name || ""}
+                    value={(data.allProducts ?? []).filter((p) =>
+                      matchingProducts?.includes(p.id)
+                    )}
+                    onChange={(event, newValue) => {
+                      if (newValue.length <= 3) {
+                        setMatchingProducts(newValue.map((item) => item.id));
+                      } else {
+                        toast.warn("Only 3 products allowed in matching list.");
+                      }
+                    }}
+                    renderTags={(value, getTagProps) =>
+                      value.map((option, index) => (
+                        <Chip
+                          key={option.id}
+                          label={option.name}
+                          {...getTagProps({ index })}
+                        />
+                      ))
+                    }
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        variant="outlined"
+                        placeholder="Search Products..."
+                      />
+                    )}
+                  />
                 </div>
               </div>
             </div>
@@ -389,24 +473,6 @@ function ProductUpdate({ item, setEditbox }) {
                     <input
                       className="form-check-input"
                       type="checkbox"
-                      id="isNewSwitch"
-                      checked={isNew}
-                      onChange={() => setIsNew(!isNew)}
-                    />
-                    <label
-                      className="form-check-label fw-bold"
-                      htmlFor="isNewSwitch"
-                    >
-                      Mark as New
-                    </label>
-                  </div>
-                </div>
-
-                <div className="col-md-4">
-                  <div className="form-check form-switch">
-                    <input
-                      className="form-check-input"
-                      type="checkbox"
                       id="storeAvailableSwitch"
                       checked={isStoreAvailable}
                       onChange={() => setIsStoreAvailable(!isStoreAvailable)}
@@ -419,7 +485,50 @@ function ProductUpdate({ item, setEditbox }) {
                     </label>
                   </div>
                 </div>
-
+                <div className="col-md-4">
+                  <div className="form-check form-switch">
+                    <input
+                      className="form-check-input"
+                      type="checkbox"
+                      id="isNewSwitch"
+                      checked={isNew}
+                      onChange={() => setIsNew(!isNew)}
+                    />
+                    <label
+                      className="form-check-label fw-bold"
+                      htmlFor="isNewSwitch"
+                    >
+                      Mark as New
+                    </label>
+                  </div>
+                </div>
+                {/* Keywords Input */}
+                <div className="col-12">
+                  <label className="form-label fw-bold">Search Keywords</label>
+                  <Autocomplete
+                    multiple
+                    freeSolo
+                    options={[]} // No predefined options
+                    value={keywords}
+                    onChange={(event, newValue) => setKeywords(newValue)}
+                    renderTags={(value, getTagProps) =>
+                      value.map((option, index) => (
+                        <Chip
+                          variant="outlined"
+                          label={option}
+                          {...getTagProps({ index })}
+                        />
+                      ))
+                    }
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        variant="outlined"
+                        placeholder="Add keywords"
+                      />
+                    )}
+                  />
+                </div>
                 <div className="col-12 d-flex justify-content-end gap-2 mt-4">
                   <button
                     type="button"
@@ -461,53 +570,90 @@ function ProductUpdateSearchBar({ value, setEditbox }) {
   const [CGST, setCGST] = useState(value.CGST);
   const [SGST, setSGST] = useState(value.SGST);
   const [SubType, setSubType] = useState(value.subcategoryId);
-  const [data, setData] = useState({ categories: [], products: [] });
-  const [loading, setLoading] = useState(true);
   const [CESS, setCESS] = useState(value.CESS || "");
   const [imagePreview, setImagePreview] = useState(value.image); // Image preview URL
   const [isStoreAvailable, setIsStoreAvailable] = useState(
     value.isStoreAvailable
   );
   const [categoryId, setCategoryId] = useState(value.categoryId);
-  // Additional fields state
-  const [isNew, setIsNew] = useState(value.isNew || false);
-  const [weeklySold, setWeeklySold] = useState(value.weeklySold || 0);
+  const [keywords, setKeywords] = useState([]);
+  const [matchingProducts, setMatchingProducts] = useState([]);
+  const [isNew, setIsNew] = useState(value?.isNew || false);
+  const [weeklySold, setWeeklySold] = useState(value?.weeklySold || 0);
+
+  const [data, setData] = useState({
+    categories: [],
+    subcategories: [],
+    allProducts: [],
+  });
+
+  const [loading, setLoading] = useState(true);
+
+  // Fetching categories, subcategories, and products
   useEffect(() => {
     const fetchData = async () => {
-      // 🔒 Guard: only run if storeId exists
-      if (!user?.storeId) return;
-
       try {
-        const categoriesQuery = query(
-          collection(db, "categories"),
-          where("storeId", "==", user.storeId)
-        );
-        const categoriesSnapshot = await getDocs(categoriesQuery);
+        const [categoriesSnapshot, subcategoriesSnapshot, productsSnapshot] =
+          await Promise.all([
+            getDocs(
+              query(
+                collection(db, "categories"),
+                where("storeId", "==", user.storeId)
+              )
+            ),
+            getDocs(
+              query(
+                collection(db, "subcategories"),
+                where("storeId", "==", user.storeId)
+              )
+            ),
+            getDocs(
+              query(
+                collection(db, "products"),
+                where("storeId", "==", user.storeId)
+              )
+            ),
+          ]);
+
         const categoriesArray = categoriesSnapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
         }));
 
-        const productsQuery = query(
-          collection(db, "subcategories"),
-          where("storeId", "==", user.storeId)
-        );
-        const productsSnapshot = await getDocs(productsQuery);
+        const subcategoriesArray = subcategoriesSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+
         const productsArray = productsSnapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
         }));
 
-        setData({ categories: categoriesArray, products: productsArray });
-      } catch (error) {
-        console.error("Error fetching filtered data:", error);
-      } finally {
+        setData({
+          categories: categoriesArray,
+          subcategories: subcategoriesArray,
+          allProducts: productsArray,
+        });
+
         setLoading(false);
+      } catch (error) {
+        console.error("Error fetching data:", error);
       }
     };
 
-    fetchData();
+    if (user?.storeId) {
+      fetchData();
+    }
   }, [user?.storeId]);
+
+  // Initialize keywords and matchingProducts from item
+  useEffect(() => {
+    if (value) {
+      setKeywords(value.keywords || []);
+      setMatchingProducts(value.matchingProducts || []);
+    }
+  }, [value]);
 
   if (loading) {
     return (
@@ -541,20 +687,21 @@ function ProductUpdateSearchBar({ value, setEditbox }) {
     setEditbox(false);
     setEdit(false);
 
-    let updatedImageUrl = imageUrl; // Keep the current image URL
+    let updatedImageUrl = imageUrl;
+    let imageCdn = false;
+
+    // Check if name has changed
+    if (name !== value.name) {
+      imageCdn = true;
+    }
 
     if (image) {
       try {
-        const imageName = `images/${value.name}`; // File path
+        const imageName = `images/${name}`; // use the new name
         const imageRef = ref(storage, imageName);
 
-        // Upload the file
         await uploadBytes(imageRef, image);
-
-        // Get the download URL
         updatedImageUrl = await getDownloadURL(imageRef);
-
-        // Update state
         setImageUrl(updatedImageUrl);
       } catch (error) {
         console.error("Error uploading image:", error);
@@ -571,7 +718,7 @@ function ProductUpdateSearchBar({ value, setEditbox }) {
       discount: parseFloat(discount) || "",
       shelfLife: shelfLife,
       quantity: parseFloat(quantity),
-      image: updatedImageUrl, // Use the updated URL here
+      image: updatedImageUrl,
       CGST: CGST,
       isNew: isNew,
       weeklySold: weeklySold,
@@ -579,6 +726,9 @@ function ProductUpdateSearchBar({ value, setEditbox }) {
       SGST: SGST,
       CESS: CESS,
       subcategoryId: SubType || "",
+      keywords: keywords,
+      matchingProducts: matchingProducts,
+      ...(imageCdn && { imageCdn: true }), // Only include if name changed
     });
   };
 
@@ -647,7 +797,7 @@ function ProductUpdateSearchBar({ value, setEditbox }) {
                     disabled={!categoryId}
                   >
                     <option value="">Select Sub Category...</option>
-                    {data.products
+                    {data.subcategories
                       .filter((subcat) => subcat.categoryId === categoryId)
                       .map((subcat) => (
                         <option key={subcat.id} value={subcat.id}>
@@ -686,6 +836,43 @@ function ProductUpdateSearchBar({ value, setEditbox }) {
                       />
                     </div>
                   )}
+                </div>
+                {/* Matching Products Selector */}
+                <div className="col-12">
+                  <label className="form-label fw-bold">
+                    Related Products (Max 3)
+                  </label>
+                  <Autocomplete
+                    multiple
+                    options={data.allProducts ?? []}
+                    getOptionLabel={(option) => option.name || ""}
+                    value={(data.allProducts ?? []).filter((p) =>
+                      matchingProducts?.includes(p.id)
+                    )}
+                    onChange={(event, newValue) => {
+                      if (newValue.length <= 3) {
+                        setMatchingProducts(newValue.map((item) => item.id));
+                      } else {
+                        toast.warn("Only 3 products allowed in matching list.");
+                      }
+                    }}
+                    renderTags={(value, getTagProps) =>
+                      value.map((option, index) => (
+                        <Chip
+                          key={option.id}
+                          label={option.name}
+                          {...getTagProps({ index })}
+                        />
+                      ))
+                    }
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        variant="outlined"
+                        placeholder="Search Products..."
+                      />
+                    )}
+                  />
                 </div>
               </div>
             </div>
@@ -854,7 +1041,33 @@ function ProductUpdateSearchBar({ value, setEditbox }) {
                     </label>
                   </div>
                 </div>
-
+                {/* Keywords Input */}
+                <div className="col-12 mx-2">
+                  <label className="form-label fw-bold">Search Keywords</label>
+                  <Autocomplete
+                    multiple
+                    freeSolo
+                    options={[]} // No predefined options
+                    value={keywords}
+                    onChange={(event, newValue) => setKeywords(newValue)}
+                    renderTags={(value, getTagProps) =>
+                      value.map((option, index) => (
+                        <Chip
+                          variant="outlined"
+                          label={option}
+                          {...getTagProps({ index })}
+                        />
+                      ))
+                    }
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        variant="outlined"
+                        placeholder="Add keywords"
+                      />
+                    )}
+                  />
+                </div>
                 <div className="col-12 d-flex justify-content-end gap-2 mt-4">
                   <button
                     type="button"

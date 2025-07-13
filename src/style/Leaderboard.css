@@ -1,0 +1,127 @@
+.leaderboard-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: Arial, sans-serif;
+}
+
+.date-navigation {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 10px;
+  background-color: #f0f0f0;
+  border-radius: 8px;
+}
+
+.date-navigation button {
+  padding: 8px 15px;
+  border: none;
+  background-color: #4caf50;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.date-navigation button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.date-selector {
+  display: flex;
+  gap: 5px;
+}
+
+.date-selector button {
+  padding: 5px 10px;
+  border: 1px solid #ddd;
+  background-color: white;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.date-selector button.active {
+  background-color: #4caf50;
+  color: white;
+  border-color: #4caf50;
+}
+
+.leaderboard {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.leaderboard-entry {
+  display: flex;
+  align-items: center;
+  padding: 15px;
+  border-radius: 8px;
+  background-color: #f5f5f5;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.position-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 20px;
+  font-weight: bold;
+  font-size: 18px;
+  color: white;
+}
+
+.position-1 .position-badge {
+  background-color: gold;
+}
+
+.position-2 .position-badge {
+  background-color: silver;
+}
+
+.position-3 .position-badge {
+  background-color: #cd7f32; /* bronze */
+}
+
+.user-info {
+  flex-grow: 1;
+}
+
+.user-info h3 {
+  margin: 0 0 5px 0;
+}
+
+.user-info p {
+  margin: 3px 0;
+  font-size: 14px;
+}
+
+.reward-info {
+  margin-left: 20px;
+  text-align: center;
+}
+
+.reward-info h4 {
+  margin: 0 0 5px 0;
+}
+
+.reward-image {
+  width: 50px;
+  height: 50px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.no-winners {
+  text-align: center;
+  padding: 20px;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  color: #666;
+}

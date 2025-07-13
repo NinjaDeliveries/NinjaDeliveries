@@ -20,7 +20,9 @@ import OrdersBill from "./pages/OrdersBill";
 import UpdateCategories from "./pages/UpdateCategory";
 import PushNotificationPage from "./pages/pushNotifications";
 import OrderList from "./pages/OrderList";
-
+import QuestionManager from "./pages/Questions";
+import Leaderboard from "./pages/LeaderBoard";
+import HotspotForm from "./pages/Hotspot";
 function App() {
   const [nav, setNav] = useState(false);
 
@@ -101,6 +103,18 @@ function App() {
           element={
             nav === true ? <PushNotificationPage /> : <Navigate to="/" />
           }
+        />
+        <Route
+          path="/questions"
+          element={nav === true ? <QuestionManager /> : <Navigate to="/" />}
+        />
+        <Route
+          path="/leaderboard"
+          element={nav === true ? <Leaderboard /> : <Navigate to="/" />}
+        />
+        <Route
+          path="/hotspot"
+          element={nav === true ? <HotspotForm /> : <Navigate to="/" />}
         />
       </Routes>
     </div>
