@@ -474,6 +474,28 @@ const OrderList = () => {
                 >
                   Download Bill
                 </Button>
+
+                {/* View on Map Button */}
+                {order.dropoffCoords?.latitude &&
+                  order.dropoffCoords?.longitude && (
+                    <Button
+                      variant="outlined"
+                      color="success"
+                      onClick={() =>
+                        window.open(
+                          `https://www.google.com/maps?q=${order.dropoffCoords.latitude},${order.dropoffCoords.longitude}`,
+                          "_blank"
+                        )
+                      }
+                      sx={{
+                        textTransform: "none",
+                        fontWeight: 600,
+                        marginLeft: 5,
+                      }}
+                    >
+                      View on Map
+                    </Button>
+                  )}
               </div>
             </div>
           ))}
