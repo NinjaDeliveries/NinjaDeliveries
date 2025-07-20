@@ -27,6 +27,7 @@ import {
 import { jsPDF } from "jspdf";
 import "jspdf-autotable";
 import "../style/login.css";
+import { useUser } from "../context/adminContext"; // or correct path
 
 const acceptedById = "q0P98JhkfRdr1d8vbqt5";
 
@@ -187,6 +188,8 @@ const statusEmojis = {
 };
 
 const OrderList = () => {
+  const { user } = useUser(); // to get user.storeId
+
   const [orders, setOrders] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -217,44 +220,53 @@ const OrderList = () => {
     }
   };
 
-  const fetchOrders = useCallback(async (date) => {
-    try {
-      setLoading(true);
-      setError(null);
-      const start = startOfDay(date);
-      const end = addDays(start, 1);
-      const q = query(
-        collection(db, "orders"),
-        where("createdAt", ">=", start),
-        where("createdAt", "<", end),
-        orderBy("createdAt", "desc")
-      );
-      const snapshot = await getDocs(q);
-      const list = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-        dateTime: doc.data().createdAt?.toDate?.(),
-      }));
-      setOrders((prev) => ({
-        ...prev,
-        [date.getTime()]: list,
-      }));
-    } catch (err) {
-      console.error("Error fetching orders:", err);
-      setError("Failed to load orders. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const fetchOrders = useCallback(
+    async (date) => {
+      if (!user?.storeId) return;
+
+      try {
+        setLoading(true);
+        setError(null);
+        const start = startOfDay(date);
+        const end = addDays(start, 1);
+
+        const q = query(
+          collection(db, "orders"),
+          where("createdAt", ">=", start),
+          where("createdAt", "<", end),
+          orderBy("createdAt", "desc")
+        );
+
+        const snapshot = await getDocs(q);
+        const list = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+          dateTime: doc.data().createdAt?.toDate?.(),
+        }));
+
+        setOrders((prev) => ({
+          ...prev,
+          [date.getTime()]: list,
+        }));
+      } catch (err) {
+        console.error("Error fetching orders:", err);
+        setError("Failed to load orders. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [user?.storeId] // 👈 ensure user.storeId is a dependency
+  );
 
   useEffect(() => {
     if (
       daysRange.length > 0 &&
-      !orders[daysRange[currentPage - 1]?.getTime()]
+      !orders[daysRange[currentPage - 1]?.getTime()] &&
+      user?.storeId
     ) {
       fetchOrders(daysRange[currentPage - 1]);
     }
-  }, [currentPage, daysRange, fetchOrders, orders]);
+  }, [currentPage, daysRange, fetchOrders, orders, user?.storeId]);
 
   const updateStatus = async (orderId, newStatus, extraFields = {}) => {
     try {

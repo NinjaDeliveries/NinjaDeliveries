@@ -417,7 +417,11 @@ const OrderChart = () => {
     }
     return labels;
   };
+  const { user } = useUser(); // Get user object containing storeId
+
   const fetchOrders = async () => {
+    if (!user?.storeId) return;
+
     const ordersRef = collection(db, "orders");
 
     const now = new Date();
@@ -437,6 +441,7 @@ const OrderChart = () => {
 
     const q = query(
       ordersRef,
+      where("storeId", "==", user.storeId),
       where("createdAt", ">=", Timestamp.fromDate(start)),
       where("createdAt", "<=", Timestamp.fromDate(end))
     );
@@ -464,7 +469,7 @@ const OrderChart = () => {
 
   useEffect(() => {
     fetchOrders();
-  }, [filter]);
+  }, [filter, user?.storeId]); // add dependency on user.storeId
 
   return (
     <div className="p-4 max-w-4xl mx-auto">

@@ -19,8 +19,11 @@ import {
 } from "react-icons/fa";
 import "../style/ProductManage.css";
 import Dashboard from "./Dashboard";
+import { useUser } from "../context/adminContext";
 
 const AdminDashboard = () => {
+  const { user } = useUser();
+
   const [totalProducts, setTotalProducts] = useState(0);
   const [successfulCount, setSuccessfulCount] = useState(0);
   const [totalRiders, setTotalRiders] = useState(0);
@@ -29,7 +32,11 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchTotalRiders = async () => {
       try {
-        const querySnapshot = await getDocs(collection(db, "riderDetails"));
+        const q = query(
+          collection(db, "riderDetails"),
+          where("storeId", "==", user.storeId)
+        );
+        const querySnapshot = await getDocs(q);
         setTotalRiders(querySnapshot.size);
       } catch (error) {
         console.error("Error fetching riders:", error);
@@ -39,11 +46,13 @@ const AdminDashboard = () => {
       try {
         const successfulQuery = query(
           collection(db, "orders"),
-          where("status", "==", "tripEnded")
+          where("status", "==", "tripEnded"),
+          where("storeId", "==", user.storeId)
         );
         const cancelledQuery = query(
           collection(db, "orders"),
-          where("status", "==", "cancelled")
+          where("status", "==", "cancelled"),
+          where("storeId", "==", user.storeId)
         );
 
         const [successfulSnap, cancelledSnap] = await Promise.all([
@@ -75,7 +84,8 @@ const AdminDashboard = () => {
       try {
         const q = query(
           collection(db, "orders"),
-          where("status", "==", "tripEnded")
+          where("status", "==", "tripEnded"),
+          where("storeId", "==", user.storeId)
         );
         const querySnapshot = await getDocs(q);
         setSuccessfulCount(querySnapshot.size);
@@ -90,7 +100,11 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchTotalProducts = async () => {
       try {
-        const querySnapshot = await getDocs(collection(db, "products"));
+        const q = query(
+          collection(db, "products"),
+          where("storeId", "==", user.storeId)
+        );
+        const querySnapshot = await getDocs(q);
         setTotalProducts(querySnapshot.size);
       } catch (error) {
         console.error("Error fetching products:", error);

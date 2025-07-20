@@ -157,13 +157,11 @@ const OrdersBill = () => {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
-
-        // const q = query(
-        //   collection(db, "orders"),
-        //   where("storeId", "==", user.storeId),
-        //   orderBy("createdAt", "desc")
-        // );
+        const q = query(
+          collection(db, "orders"),
+          where("storeId", "==", user.storeId),
+          orderBy("createdAt", "desc")
+        );
 
         const querySnapshot = await getDocs(q);
         const ordersData = querySnapshot.docs.map((doc) => ({

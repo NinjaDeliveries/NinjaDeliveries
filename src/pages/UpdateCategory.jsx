@@ -164,6 +164,25 @@ const UpdateCategories = () => {
 
     setLoading(true);
     try {
+      // Step 1: Determine next priority (as a number!)
+      const q = query(
+        collection(db, "categories"),
+        where("storeId", "==", user.storeId)
+      );
+      const snapshot = await getDocs(q);
+
+      let maxPriority = 0;
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        const priority = Number(data.priority || 0); // ✅ Ensure it's numeric
+        if (priority > maxPriority) {
+          maxPriority = priority;
+        }
+      });
+
+      const nextPriority = maxPriority + 1;
+
+      // Step 2: Handle image upload
       let imageUrl = "";
       if (newCategory.imageFile) {
         const imageRef = ref(
@@ -174,10 +193,12 @@ const UpdateCategories = () => {
         imageUrl = await getDownloadURL(imageRef);
       }
 
+      // Step 3: Create the new category
       await setDoc(doc(db, "categories", newCategory.name), {
         name: newCategory.name,
         image: imageUrl,
         storeId: user.storeId,
+        priority: nextPriority, // ✅ Correct numeric priority
       });
 
       toast.success("Category created successfully!");

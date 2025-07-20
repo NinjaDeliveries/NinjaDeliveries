@@ -1245,12 +1245,13 @@ function SearchBar() {
     </div>
   );
 }
-
 const FetchListedItems = () => {
   const [data, setData] = useState([]);
   const [Loader, setLoader] = useState(true);
   const { user } = useUser();
   const navigate = useNavigate();
+  const [selectedFilter, setSelectedFilter] = useState("all"); // Track selected filter
+
   const handleAddProduct = () => {
     navigate("/itemAdd");
   };
@@ -1289,6 +1290,12 @@ const FetchListedItems = () => {
     };
   }, []);
 
+  // Filter items based on selection
+  const filteredItems =
+    selectedFilter === "outOfStock"
+      ? data.filter((item) => item.quantity === 0)
+      : data;
+
   return (
     <div className="riders-page-container">
       {/* Enhanced Header Section */}
@@ -1309,30 +1316,24 @@ const FetchListedItems = () => {
         <div className="search-wrapper">
           <SearchBar />
         </div>
-      </div>
-
-      {/* <div className="filters">
-        <div className="filter-group">
-          <label>Status:</label>
-          <select>
-            <option>All Statuses</option>
-            <option>Active</option>
-            <option>Inactive</option>
-            <option>On Leave</option>
-          </select>
-        </div>
-
-        <div className="filter-group">
-          <label>Sort By:</label>
-          <select>
-            <option>Recently Added</option>
-            <option>Name (A-Z)</option>
-            <option>Name (Z-A)</option>
-            <option>Most Active</option>
-          </select>
+        <div className="filter-dropdowns">
+          <div className="filter-group">
+            <label htmlFor="inventory-filter">Inventory Filter:</label>
+            <select
+              id="inventory-filter"
+              value={selectedFilter}
+              onChange={(e) => setSelectedFilter(e.target.value)}
+              className="filter-select"
+            >
+              <option value="all">All Items ({data.length})</option>
+              <option value="outOfStock">
+                Out of Stock (
+                {data.filter((item) => item.quantity === 0).length})
+              </option>
+            </select>
+          </div>
         </div>
       </div>
-    </div> */}
 
       {/* Riders List Table */}
       <div className="riders-table-container">
@@ -1345,10 +1346,13 @@ const FetchListedItems = () => {
 
         <div className="table-body">
           {Loader === false &&
-            data.map((item) => <DataBlock key={item.id} item={item} />)}
+            filteredItems.map((item) => (
+              <DataBlock key={item.id} item={item} />
+            ))}
         </div>
       </div>
     </div>
   );
 };
+
 export default FetchListedItems;
