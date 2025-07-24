@@ -72,9 +72,9 @@ const Home = () => {
         "https://m.economictimes.com/thumb/msid-74960608,width-1200,height-900,resizemode-4,imgsize-49172/upi-twitter.jpg",
     },
     {
-      title: "Download Bills",
-      text: "Download Orders bill",
-      link: "/downloadbill",
+      title: "Orders List",
+      text: "Download orders bill and change status",
+      link: "/orderlist",
       image:
         "https://img.freepik.com/free-vector/flat-payment-receipt_23-2147922105.jpg",
     },
