@@ -25,7 +25,7 @@ export default function navbar() {
           </Link>
         </li>
         <li className="admin-navbar-item">
-          <Link aria-current="page" to="/orderlist">
+          <Link aria-current="page" to="/scanorder">
             Scan Order
           </Link>
         </li>

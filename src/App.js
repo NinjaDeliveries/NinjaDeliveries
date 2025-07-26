@@ -23,6 +23,7 @@ import OrderList from "./pages/OrderList";
 import QuestionManager from "./pages/Questions";
 import Leaderboard from "./pages/LeaderBoard";
 import HotspotForm from "./pages/Hotspot";
+import OrderQRCodeQueue from "./pages/QrCodepage";
 function App() {
   const [nav, setNav] = useState(false);
 
@@ -115,6 +116,10 @@ function App() {
         <Route
           path="/hotspot"
           element={nav === true ? <HotspotForm /> : <Navigate to="/" />}
+        />
+        <Route
+          path="/scanorder"
+          element={nav === true ? <OrderQRCodeQueue /> : <Navigate to="/" />}
         />
       </Routes>
     </div>

@@ -4,6 +4,7 @@ import {
   query,
   orderBy,
   getDocs,
+  onSnapshot,
   where,
   doc,
   updateDoc,
@@ -257,10 +258,53 @@ const OrderList = () => {
     },
     [user?.storeId] // 👈 ensure user.storeId is a dependency
   );
+  useEffect(() => {
+    if (
+      daysRange.length > 0 &&
+      currentPage === 1 && // Only for Today
+      user?.storeId
+    ) {
+      const date = daysRange[0]; // Today
+      const start = startOfDay(date);
+      const end = addDays(start, 1);
+
+      const q = query(
+        collection(db, "orders"),
+        where("createdAt", ">=", start),
+        where("createdAt", "<", end),
+        orderBy("createdAt", "desc")
+      );
+
+      setLoading(true);
+      const unsubscribe = onSnapshot(
+        q,
+        (snapshot) => {
+          const list = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+            dateTime: doc.data().createdAt?.toDate?.(),
+          }));
+          setOrders((prev) => ({
+            ...prev,
+            [date.getTime()]: list,
+          }));
+          setLoading(false);
+        },
+        (error) => {
+          console.error("Error fetching live orders:", error);
+          setError("Failed to get real-time updates.");
+          setLoading(false);
+        }
+      );
+
+      return () => unsubscribe();
+    }
+  }, [currentPage, daysRange, user?.storeId]);
 
   useEffect(() => {
     if (
       daysRange.length > 0 &&
+      currentPage !== 1 && // Skip Today
       !orders[daysRange[currentPage - 1]?.getTime()] &&
       user?.storeId
     ) {
