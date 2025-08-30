@@ -92,6 +92,20 @@ const Home = () => {
       image:
         "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR-UA1171fBWRqYWcXTe3Dutocy4I_CaIQzog&s",
     },
+    {
+      title: "Banner Management",
+      text: "Display banner as you want",
+      link: "/banner_management",
+      image:
+        "https://firebasestorage.googleapis.com/v0/b/ninjadeliveries-91007.firebasestorage.app/o/banners%2Fvocal.png?alt=media&token=d5529679-ddf7-487b-8527-3e7d62887051",
+    },
+    {
+      title: "Coupons Campaign Management",
+      text: "Add coupons and campaigns",
+      link: "/coupon_management",
+      image:
+        "https://repository-images.githubusercontent.com/44112601/e7646680-3302-11eb-91df-9962cfb40da5",
+    },
   ];
 
   return (

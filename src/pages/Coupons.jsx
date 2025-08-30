@@ -93,9 +93,15 @@ const CouponCampaignManager = () => {
 
   // Fetch coupons from Firebase
   useEffect(() => {
-    const unsubscribe = onSnapshot(
+    if (!user?.storeId) return;
+
+    const q = query(
       collection(db, "coupons"),
-      where("storeId", "==", user.storeId),
+      where("storeId", "==", user.storeId)
+    );
+
+    const unsubscribe = onSnapshot(
+      q,
       (snapshot) => {
         const couponsData = snapshot.docs.map((doc) => ({
           id: doc.id,
@@ -111,13 +117,19 @@ const CouponCampaignManager = () => {
     );
 
     return () => unsubscribe();
-  }, []);
+  }, [user?.storeId]);
 
-  // Fetch campaigns from Firebase - fixed collection name
+  // Fetch campaigns from Firebase
   useEffect(() => {
-    const unsubscribe = onSnapshot(
+    if (!user?.storeId) return;
+
+    const q = query(
       collection(db, "campaign"),
-      where("storeId", "==", user.storeId),
+      where("storeId", "==", user.storeId)
+    );
+
+    const unsubscribe = onSnapshot(
+      q,
       (snapshot) => {
         const campaignsData = snapshot.docs.map((doc) => ({
           id: doc.id,
@@ -133,7 +145,7 @@ const CouponCampaignManager = () => {
     );
 
     return () => unsubscribe();
-  }, []);
+  }, [user?.storeId]);
 
   // Handle form inputs for coupon
   const handleCouponInputChange = (e) => {
@@ -189,6 +201,7 @@ const CouponCampaignManager = () => {
         validUntil: safeConvertToTimestamp(editingCoupon.validUntil),
         isActive:
           editingCoupon.isActive === true || editingCoupon.isActive === "true",
+        storeId: user.storeId,
       };
 
       if (editingCoupon.id) {
@@ -217,6 +230,7 @@ const CouponCampaignManager = () => {
         generatedCoupons: Number(editingCampaign.generatedCoupons),
         totalCoupons: Number(editingCampaign.totalCoupons),
         minOrderValue: Number(editingCampaign.minOrderValue),
+        storeId: user.storeId,
         createdAt: safeConvertToTimestamp(editingCampaign.createdAt),
         endDate: safeConvertToTimestamp(editingCampaign.endDate),
         isActive:
@@ -353,7 +367,6 @@ const CouponCampaignManager = () => {
       isActive: true,
       issuedTo: "",
       minOrderValue: 0,
-      storeId: "",
       totalCoupons: 0,
     });
     setShowCampaignForm(true);
@@ -675,16 +688,6 @@ const CouponCampaignManager = () => {
                           required
                         />
                       </div>
-                      <div className="ccm-form-group">
-                        <label>Store ID</label>
-                        <input
-                          type="text"
-                          name="storeId"
-                          value={editingCampaign.storeId}
-                          onChange={handleCampaignInputChange}
-                          required
-                        />
-                      </div>
                     </div>
 
                     <div className="ccm-form-row">
@@ -948,14 +951,6 @@ const CouponCampaignManager = () => {
                                   </span>
                                 </span>
                               </div>
-                            </div>
-                            <div className="ccm-action-buttons">
-                              <button
-                                className="ccm-btn-secondary"
-                                onClick={() => editCoupon(linkedCoupon)}
-                              >
-                                Edit Coupon
-                              </button>
                             </div>
                           </div>
                         )}

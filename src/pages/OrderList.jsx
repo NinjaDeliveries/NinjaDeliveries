@@ -200,7 +200,8 @@ const OrderList = () => {
 
   useEffect(() => {
     const days = [];
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < 30; i++) {
+      // 👈 30 days for 1 month
       days.push(startOfDay(subDays(new Date(), i)));
     }
     setDaysRange(days);
@@ -421,7 +422,7 @@ const OrderList = () => {
       )}
       <div className="flex justify-center mb-6">
         <Pagination
-          count={daysRange.length}
+          count={daysRange.length} // 👈 now 30
           page={currentPage}
           onChange={(_, page) => setCurrentPage(page)}
           color="primary"

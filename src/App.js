@@ -24,6 +24,8 @@ import QuestionManager from "./pages/Questions";
 import Leaderboard from "./pages/LeaderBoard";
 import HotspotForm from "./pages/Hotspot";
 import OrderQRCodeQueue from "./pages/QrCodepage";
+import BannerAdmin from "./pages/Banner";
+import CouponCampaignManager from "./pages/Coupons";
 function App() {
   const [nav, setNav] = useState(false);
 
@@ -120,6 +122,16 @@ function App() {
         <Route
           path="/scanorder"
           element={nav === true ? <OrderQRCodeQueue /> : <Navigate to="/" />}
+        />
+        <Route
+          path="/banner_management"
+          element={nav === true ? <BannerAdmin /> : <Navigate to="/" />}
+        />
+        <Route
+          path="/coupon_management"
+          element={
+            nav === true ? <CouponCampaignManager /> : <Navigate to="/" />
+          }
         />
       </Routes>
     </div>

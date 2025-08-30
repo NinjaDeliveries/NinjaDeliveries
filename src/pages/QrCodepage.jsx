@@ -77,7 +77,7 @@ export default function OrderQRCodeQueue() {
           >
             <h2>Scan to Accept Order</h2>
             <QRCodeSVG
-              value={JSON.stringify({ orderId: currentOrder.id })}
+              value={currentOrder.id}
               size={250}
               bgColor="#ffffff"
               fgColor="#00b4a0"
