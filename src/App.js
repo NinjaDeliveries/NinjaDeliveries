@@ -28,19 +28,40 @@ import BannerAdmin from "./pages/Banner";
 import CouponCampaignManager from "./pages/Coupons";
 function App() {
   const [nav, setNav] = useState(false);
+  const [Isadmin, setIsadmin] = useState(false);
 
   return (
     <div>
-      {nav && <Navbar />}
+      {nav && Isadmin && <Navbar />}
       <Routes>
         <Route
           path="/"
-          element={nav === true ? <Home /> : <Login setNav={setNav} />}
+          element={
+            nav === true ? (
+              Isadmin === true ? (
+                <Home />
+              ) : (
+                <OrderQRCodeQueue />
+              )
+            ) : (
+              <Login setNav={setNav} setIsadmin={setIsadmin} />
+            )
+          }
         />
 
         <Route
           path="/home"
-          element={nav === true ? <Home /> : <Login setNav={setNav} />}
+          element={
+            nav === true ? (
+              Isadmin === true ? (
+                <Home />
+              ) : (
+                <OrderQRCodeQueue />
+              )
+            ) : (
+              <Login setNav={setNav} setIsadmin={setIsadmin} />
+            )
+          }
         />
         <Route
           path="/bussinessregistration"
