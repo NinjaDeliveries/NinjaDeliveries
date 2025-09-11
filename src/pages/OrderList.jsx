@@ -20,15 +20,21 @@ import {
   Typography,
   Box,
 } from "@mui/material";
-import { AssignmentLate as AssignmentLateIcon } from "@mui/icons-material";
+import {
+  ArrowBackIos as ArrowBackIosIcon,
+  ArrowForwardIos as ArrowForwardIosIcon,
+  AssignmentLate as AssignmentLateIcon,
+} from "@mui/icons-material";
 import { jsPDF } from "jspdf";
-import autoTable from "jspdf-autotable"; // ✅ FIXED import
+
+import autoTable from "jspdf-autotable";
+
 import "../style/login.css";
 import { useUser } from "../context/adminContext"; // or correct path
 
 const acceptedById = "QT3M1gUaxqUdIPf6qN9a";
 
-// ========== FIXED generateBill FUNCTION ========== //
+// ========== ADDED: generateBill FUNCTION ========== //
 const generateBill = async (order, phoneNumber) => {
   const companyRef = doc(db, "company", "cgwqfmBd4GDEFv4lUsHX");
   const companySnap = await getDoc(companyRef);
@@ -110,7 +116,6 @@ const generateBill = async (order, phoneNumber) => {
     id: doc.id,
     ...doc.data(),
   }));
-
   autoTable(docPDF, {
     startY: 110,
     head: [["Item", "Qty", "Store", "Unit Price", "Discount", "Total"]],
@@ -156,7 +161,7 @@ const generateBill = async (order, phoneNumber) => {
   docPDF.save(`Bill_${order.orderedBy}.pdf`);
 };
 
-// ========== fetchPhoneNumber FUNCTION ========== //
+// ========== ADDED: fetchPhoneNumber FUNCTION ========== //
 const fetchPhoneNumber = async (orderedBy) => {
   const userRef = doc(db, "users", orderedBy);
   try {
@@ -185,7 +190,8 @@ const statusEmojis = {
 };
 
 const OrderList = () => {
-  const { user } = useUser();
+  const { user } = useUser(); // to get user.storeId
+
   const [orders, setOrders] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -196,11 +202,13 @@ const OrderList = () => {
   useEffect(() => {
     const days = [];
     for (let i = 0; i < 30; i++) {
+      // 👈 30 days for 1 month
       days.push(startOfDay(subDays(new Date(), i)));
     }
     setDaysRange(days);
   }, []);
 
+  // ========== ADDED: handleDownloadBill FUNCTION ========== //
   const handleDownloadBill = async (orderId) => {
     try {
       const orderRef = doc(db, "orders", orderId);
