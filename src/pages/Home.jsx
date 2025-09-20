@@ -4,6 +4,8 @@ import AOS from "aos";
 import "aos/dist/aos.css";
 import Map from "./Map";
 import "../style/home.css";
+import riderCharges from "../image/riderCharges.jpg";
+import freshGreens from "../image/freshGreens.webp";
 
 const Home = () => {
   useEffect(() => {
@@ -105,6 +107,18 @@ const Home = () => {
       link: "/coupon_management",
       image:
         "https://repository-images.githubusercontent.com/44112601/e7646680-3302-11eb-91df-9962cfb40da5",
+    },
+    {
+      title: "Rider Daily charges",
+      text: "daily surge + convenience fee",
+      link: "/RiderCharges",
+      image: riderCharges,
+    },
+    {
+      title: "Fresh Greens order board",
+      text: "See Fresh Green orders here.",
+      link: "/Fresh_Greens",
+      image: freshGreens,
     },
   ];
 

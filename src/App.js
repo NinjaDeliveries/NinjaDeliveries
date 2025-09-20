@@ -26,6 +26,8 @@ import HotspotForm from "./pages/Hotspot";
 import OrderQRCodeQueue from "./pages/QrCodepage";
 import BannerAdmin from "./pages/Banner";
 import CouponCampaignManager from "./pages/Coupons";
+import RiderCharges from "./pages/RiderCharges";
+import FreshGreens from "./pages/freshGreenCard";
 function App() {
   const [nav, setNav] = useState(false);
   const [Isadmin, setIsadmin] = useState(false);
@@ -153,6 +155,14 @@ function App() {
           element={
             nav === true ? <CouponCampaignManager /> : <Navigate to="/" />
           }
+        />
+        <Route
+          path="/RiderCharges"
+          element={nav === true ? <RiderCharges /> : <Navigate to="/" />}
+        />
+        <Route
+          path="/Fresh_Greens"
+          element={nav === true ? <FreshGreens /> : <Navigate to="/" />}
         />
       </Routes>
     </div>

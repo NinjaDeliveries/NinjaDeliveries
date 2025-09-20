@@ -45,12 +45,6 @@ export default function Login({ setNav, setIsadmin }) {
 
       const user = userCredential.user;
 
-      // Debug logging
-      console.log("User credential:", userCredential);
-      console.log("User object:", user);
-      console.log("User email from auth:", user?.email);
-      console.log("Trimmed form email:", trimmedEmail);
-
       // Use multiple fallbacks for getting the email
       let userEmail = null;
 
@@ -70,22 +64,15 @@ export default function Login({ setNav, setIsadmin }) {
         );
       }
 
-      console.log("Final email for query:", userEmail);
-
       // Check admin status in Firestore
       let isAdmin = false;
 
       try {
         // Ensure email is a valid string before querying
         if (typeof userEmail === "string" && userEmail.length > 0) {
-          console.log("Attempting admin check with email:", userEmail);
-
           // Try using Firestore query first (more efficient)
           try {
-            const q = query(
-              collection(db, "delivery_zones"),
-              where("adminEmail", "array-contains", userEmail)
-            );
+            const q = query(collection(db, "delivery_zones"));
             const querySnapshot = await getDocs(q);
 
             if (!querySnapshot.empty) {
@@ -103,7 +90,6 @@ export default function Login({ setNav, setIsadmin }) {
 
           console.log("Final admin status:", isAdmin);
         } else {
-          console.error("Invalid email for admin check:", userEmail);
           console.error(
             "Email type:",
             typeof userEmail,
