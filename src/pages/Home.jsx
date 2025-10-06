@@ -1,17 +1,12 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { Link } from "react-router-dom";
-import AOS from "aos";
-import "aos/dist/aos.css";
 import Map from "./Map";
 import "../style/home.css";
 import riderCharges from "../image/riderCharges.jpg";
 import freshGreens from "../image/freshGreens.webp";
+import radiusMap from "../image/raidusMap.jpg";
 
 const Home = () => {
-  useEffect(() => {
-    AOS.init({ duration: 1000 });
-  }, []);
-
   const adminFunctions = [
     {
       title: "Add Product",
@@ -120,11 +115,16 @@ const Home = () => {
       link: "/Fresh_Greens",
       image: freshGreens,
     },
+    {
+      title: "Location Radius Map",
+      text: "See Location Radius Map.",
+      link: "/RadiusMap",
+      image: radiusMap,
+    },
   ];
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Enhanced Header Section */}
       <div className="ninja-header text-center">
         <h1 className="ninja-title">Ninja Deliveries Admin</h1>
         <p className="ninja-subtitle">
@@ -135,16 +135,10 @@ const Home = () => {
         </span>
       </div>
 
-      {/* Admin Functions Cards */}
       <div className="container mx-auto px-4">
         <div className="card-grid">
           {adminFunctions.map((card, index) => (
-            <div
-              key={index}
-              className="admin-card"
-              data-aos="fade-up"
-              data-aos-delay={index * 100}
-            >
+            <div key={index} className="admin-card">
               <img src={card.image} alt={card.title} className="card-image" />
               <div className="card-content">
                 <h3 className="card-title">{card.title}</h3>
@@ -157,7 +151,6 @@ const Home = () => {
           ))}
         </div>
 
-        {/* Map Section */}
         <div className="map-container">
           <Map />
         </div>

@@ -236,6 +236,7 @@ const OrderList = () => {
         const q = query(
           collection(db, "orders"),
           where("createdAt", ">=", start),
+          where("storeId", "==", user.storeId),
           where("createdAt", "<", end),
           orderBy("createdAt", "desc")
         );
@@ -274,6 +275,7 @@ const OrderList = () => {
         collection(db, "orders"),
         where("createdAt", ">=", start),
         where("createdAt", "<", end),
+        where("storeId", "==", user.storeId),
         orderBy("createdAt", "desc")
       );
 

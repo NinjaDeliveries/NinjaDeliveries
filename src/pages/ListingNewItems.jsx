@@ -122,7 +122,7 @@ export default function ListingNewItems() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const imageName = `images/${name}`;
+    const imageName = `images/${image.name}`;
     const imageRef = ref(storage, imageName);
     await uploadBytes(imageRef, image);
     const url = await getDownloadURL(imageRef);

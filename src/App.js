@@ -28,6 +28,7 @@ import BannerAdmin from "./pages/Banner";
 import CouponCampaignManager from "./pages/Coupons";
 import RiderCharges from "./pages/RiderCharges";
 import FreshGreens from "./pages/freshGreenCard";
+import RadiusMap from "./pages/locationRadiusMap";
 function App() {
   const [nav, setNav] = useState(false);
   const [Isadmin, setIsadmin] = useState(false);
@@ -163,6 +164,10 @@ function App() {
         <Route
           path="/Fresh_Greens"
           element={nav === true ? <FreshGreens /> : <Navigate to="/" />}
+        />
+        <Route
+          path="/RadiusMap"
+          element={nav === true ? <RadiusMap /> : <Navigate to="/" />}
         />
       </Routes>
     </div>

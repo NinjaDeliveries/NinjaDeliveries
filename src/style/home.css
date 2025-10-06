@@ -1,4 +1,4 @@
-/* Home.css */
+/* home.css */
 .ninja-header {
   background: linear-gradient(135deg, #4b6cb7 0%, #182848 100%);
   color: white;
@@ -29,7 +29,6 @@
 
 .ninja-subtitle {
   font-size: 1.2rem;
-  opacity: 0.9;
   margin-bottom: 1rem;
 }
 
@@ -40,12 +39,11 @@
   border-radius: 50px;
   font-size: 0.9rem;
   margin-top: 1rem;
-  backdrop-filter: blur(5px);
 }
 
 .card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(4, 1fr); /* Fixed 4 columns */
   gap: 1.5rem;
   padding: 1rem;
 }
@@ -54,14 +52,14 @@
   background: white;
   border-radius: 15px;
   overflow: hidden;
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.1s ease-out, box-shadow 0.1s ease-out;
   border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .admin-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
 }
 
 .card-image {
@@ -96,7 +94,7 @@
   border-radius: 50px;
   text-decoration: none;
   font-weight: 600;
-  transition: all 0.3s ease;
+  transition: transform 0.1s ease-out, box-shadow 0.1s ease-out;
   border: none;
   cursor: pointer;
   width: 100%;
@@ -104,14 +102,14 @@
 }
 
 .card-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(75, 108, 183, 0.4);
+  transform: scale(1.03);
+  box-shadow: 0 4px 10px rgba(75, 108, 183, 0.3);
 }
 
 .map-container {
   margin-top: 3rem;
   border-radius: 15px;
-  overflow: hidden;
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   border: 1px solid #eee;
+  transition: transform 0.1s ease-out;
 }
