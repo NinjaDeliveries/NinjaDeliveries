@@ -1,9 +1,15 @@
 import React, { useState } from "react";
 import { auth } from "../context/Firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { toast } from "react-toastify";
-import { FaLock, FaEnvelope, FaSignInAlt } from "react-icons/fa";
-import "../style/login.css";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import {
+  FaLock,
+  FaEnvelope,
+  FaSignInAlt,
+  FaEye,
+  FaEyeSlash,
+} from "react-icons/fa";
 import {
   getFirestore,
   collection,
@@ -11,17 +17,18 @@ import {
   where,
   getDocs,
 } from "firebase/firestore";
+import "../style/login.css";
 
 export default function Login({ setNav, setIsadmin }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const db = getFirestore();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Trim whitespace from email
     const trimmedEmail = email.trim().toLowerCase();
     const trimmedPassword = password.trim();
 
@@ -36,7 +43,6 @@ export default function Login({ setNav, setIsadmin }) {
     setIsLoading(true);
 
     try {
-      // Sign in the user
       const userCredential = await signInWithEmailAndPassword(
         auth,
         trimmedEmail,
@@ -44,19 +50,8 @@ export default function Login({ setNav, setIsadmin }) {
       );
 
       const user = userCredential.user;
+      let userEmail = user.email ? user.email.toLowerCase() : trimmedEmail;
 
-      // Use multiple fallbacks for getting the email
-      let userEmail = null;
-
-      if (user && user.email) {
-        userEmail = user.email.toLowerCase();
-      } else if (trimmedEmail) {
-        // Fallback to the form email if user.email is not available
-        userEmail = trimmedEmail;
-        console.log("Using form email as fallback");
-      }
-
-      // Final safety check
       if (!userEmail) {
         console.error("No valid email found after all attempts");
         throw new Error(
@@ -64,31 +59,19 @@ export default function Login({ setNav, setIsadmin }) {
         );
       }
 
-      // Check admin status in Firestore
       let isAdmin = false;
 
       try {
-        // Ensure email is a valid string before querying
         if (typeof userEmail === "string" && userEmail.length > 0) {
-          // Try using Firestore query first (more efficient)
-          try {
-            const q = query(collection(db, "delivery_zones"));
-            const querySnapshot = await getDocs(q);
+          const q = query(collection(db, "delivery_zones"));
+          const querySnapshot = await getDocs(q);
 
-            if (!querySnapshot.empty) {
-              isAdmin = true;
-              console.log("Admin found via query");
-            } else {
-              console.log("No admin documents found via query");
-            }
-          } catch (queryError) {
-            console.log(
-              "Query method failed, falling back to manual check:",
-              queryError.message
-            );
+          if (!querySnapshot.empty) {
+            isAdmin = true;
+            console.log("Admin found via query");
+          } else {
+            console.log("No admin documents found via query");
           }
-
-          console.log("Final admin status:", isAdmin);
         } else {
           console.error(
             "Email type:",
@@ -99,17 +82,9 @@ export default function Login({ setNav, setIsadmin }) {
         }
       } catch (firestoreError) {
         console.error("Firestore query error:", firestoreError);
-        console.error("Error details:", {
-          message: firestoreError.message,
-          code: firestoreError.code,
-          userEmail: userEmail,
-          emailType: typeof userEmail,
-        });
-        // Continue as non-admin if check fails
         isAdmin = false;
       }
 
-      // Set states after admin check (whether successful or not)
       setIsadmin(isAdmin);
       setNav(true);
 
@@ -120,9 +95,7 @@ export default function Login({ setNav, setIsadmin }) {
     } catch (error) {
       console.error("Login error:", error);
 
-      // Provide more specific error messages
       let errorMessage = "Login failed";
-
       if (error.code === "auth/user-not-found") {
         errorMessage = "No user found with this email";
       } else if (error.code === "auth/wrong-password") {
@@ -149,8 +122,7 @@ export default function Login({ setNav, setIsadmin }) {
       <div className="login-container">
         <div className="login-card">
           <div className="login-header">
-            <FaSignInAlt size={25} color="#4CAF50" />
-            <h2>NinjaDeliveries Login</h2>
+            <h2>Ninja Deliveries Login</h2>
           </div>
           <form onSubmit={handleSubmit}>
             <div className="input-group">
@@ -165,11 +137,10 @@ export default function Login({ setNav, setIsadmin }) {
                 autoComplete="email"
               />
             </div>
-
             <div className="input-group">
               <FaLock size={20} color="#666" />
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -177,13 +148,21 @@ export default function Login({ setNav, setIsadmin }) {
                 disabled={isLoading}
                 autoComplete="current-password"
               />
+              <button
+                type="button"
+                className="eye-button"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <FaEyeSlash size={20} /> : <FaEye size={20} />}
+              </button>
             </div>
-            <button className="loginButton" type="submit" disabled={isLoading}>
+            <button className="login-button" type="submit" disabled={isLoading}>
               {isLoading ? "Logging in..." : "Login"}
             </button>
           </form>
         </div>
       </div>
+      <ToastContainer />
     </div>
   );
 }

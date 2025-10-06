@@ -1,5 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { FaArrowRight } from "react-icons/fa";
 import Map from "./Map";
 import "../style/home.css";
 import riderCharges from "../image/riderCharges.jpg";
@@ -127,9 +128,7 @@ const Home = () => {
     <div className="min-h-screen bg-gray-50">
       <div className="ninja-header text-center">
         <h1 className="ninja-title">Ninja Deliveries Admin</h1>
-        <p className="ninja-subtitle">
-          Manage your delivery operations in Dharamshala
-        </p>
+        <p className="ninja-subtitle">Manage your delivery operations</p>
         <span className="ninja-tagline">
           Fastest Grocery Delivery in the Hills ⚡
         </span>
@@ -139,13 +138,21 @@ const Home = () => {
         <div className="card-grid">
           {adminFunctions.map((card, index) => (
             <div key={index} className="admin-card">
-              <img src={card.image} alt={card.title} className="card-image" />
+              <div className="card-image-wrapper">
+                <img src={card.image} alt={card.title} className="card-image" />
+              </div>
               <div className="card-content">
-                <h3 className="card-title">{card.title}</h3>
-                <p className="card-text">{card.text}</p>
-                <Link to={card.link}>
-                  <button className="card-button">{card.title}</button>
-                </Link>
+                <div className="card-text-wrapper">
+                  <h3 className="card-title">{card.title}</h3>
+                  <p className="card-text">{card.text}</p>
+                </div>
+                <div className="card-button-wrapper">
+                  <Link to={card.link}>
+                    <button className="card-button">
+                      Open <FaArrowRight />
+                    </button>
+                  </Link>
+                </div>
               </div>
             </div>
           ))}
