@@ -1,7 +1,7 @@
 {
   "files": {
-    "main.css": "/static/css/main.8a384d6f.css",
-    "main.js": "/static/js/main.93d2f0c6.js",
+    "main.css": "/static/css/main.688e7512.css",
+    "main.js": "/static/js/main.47f6f88e.js",
     "static/js/239.ece5a3b0.chunk.js": "/static/js/239.ece5a3b0.chunk.js",
     "static/js/977.8e6298ff.chunk.js": "/static/js/977.8e6298ff.chunk.js",
     "static/js/455.6806e996.chunk.js": "/static/js/455.6806e996.chunk.js",
@@ -9,18 +9,19 @@
     "static/media/beep.mp3": "/static/media/beep.9c91a01e4cbaaaf936b1.mp3",
     "static/media/event.jpg": "/static/media/event.b227415f61746af91e98.jpg",
     "static/media/raidusMap.jpg": "/static/media/raidusMap.48716672d010a845c3db.jpg",
+    "static/media/ninjalogo.jpg": "/static/media/ninjalogo.7d6f9a86b1e803b94563.jpg",
+    "static/media/ninjaimg.jpg": "/static/media/ninjaimg.012ee4e74780fbf9a980.jpg",
     "static/media/freshGreens.webp": "/static/media/freshGreens.dce80b088e5536765fe8.webp",
-    "static/media/ninjaimg.jpg": "/static/media/ninjaimg.1ea12668f4cd4b079534.jpg",
     "index.html": "/index.html",
-    "main.8a384d6f.css.map": "/static/css/main.8a384d6f.css.map",
-    "main.93d2f0c6.js.map": "/static/js/main.93d2f0c6.js.map",
+    "main.688e7512.css.map": "/static/css/main.688e7512.css.map",
+    "main.47f6f88e.js.map": "/static/js/main.47f6f88e.js.map",
     "239.ece5a3b0.chunk.js.map": "/static/js/239.ece5a3b0.chunk.js.map",
     "977.8e6298ff.chunk.js.map": "/static/js/977.8e6298ff.chunk.js.map",
     "455.6806e996.chunk.js.map": "/static/js/455.6806e996.chunk.js.map",
     "453.9a4134c7.chunk.js.map": "/static/js/453.9a4134c7.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.8a384d6f.css",
-    "static/js/main.93d2f0c6.js"
+    "static/css/main.688e7512.css",
+    "static/js/main.47f6f88e.js"
   ]
 }
