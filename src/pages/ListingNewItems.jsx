@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { db } from "../context/Firebase";
+import { FormControlLabel, Switch } from "@mui/material";
+
 import {
   collection,
   setDoc,
@@ -185,7 +187,7 @@ export default function ListingNewItems() {
           </div>
         </div>
         <div className="card-body">
-          <form className="form-grid">
+          <form className="form-grid" onSubmit={(e) => e.preventDefault()}>
             {/* Category & Subcategory Section */}
             <div className="section-header">
               <h3>Product Classification</h3>
@@ -378,82 +380,53 @@ export default function ListingNewItems() {
             </div>
 
             {/* Product Options Section */}
+
             <div className="section-header">
               <h3>Product Options</h3>
               <div className="divider"></div>
             </div>
 
-            <div className="form-group">
-              <div className="toggle-card">
-                <div className="toggle-content">
-                  <label className="toggle-label" htmlFor="newProductSwitch">
-                    <span className="toggle-title">Mark as New</span>
-                    <span className="toggle-description">
-                      Display "New" badge on product
-                    </span>
-                  </label>
-                  <label className="switch">
-                    <input
-                      type="checkbox"
-                      id="newProductSwitch"
-                      checked={isNew}
-                      onChange={() => setIsNew(!isNew)}
-                    />
-                    <span className="slider"></span>
-                  </label>
+            <div className="toggle-row">
+              <div className="toggle-item">
+                <div className="toggle-text">
+                  <div className="toggle-title">Mark as New</div>
+                  <div className="toggle-description">
+                    Display “New” badge on product
+                  </div>
                 </div>
+                <Switch
+                  checked={isNew}
+                  onChange={(_, checked) => setIsNew(checked)}
+                  color="secondary"
+                />
               </div>
-            </div>
 
-            <div className="form-group">
-              <div className="toggle-card">
-                <div className="toggle-content">
-                  <label
-                    className="toggle-label"
-                    htmlFor="availableAfter10PMSwitch"
-                  >
-                    <span className="toggle-title">Available After 10PM</span>
-                    <span className="toggle-description">
-                      Product available for late orders
-                    </span>
-                  </label>
-                  <label className="switch">
-                    <input
-                      type="checkbox"
-                      id="availableAfter10PMSwitch"
-                      checked={availableAfter10PM}
-                      onChange={() =>
-                        setAvailableAfter10PM(!availableAfter10PM)
-                      }
-                    />
-                    <span className="slider"></span>
-                  </label>
+              <div className="toggle-item">
+                <div className="toggle-text">
+                  <div className="toggle-title">Available After 10PM</div>
+                  <div className="toggle-description">
+                    Product available for late orders
+                  </div>
                 </div>
+                <Switch
+                  checked={availableAfter10PM}
+                  onChange={(_, checked) => setAvailableAfter10PM(checked)}
+                  color="secondary"
+                />
               </div>
-            </div>
 
-            <div className="form-group">
-              <div className="toggle-card">
-                <div className="toggle-content">
-                  <label
-                    className="toggle-label"
-                    htmlFor="storeAvailableSwitch"
-                  >
-                    <span className="toggle-title">Available in Store</span>
-                    <span className="toggle-description">
-                      Product available for in-store purchase
-                    </span>
-                  </label>
-                  <label className="switch">
-                    <input
-                      type="checkbox"
-                      id="storeAvailableSwitch"
-                      checked={isStoreAvailable}
-                      onChange={() => setIsStoreAvailable(!isStoreAvailable)}
-                    />
-                    <span className="slider"></span>
-                  </label>
+              <div className="toggle-item">
+                <div className="toggle-text">
+                  <div className="toggle-title">Available in Store</div>
+                  <div className="toggle-description">
+                    Product available for in-store purchase
+                  </div>
                 </div>
+                <Switch
+                  checked={isStoreAvailable}
+                  onChange={(_, checked) => setIsStoreAvailable(checked)}
+                  color="secondary"
+                />
               </div>
             </div>
 
@@ -843,91 +816,71 @@ export default function ListingNewItems() {
           border-left: 2px solid #667eea;
         }
 
-        .toggle-card {
-          background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
-          border: 2px solid #e5e7eb;
-          border-radius: 10px;
-          padding: 0.875rem;
-          transition: all 0.3s ease;
-        }
-
-        .toggle-card:hover {
-          border-color: #cbd5e1;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-        }
-
-        .toggle-content {
+        .toggle-row {
           display: flex;
           justify-content: space-between;
-          align-items: center;
-          gap: 0.875rem;
+          gap: 1rem;
+          flex-wrap: wrap;
+          grid-column: 1 / -1;
         }
 
-        .toggle-label {
-          flex: 1;
-          cursor: pointer;
+        .toggle-item {
+          flex: 1 1 30%;
+          min-width: 280px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          background: #fff;
+          border: 1.5px solid #e5e7eb;
+          border-radius: 10px;
+          padding: 0.9rem 1rem;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+          transition: all 0.2s ease;
+        }
+
+        .toggle-item:hover {
+          border-color: #cbd5e1;
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .toggle-text {
           display: flex;
           flex-direction: column;
-          gap: 0.15rem;
+          justify-content: center;
+          gap: 0.2rem;
         }
 
         .toggle-title {
           font-weight: 600;
-          color: #1f2937;
-          font-size: 0.875rem;
+          color: #111827;
+          font-size: 0.9rem;
         }
 
         .toggle-description {
-          font-size: 0.75rem;
+          font-size: 0.78rem;
           color: #6b7280;
+          line-height: 1.2;
         }
 
-        .switch {
+        .toggle-switch {
           position: relative;
-          display: inline-block;
-          width: 44px;
-          height: 24px;
-          flex-shrink: 0;
+          z-index: 2;
+          pointer-events: auto;
         }
 
-        .switch input {
-          opacity: 0;
-          width: 0;
-          height: 0;
+        .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track {
+          background: linear-gradient(
+            135deg,
+            #667eea 0%,
+            #764ba2 100%
+          ) !important;
+          opacity: 1 !important;
         }
 
-        .slider {
-          position: absolute;
-          cursor: pointer;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background-color: #cbd5e1;
-          transition: 0.3s;
-          border-radius: 24px;
-          box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
-        }
-
-        .slider:before {
-          position: absolute;
-          content: "";
-          height: 18px;
-          width: 18px;
-          left: 3px;
-          bottom: 3px;
-          background-color: white;
-          transition: 0.3s;
-          border-radius: 50%;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-        }
-
-        input:checked + .slider {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-
-        input:checked + .slider:before {
-          transform: translateX(20px);
+        @media (max-width: 768px) {
+          .toggle-item {
+            flex: 1 1 100%;
+          }
         }
 
         .file-upload-wrapper {

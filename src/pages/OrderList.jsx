@@ -19,22 +19,32 @@ import {
   Button,
   Typography,
   Box,
+  Paper,
+  Chip,
+  Divider,
+  IconButton,
+  Tooltip,
 } from "@mui/material";
 import {
   ArrowBackIos as ArrowBackIosIcon,
   ArrowForwardIos as ArrowForwardIosIcon,
   AssignmentLate as AssignmentLateIcon,
+  Download as DownloadIcon,
+  Map as MapIcon,
+  Schedule as ScheduleIcon,
+  LocalShipping as LocalShippingIcon,
+  CheckCircle as CheckCircleIcon,
+  Cancel as CancelIcon,
+  HourglassEmpty as HourglassEmptyIcon,
 } from "@mui/icons-material";
 import { jsPDF } from "jspdf";
-
 import autoTable from "jspdf-autotable";
-
 import "../style/login.css";
-import { useUser } from "../context/adminContext"; // or correct path
+import { useUser } from "../context/adminContext";
 
 const acceptedById = "QT3M1gUaxqUdIPf6qN9a";
 
-// ========== ADDED: generateBill FUNCTION ========== //
+// ========== generateBill FUNCTION (unchanged) ========== //
 const generateBill = async (order, phoneNumber) => {
   const companyRef = doc(db, "company", "cgwqfmBd4GDEFv4lUsHX");
   const companySnap = await getDoc(companyRef);
@@ -122,8 +132,12 @@ const generateBill = async (order, phoneNumber) => {
     body: order.items.map((item) => {
       const product = products.find((product) => product.name === item.name);
       const storeName = product?.isStoreAvailable ? "inStore" : "Mahamai Store";
+      const displayName =
+        product && product.availableAfter10PM === true
+          ? `24/7 - ${item.name}`
+          : item.name;
       return [
-        item.name,
+        displayName,
         item.quantity,
         storeName,
         `Rs. ${item.price.toFixed(2)}`,
@@ -161,7 +175,7 @@ const generateBill = async (order, phoneNumber) => {
   docPDF.save(`Bill_${order.orderedBy}.pdf`);
 };
 
-// ========== ADDED: fetchPhoneNumber FUNCTION ========== //
+// ========== fetchPhoneNumber FUNCTION (unchanged) ========== //
 const fetchPhoneNumber = async (orderedBy) => {
   const userRef = doc(db, "users", orderedBy);
   try {
@@ -173,24 +187,41 @@ const fetchPhoneNumber = async (orderedBy) => {
   }
 };
 
-const statusStyles = {
-  pending: "bg-gray-50",
-  accepted: "bg-yellow-100",
-  tripStarted: "bg-blue-100",
-  tripEnded: "bg-green-100",
-  cancelled: "bg-red-100",
-};
-
-const statusEmojis = {
-  pending: "⌛",
-  accepted: "📦",
-  tripStarted: "🚚",
-  tripEnded: "✅",
-  cancelled: "❌",
+const statusConfig = {
+  pending: {
+    color: "#F59E0B",
+    bgColor: "#FEF3C7",
+    icon: HourglassEmptyIcon,
+    label: "Pending",
+  },
+  accepted: {
+    color: "#3B82F6",
+    bgColor: "#DBEAFE",
+    icon: CheckCircleIcon,
+    label: "Accepted",
+  },
+  tripStarted: {
+    color: "#8B5CF6",
+    bgColor: "#EDE9FE",
+    icon: LocalShippingIcon,
+    label: "In Transit",
+  },
+  tripEnded: {
+    color: "#10B981",
+    bgColor: "#D1FAE5",
+    icon: CheckCircleIcon,
+    label: "Completed",
+  },
+  cancelled: {
+    color: "#EF4444",
+    bgColor: "#FEE2E2",
+    icon: CancelIcon,
+    label: "Cancelled",
+  },
 };
 
 const OrderList = () => {
-  const { user } = useUser(); // to get user.storeId
+  const { user } = useUser();
 
   const [orders, setOrders] = useState({});
   const [loading, setLoading] = useState(false);
@@ -202,13 +233,11 @@ const OrderList = () => {
   useEffect(() => {
     const days = [];
     for (let i = 0; i < 30; i++) {
-      // 👈 30 days for 1 month
       days.push(startOfDay(subDays(new Date(), i)));
     }
     setDaysRange(days);
   }, []);
 
-  // ========== ADDED: handleDownloadBill FUNCTION ========== //
   const handleDownloadBill = async (orderId) => {
     try {
       const orderRef = doc(db, "orders", orderId);
@@ -259,15 +288,12 @@ const OrderList = () => {
         setLoading(false);
       }
     },
-    [user?.storeId] // 👈 ensure user.storeId is a dependency
+    [user?.storeId]
   );
+
   useEffect(() => {
-    if (
-      daysRange.length > 0 &&
-      currentPage === 1 && // Only for Today
-      user?.storeId
-    ) {
-      const date = daysRange[0]; // Today
+    if (daysRange.length > 0 && currentPage === 1 && user?.storeId) {
+      const date = daysRange[0];
       const start = startOfDay(date);
       const end = addDays(start, 1);
 
@@ -308,7 +334,7 @@ const OrderList = () => {
   useEffect(() => {
     if (
       daysRange.length > 0 &&
-      currentPage !== 1 && // Skip Today
+      currentPage !== 1 &&
       !orders[daysRange[currentPage - 1]?.getTime()] &&
       user?.storeId
     ) {
@@ -350,33 +376,49 @@ const OrderList = () => {
     (order) => {
       const buttonConfig = {
         pending: {
-          text: "Accept",
-          color: "bg-blue-600 btn btn-warning hover:bg-blue-700",
+          text: "Accept Order",
+          color: "#3B82F6",
           action: () =>
             updateStatus(order.id, "accepted", { acceptedBy: acceptedById }),
         },
         accepted: {
-          text: "Trip Start",
-          color: "bg-amber-600 btn btn-info hover:bg-amber-700",
+          text: "Start Trip",
+          color: "#8B5CF6",
           action: () => updateStatus(order.id, "tripStarted"),
         },
         tripStarted: {
-          text: "Trip End",
-          color: "bg-teal-600 btn btn-success hover:bg-teal-700",
+          text: "Complete Trip",
+          color: "#10B981",
           action: () => updateStatus(order.id, "tripEnded"),
         },
         tripEnded: {
           component: (
-            <div className="text-green-600 font-semibold flex items-center gap-2">
-              ✅ <span>Completed</span>
-            </div>
+            <Chip
+              icon={<CheckCircleIcon />}
+              label="Completed"
+              sx={{
+                backgroundColor: "#D1FAE5",
+                color: "#10B981",
+                fontWeight: 600,
+                fontSize: "0.875rem",
+                height: "36px",
+              }}
+            />
           ),
         },
         cancelled: {
           component: (
-            <div className="text-red-600 font-semibold flex items-center gap-2">
-              ❌ <span>Cancelled</span>
-            </div>
+            <Chip
+              icon={<CancelIcon />}
+              label="Cancelled"
+              sx={{
+                backgroundColor: "#FEE2E2",
+                color: "#EF4444",
+                fontWeight: 600,
+                fontSize: "0.875rem",
+                height: "36px",
+              }}
+            />
           ),
         },
       };
@@ -387,12 +429,24 @@ const OrderList = () => {
             variant="contained"
             onClick={config.action}
             disabled={updatingOrderId === order.id}
-            className={`${config.color} text-white px-4 py-2 rounded-full shadow-md transition-all`}
             sx={{
+              backgroundColor: config.color,
+              color: "white",
               textTransform: "none",
               fontWeight: 600,
+              px: 3,
+              py: 1,
+              borderRadius: "8px",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+              "&:hover": {
+                backgroundColor: config.color,
+                opacity: 0.9,
+                boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+              },
               "&:disabled": {
                 opacity: 0.7,
+                backgroundColor: config.color,
+                color: "white",
               },
             }}
           >
@@ -416,152 +470,353 @@ const OrderList = () => {
   const currentOrders = currentDateKey ? orders[currentDateKey] || [] : [];
 
   return (
-    <div className="max-w-3xl mx-auto p-4">
-      <h1 className="text-3xl font-bold mb-6 text-center">🧾 Orders</h1>
-      {error && (
-        <Alert severity="error" className="mb-4">
-          {error}
-        </Alert>
-      )}
-      <div className="flex justify-center mb-6">
-        <Pagination
-          count={daysRange.length} // 👈 now 30
-          page={currentPage}
-          onChange={(_, page) => setCurrentPage(page)}
-          color="primary"
-          disabled={loading}
+    <Box
+      sx={{
+        minHeight: "100vh",
+        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+        py: 4,
+        px: 2,
+      }}
+    >
+      <Box
+        sx={{
+          maxWidth: "1200px",
+          mx: "auto",
+        }}
+      >
+        <Paper
+          elevation={3}
           sx={{
-            "& .MuiPaginationItem-root": {
-              fontWeight: 600,
-            },
-          }}
-        />
-      </div>
-      <div className="mb-4 text-center">
-        <Typography
-          variant="h6"
-          className="font-bold text-gray-800"
-          sx={{
-            background: "black",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            fontWeight: 700,
+            p: 4,
+            borderRadius: "16px",
+            background: "white",
           }}
         >
-          {daysRange[currentPage - 1]
-            ? format(daysRange[currentPage - 1], "EEEE, MMMM do yyyy")
-            : ""}
-          {currentPage === 1 && " (Today)"}
-          {currentPage === 2 && " (Yesterday)"}
-        </Typography>
-      </div>
-      {loading && !currentOrders.length ? (
-        <div className="flex justify-center my-12">
-          <CircularProgress
-            size={60}
-            thickness={4}
-            sx={{
-              color: "rgb(99 102 241)",
-            }}
-          />
-        </div>
-      ) : currentOrders.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-xl shadow-sm">
-          <Box className="flex flex-col items-center gap-4">
-            <AssignmentLateIcon
+          {/* Header */}
+          <Box sx={{ textAlign: "center", mb: 4 }}>
+            <Typography
+              variant="h3"
               sx={{
-                fontSize: 60,
-                color: "rgb(156 163 175)",
+                fontWeight: 700,
+                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                mb: 1,
               }}
-            />
-            <Typography variant="h6" className="text-gray-500 font-medium">
-              No orders found for this day
+            >
+              Order Management
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              Track and manage your delivery orders
             </Typography>
           </Box>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {currentOrders.map((order) => (
-            <div
-              key={order.id}
-              className={`flex flex-col OrderList sm:flex-row justify-between items-center gap-4 p-5 rounded-xl border border-gray-200 transition-all ${
-                statusStyles[order.status] || "bg-white"
-              } ${
-                updatingOrderId === order.id ? "opacity-70" : "hover:shadow-md"
-              }`}
+
+          {error && (
+            <Alert
+              severity="error"
+              onClose={() => setError(null)}
+              sx={{ mb: 3, borderRadius: "8px" }}
             >
-              <div className="w-full sm:w-auto">
-                <div className="flex items-center gap-3">
-                  {shouldGlow(order.status) && (
-                    <span className="relative flex h-4 w-4">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-4 w-4 bg-yellow-500"></span>
-                    </span>
-                  )}
-                  <div>
-                    <Typography variant="subtitle1" className="font-medium">
-                      {statusEmojis[order.status] || "📄"}
-                      {order.dateTime
-                        ? format(order.dateTime, "MMM d, h:mm a")
-                        : "Unknown Time"}
-                    </Typography>
+              {error}
+            </Alert>
+          )}
 
-                    <Typography variant="body2" className="text-gray-500 mt-1">
-                      Status:{" "}
-                      <span className="capitalize font-medium">
-                        {order.status}
-                      </span>
-                    </Typography>
-                  </div>
-                  {/* Existing Action Button */}
-                  <div className="my-1 min-w-[120px] flex justify-end">
-                    {getNextActionButton(order)}
-                  </div>
-                </div>
-              </div>
+          {/* Date Navigation */}
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              mb: 3,
+              gap: 2,
+            }}
+          >
+            <Pagination
+              count={daysRange.length}
+              page={currentPage}
+              onChange={(_, page) => setCurrentPage(page)}
+              disabled={loading}
+              color="primary"
+              size="large"
+              sx={{
+                "& .MuiPaginationItem-root": {
+                  fontWeight: 600,
+                  fontSize: "1rem",
+                },
+              }}
+            />
+          </Box>
 
-              <div className="flex items-center gap-2">
-                {/* Download Bill Button */}
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={() => handleDownloadBill(order.id)}
-                  className="text-indigo-600 border-indigo-600 hover:bg-indigo-50"
+          {/* Current Date Display */}
+          <Paper
+            elevation={0}
+            sx={{
+              p: 2,
+              mb: 3,
+              background:
+                "linear-gradient(135deg, #667eea15 0%, #764ba215 100%)",
+              borderRadius: "12px",
+              textAlign: "center",
+            }}
+          >
+            <Typography
+              variant="h5"
+              sx={{
+                fontWeight: 700,
+                color: "#667eea",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 1,
+              }}
+            >
+              <ScheduleIcon />
+              {daysRange[currentPage - 1]
+                ? format(daysRange[currentPage - 1], "EEEE, MMMM do yyyy")
+                : ""}
+              {currentPage === 1 && (
+                <Chip
+                  label="Today"
+                  size="small"
                   sx={{
-                    textTransform: "none",
+                    ml: 1,
+                    backgroundColor: "#10B981",
+                    color: "white",
                     fontWeight: 600,
                   }}
-                >
-                  Download Bill
-                </Button>
+                />
+              )}
+              {currentPage === 2 && (
+                <Chip
+                  label="Yesterday"
+                  size="small"
+                  sx={{
+                    ml: 1,
+                    backgroundColor: "#F59E0B",
+                    color: "white",
+                    fontWeight: 600,
+                  }}
+                />
+              )}
+            </Typography>
+          </Paper>
 
-                {/* View on Map Button */}
-                {order.dropoffCoords?.latitude &&
-                  order.dropoffCoords?.longitude && (
-                    <Button
-                      variant="outlined"
-                      color="success"
-                      onClick={() =>
-                        window.open(
-                          `https://www.google.com/maps?q=${order.dropoffCoords.latitude},${order.dropoffCoords.longitude}`,
-                          "_blank"
-                        )
-                      }
+          <Divider sx={{ mb: 3 }} />
+
+          {/* Orders List */}
+          {loading && !currentOrders.length ? (
+            <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
+              <CircularProgress size={60} thickness={4} />
+            </Box>
+          ) : currentOrders.length === 0 ? (
+            <Paper
+              elevation={0}
+              sx={{
+                py: 8,
+                textAlign: "center",
+                background: "#F9FAFB",
+                borderRadius: "12px",
+              }}
+            >
+              <AssignmentLateIcon
+                sx={{
+                  fontSize: 80,
+                  color: "#9CA3AF",
+                  mb: 2,
+                }}
+              />
+              <Typography variant="h6" color="text.secondary" fontWeight={500}>
+                No orders found for this day
+              </Typography>
+            </Paper>
+          ) : (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              {currentOrders.map((order) => {
+                const config =
+                  statusConfig[order.status] || statusConfig.pending;
+                const StatusIcon = config.icon;
+
+                return (
+                  <Paper
+                    key={order.id}
+                    elevation={2}
+                    sx={{
+                      p: 3,
+                      borderRadius: "12px",
+                      border: `2px solid ${config.bgColor}`,
+                      backgroundColor: shouldGlow(order.status)
+                        ? `${config.bgColor}40`
+                        : "white",
+                      transition: "all 0.3s ease",
+                      position: "relative",
+                      overflow: "hidden",
+                      "&:hover": {
+                        transform: "translateY(-2px)",
+                        boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+                      },
+                    }}
+                  >
+                    {shouldGlow(order.status) && (
+                      <Box
+                        sx={{
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          width: "4px",
+                          height: "100%",
+                          backgroundColor: config.color,
+                          animation: "pulse 2s ease-in-out infinite",
+                          "@keyframes pulse": {
+                            "0%, 100%": { opacity: 1 },
+                            "50%": { opacity: 0.5 },
+                          },
+                        }}
+                      />
+                    )}
+
+                    <Box
                       sx={{
-                        textTransform: "none",
-                        fontWeight: 600,
-                        marginLeft: 5,
+                        display: "flex",
+                        flexDirection: { xs: "column", md: "row" },
+                        gap: 3,
+                        alignItems: { xs: "stretch", md: "center" },
+                        justifyContent: "space-between",
                       }}
                     >
-                      View on Map
-                    </Button>
-                  )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+                      {/* Left Section - Order Info */}
+                      <Box sx={{ flex: 1 }}>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 2,
+                            mb: 2,
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              width: 48,
+                              height: 48,
+                              borderRadius: "12px",
+                              backgroundColor: config.bgColor,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                          >
+                            <StatusIcon
+                              sx={{ color: config.color, fontSize: 28 }}
+                            />
+                          </Box>
+                          <Box>
+                            <Typography
+                              variant="h6"
+                              sx={{
+                                fontWeight: 700,
+                                color: "#1F2937",
+                                mb: 0.5,
+                              }}
+                            >
+                              {order.dateTime
+                                ? format(order.dateTime, "MMM d, h:mm a")
+                                : "Unknown Time"}
+                            </Typography>
+                            <Chip
+                              label={config.label}
+                              size="small"
+                              sx={{
+                                backgroundColor: config.bgColor,
+                                color: config.color,
+                                fontWeight: 600,
+                                fontSize: "0.75rem",
+                              }}
+                            />
+                          </Box>
+                        </Box>
+                      </Box>
+
+                      {/* Middle Section - Action Button */}
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: { xs: "center", md: "flex-start" },
+                        }}
+                      >
+                        {getNextActionButton(order)}
+                      </Box>
+
+                      {/* Right Section - Actions */}
+                      <Box
+                        sx={{
+                          display: "flex",
+                          gap: 1,
+                          alignItems: "center",
+                          justifyContent: { xs: "center", md: "flex-end" },
+                        }}
+                      >
+                        <Tooltip title="Download Bill" arrow>
+                          <Button
+                            variant="outlined"
+                            onClick={() => handleDownloadBill(order.id)}
+                            sx={{
+                              borderColor: "#667eea",
+                              color: "#667eea",
+                              textTransform: "none",
+                              fontWeight: 600,
+                              borderRadius: "8px",
+                              px: 2.5,
+                              py: 1,
+                              "&:hover": {
+                                borderColor: "#667eea",
+                                backgroundColor: "#667eea10",
+                              },
+                            }}
+                            startIcon={<DownloadIcon />}
+                          >
+                            Bill
+                          </Button>
+                        </Tooltip>
+                        {order.dropoffCoords?.latitude &&
+                          order.dropoffCoords?.longitude && (
+                            <Tooltip title="View on Map" arrow>
+                              <Button
+                                variant="outlined"
+                                onClick={() =>
+                                  window.open(
+                                    `https://www.google.com/maps?q=${order.dropoffCoords.latitude},${order.dropoffCoords.longitude}`,
+                                    "_blank"
+                                  )
+                                }
+                                sx={{
+                                  borderColor: "#10B981",
+                                  color: "#10B981",
+                                  textTransform: "none",
+                                  fontWeight: 600,
+                                  borderRadius: "8px",
+                                  px: 2.5,
+                                  py: 1,
+                                  "&:hover": {
+                                    borderColor: "#10B981",
+                                    backgroundColor: "#10B98110",
+                                  },
+                                }}
+                                startIcon={<MapIcon />}
+                              >
+                                Map
+                              </Button>
+                            </Tooltip>
+                          )}
+                      </Box>
+                    </Box>
+                  </Paper>
+                );
+              })}
+            </Box>
+          )}
+        </Paper>
+      </Box>
+    </Box>
   );
 };
 
