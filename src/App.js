@@ -13,6 +13,7 @@ import Report from "./pages/Report";
 import "react-toastify/dist/ReactToastify.css";
 import { useState } from "react";
 import ListingNewItems from "./pages/ListingNewItems";
+import ListingNewSalesItems from "./pages/ListSaleProduct";
 import FetchListedItems from "./pages/FetchListedItems";
 import AddCategory from "./pages/AddCategory";
 import UpdateSubCategory from "./pages/UpdateSubCategory";
@@ -106,8 +107,14 @@ function App() {
           element={nav === true ? <OrderList /> : <Navigate to="/" />}
         />
         <Route
-          path="/itemAdd"
+          path="/AddItems"
           element={nav === true ? <ListingNewItems /> : <Navigate to="/" />}
+        />
+        <Route
+          path="/AddSalesItems"
+          element={
+            nav === true ? <ListingNewSalesItems /> : <Navigate to="/" />
+          }
         />
         <Route
           path="/updatesubcategory"

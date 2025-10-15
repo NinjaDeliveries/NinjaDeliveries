@@ -11,10 +11,17 @@ const Home = () => {
   const adminFunctions = [
     {
       title: "Add Product",
-      text: "Click below to Add a new product.",
-      link: "/itemAdd",
+      text: "Click below to Add new products.",
+      link: "/AddItems",
       image:
         "https://www.shutterstock.com/image-vector/shopping-cart-icon-flat-design-260nw-570153007.jpg",
+    },
+    {
+      title: "Add Sales Product",
+      text: "Click below to Add new Sales products.",
+      link: "/AddSalesItems",
+      image:
+        "https://imgs.search.brave.com/IUau1I4TDa9u1esoESIONT4uqloOvI_CeZ37SIYk4xY/rs:fit:500:0:1:0/g:ce/aHR0cHM6Ly90My5m/dGNkbi5uZXQvanBn/LzE0LzQ5LzkyLzUw/LzM2MF9GXzE0NDk5/MjUwODhfSmdib05X/ZVdWWTZXeG5ma2Zm/YU83SFQwUEkzc29j/NzkuanBn",
     },
     {
       title: "Categories Management",
@@ -81,7 +88,7 @@ const Home = () => {
       text: "Push a new Notification",
       link: "/pushNotification",
       image:
-        "https://www.pushengage.com/wp-content/uploads/2023/03/Waterfall-Push-Campaigns.png",
+        "https://imgs.search.brave.com/3trWBNSGJn8mOcWHknCTQNHuvWlkVZx8P1ACGEgTefA/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly90My5m/dGNkbi5uZXQvanBn/LzE1LzE4LzE4Lzc0/LzM2MF9GXzE1MTgx/ODc0MzBfQ3c2QW1N/a0lta0JIRjVGcWlO/OHkwNnFCWUVDNmx1/SnUuanBn",
     },
     {
       title: "Add Hotspot Areas",
