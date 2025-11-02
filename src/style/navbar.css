@@ -1,48 +1,129 @@
+/* =============================
+   PROFESSIONAL ADMIN NAVBAR
+   ============================= */
+
 .admin-navbar {
-  background-color: #fff;
-  padding: 0.5rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  padding: 0.8rem 2rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
   position: sticky;
   top: 0;
   z-index: 1000;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  height: 70px;
+}
+
+.admin-navbar-left {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
 }
 
 .admin-navbar-brand {
-  font-size: 1.5rem;
-  font-weight: bold;
-  color: #333;
-  margin-right: 20px;
-}
-
-.admin-navbar-nav {
-  list-style: none;
-  margin: 0;
-  padding: 0;
   display: flex;
   align-items: center;
-  flex-direction: row;
+  gap: 0.8rem;
 }
+
 .logo {
   border-radius: 50%;
-  margin-left: 1rem;
-  height: 3.5rem;
-  width: 3.5rem;
-  border: 2px solid #333;
+  height: 2.8rem;
+  width: 2.8rem;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  object-fit: cover;
 }
-.admin-navbar-item {
-  margin-right: 20px;
+
+.brand-name {
+  font-weight: 700;
+  font-size: 1.25rem;
+  letter-spacing: 0.5px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.store-name {
+  background: rgba(255, 255, 255, 0.15);
+  padding: 0.4rem 0.9rem;
+  border-radius: 20px;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+/* Nav Links */
+.admin-navbar-nav {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  margin: 0;
+  padding: 0;
+}
+
+.admin-navbar-nav li {
   display: inline-block;
 }
 
-.admin-navbar-item a {
+.admin-navbar-nav a {
+  color: #fff;
   text-decoration: none;
-  color: #333;
-  transition: color 0.2s ease;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  transition: all 0.25s ease-in-out;
+  background: transparent;
 }
 
-.admin-navbar-item a:hover {
-  color: #764ba2;
+/* Professional Hover (subtle gradient shift) */
+.admin-navbar-nav a:hover {
+  background: rgba(181, 178, 178, 0.15);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+/* Active State — solid highlight with gradient */
+.admin-navbar-nav .active {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.281),
+    rgba(255, 255, 255, 0.186)
+  );
+  border-radius: 8px;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.15);
+  color: #fff;
+}
+
+/* Remove glowing & ensure consistency */
+.admin-navbar-nav a:focus,
+.admin-navbar-nav .active:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .admin-navbar {
+    flex-direction: column;
+    align-items: flex-start;
+    height: auto;
+    padding: 1rem;
+  }
+
+  .admin-navbar-nav {
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+    margin-top: 0.8rem;
+  }
+
+  .admin-navbar-nav a {
+    padding: 0.6rem 1rem;
+  }
+
+  .store-name {
+    font-size: 0.9rem;
+  }
 }

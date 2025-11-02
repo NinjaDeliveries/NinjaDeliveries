@@ -6,36 +6,173 @@
 }
 
 /* Header Styles */
+/* Ninja Header Styles */
 .ninja-header {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 2rem 1.5rem;
+  padding: 3rem 2rem;
   color: white;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  margin-bottom: 1.5rem;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  margin-bottom: 2rem;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Decorative background elements */
+.ninja-header::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  right: -10%;
+  width: 400px;
+  height: 400px;
+  background: rgba(255, 255, 255, 0.107);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.ninja-header::after {
+  content: "";
+  position: absolute;
+  bottom: -30%;
+  left: -5%;
+  width: 300px;
+  height: 300px;
+  background: rgba(255, 255, 255, 0.116);
+  border-radius: 50%;
+  pointer-events: none;
 }
 
 .ninja-title {
-  font-size: 1.75rem;
-  font-weight: 700;
-  margin-bottom: 0.35rem;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+  font-size: 2.5rem;
+  font-weight: 800;
+  margin-bottom: 0.75rem;
+  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.3);
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+  position: relative;
+  z-index: 1;
 }
 
 .ninja-subtitle {
-  font-size: 0.95rem;
+  font-size: 1.125rem;
   opacity: 0.95;
-  margin-bottom: 0.5rem;
-  font-weight: 300;
+  margin-bottom: 1.25rem;
+  font-weight: 400;
+  line-height: 1.6;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+  position: relative;
+  z-index: 1;
 }
 
 .ninja-tagline {
   display: inline-block;
-  background: rgba(255, 255, 255, 0.2);
-  padding: 0.35rem 0.875rem;
-  border-radius: 20px;
-  font-size: 0.825rem;
-  font-weight: 500;
+  background: rgba(255, 255, 255, 0.25);
+  padding: 0.65rem 1.5rem;
+  border-radius: 50px;
+  font-size: 0.95rem;
+  font-weight: 600;
   backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 1;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .ninja-header {
+    padding: 2.5rem 1.5rem;
+  }
+
+  .ninja-title {
+    font-size: 2rem;
+  }
+
+  .ninja-subtitle {
+    font-size: 1rem;
+  }
+
+  .ninja-tagline {
+    font-size: 0.875rem;
+    padding: 0.6rem 1.25rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .ninja-header {
+    padding: 2rem 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .ninja-title {
+    font-size: 1.75rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .ninja-subtitle {
+    font-size: 0.95rem;
+    margin-bottom: 1rem;
+  }
+
+  .ninja-tagline {
+    font-size: 0.825rem;
+    padding: 0.5rem 1rem;
+  }
+
+  /* Reduce decorative elements on mobile */
+  .ninja-header::before,
+  .ninja-header::after {
+    opacity: 0.5;
+  }
+}
+
+@media (max-width: 480px) {
+  .ninja-header {
+    padding: 1.5rem 1rem;
+  }
+
+  .ninja-title {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .ninja-subtitle {
+    font-size: 0.875rem;
+    margin-bottom: 0.875rem;
+  }
+
+  .ninja-tagline {
+    font-size: 0.75rem;
+    padding: 0.45rem 0.875rem;
+  }
+}
+
+/* Tablet landscape */
+@media (min-width: 769px) and (max-width: 1024px) and (orientation: landscape) {
+  .ninja-header {
+    padding: 2rem 2rem;
+  }
+
+  .ninja-title {
+    font-size: 2.25rem;
+  }
+}
+
+/* Print styles */
+@media print {
+  .ninja-header {
+    background: #667eea !important;
+    box-shadow: none;
+    page-break-after: avoid;
+  }
+
+  .ninja-header::before,
+  .ninja-header::after {
+    display: none;
+  }
 }
 
 /* Container */

@@ -1,167 +1,139 @@
-import React from "react";
-import { useState } from "react";
-import "../style/promocode.css";
+import React, { useState } from "react";
+import "../style/promo.css";
 import { toast } from "react-toastify";
 import { firestore } from "../context/Firebase";
 import { collection, addDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
-import { Button } from "@mui/material";
 
 function PromoCode() {
-  const [Code, setCode] = useState("");
-  const [Description, setDescription] = useState("");
-  const [promoLabel, setpromoLabel] = useState("");
-  const [Type, setType] = useState("Choose...");
-  const [Value, setValue] = useState("");
-  const [isAvailable, setisAvailable] = useState(false);
-  const [usedBy, setusedBy] = useState([]);
+  const [code, setCode] = useState("");
+  const [description, setDescription] = useState("");
+  const [promoLabel, setPromoLabel] = useState("");
+  const [type, setType] = useState("");
+  const [value, setValue] = useState("");
+  const [isActive, setIsActive] = useState(false);
   const navigate = useNavigate();
-  const handleSelect = (e) => {
-    setType(e.target.value);
-  };
+
+  const handleTypeChange = (e) => setType(e.target.value);
+
   const generateCode = (e) => {
     e.preventDefault();
-
     const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    let promoCode = "";
+    let newCode = "";
     for (let i = 0; i < 6; i++) {
       const randomIndex = Math.floor(Math.random() * characters.length);
-      promoCode += characters[randomIndex];
+      newCode += characters[randomIndex];
     }
-    setCode(promoCode);
+    setCode(newCode);
   };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    try {
-      await addDoc(collection(firestore, "promoCodes"), {
-        code: Code,
-        description: Description,
-        discountType: Type,
-        discountValue: parseFloat(Value),
-        isActive: isAvailable,
-        promoLabel: promoLabel,
-        usedBy: usedBy,
-      });
-      toast("PromoCode Added!", {
-        type: "success",
+    if (!code || !description || !type || !value) {
+      toast("Please fill all fields", {
+        type: "warning",
         position: "top-center",
       });
+      return;
+    }
+    try {
+      await addDoc(collection(firestore, "promoCodes"), {
+        code,
+        description,
+        discountType: type,
+        discountValue: parseFloat(value),
+        isActive,
+        promoLabel,
+        usedBy: [],
+      });
+      toast("PromoCode Added!", { type: "success", position: "top-center" });
       navigate("/home");
     } catch (error) {
-      console.error("Error sending data : ", error);
+      console.error("Error adding PromoCode:", error);
+      toast("Failed to add PromoCode", {
+        type: "error",
+        position: "top-center",
+      });
     }
   };
+
   return (
-    <div>
-      <h2 className="heading1promo ">PromoCode</h2>
-      <div className="form1">
-        <form className="row g-3">
-          <div className="input-group  mb-3">
-            <button
-              className="input-group-text"
-              onClick={generateCode}
-              id="basic-addon1"
-            >
-              Code
+    <div className="promo-container">
+      <h2 className="promo-heading">Create PromoCode</h2>
+      <div className="promo-form">
+        <form>
+          {/* Generate Code */}
+          <div className="input-row">
+            <button className="generate-btn" onClick={generateCode}>
+              Generate Code
             </button>
             <input
               type="text"
-              className="form-control"
-              value={Code}
-              onChange={(e) => setCode(e.target.value)}
               placeholder="XYZABC"
-              aria-label="Username"
-              aria-describedby="basic-addon1"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
             />
           </div>
 
-          <div className="col-12">
-            <label htmlFor="inputAddress" className="form-label">
-              Description
-            </label>
+          {/* Description */}
+          <div className="form-group">
+            <label className="label">Description</label>
             <input
               type="text"
-              value={Description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="form-control"
-              id="inputAddress"
               placeholder="Flat ₹X off on your order"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
             />
           </div>
-          <div className="col-12">
-            <label htmlFor="inputAddress2" className="form-label">
-              Promo Label
-            </label>
+
+          {/* Promo Label */}
+          <div className="form-group">
+            <label className="label">Promo Label</label>
             <input
               type="text"
-              value={promoLabel}
-              onChange={(e) => setpromoLabel(e.target.value)}
-              className="form-control"
-              id="inputAddress2"
               placeholder="Flat ₹X off!"
-            />
-          </div>
-          <div className="col-md-6">
-            <label htmlFor="inputCity" className="form-label">
-              Discount Value
-            </label>
-            <input
-              type="number"
-              value={Value}
-              onChange={(e) => setValue(e.target.value)}
-              className="form-control"
-              id="inputCity"
+              value={promoLabel}
+              onChange={(e) => setPromoLabel(e.target.value)}
             />
           </div>
 
-          <div className="col-md-6">
-            <label htmlFor="inputState" className="form-label">
-              Discount Type
-            </label>
-            <select
-              id="inputState"
-              value={Type}
-              onChange={handleSelect}
-              className="form-select"
-            >
-              <option disabled>Choose...</option>
-              <option>flat</option>
-              <option>...</option>
-            </select>
+          {/* Discount Value & Type */}
+          <div className="input-row">
+            <div className="form-group">
+              <label className="label">Discount Value</label>
+              <input
+                type="number"
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+              />
+            </div>
+            <div className="form-group">
+              <label className="label">Discount Type</label>
+              <select value={type} onChange={handleTypeChange}>
+                <option value="" disabled>
+                  Choose...
+                </option>
+                <option value="flat">Flat</option>
+                {/* <option value="percentage">Percentage</option> */}
+              </select>
+            </div>
           </div>
 
-          <div className="form-check form-switch mx-2">
+          {/* Active Switch */}
+          <div className="switch">
             <input
-              className="form-check-input"
               type="checkbox"
-              role="switch"
-              id="flexSwitchCheckChecked"
-              onChange={() => {
-                if (isAvailable === false) {
-                  setisAvailable(true);
-                } else {
-                  setisAvailable(false);
-                }
-              }}
-              checked={isAvailable === true}
+              id="promoActive"
+              checked={isActive}
+              onChange={() => setIsActive(!isActive)}
             />
-            <label
-              className="form-check-label"
-              htmlFor="flexSwitchCheckChecked"
-            >
-              Active
-            </label>
+            <label htmlFor="promoActive">Active</label>
           </div>
-          <div className="col-12">
-            <button
-              to="/home"
-              type="submit"
-              onClick={handleSubmit}
-              className="btn btn-primary"
-            >
-              Add PromoCode
-            </button>
-          </div>
+
+          {/* Submit Button */}
+          <button className="submit-btn" onClick={handleSubmit}>
+            Add PromoCode
+          </button>
         </form>
       </div>
     </div>

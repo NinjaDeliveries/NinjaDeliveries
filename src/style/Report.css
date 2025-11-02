@@ -1,84 +1,158 @@
-.chart {
-  justify-self: center;
-  /* align-items: center; */
-  margin-top: 2rem;
-  margin-left: 1rem;
-  margin-right: 1rem;
-  margin-bottom: 1rem;
+/* General Dashboard Layout */
+.admin-dashboard {
+  padding: 40px;
+  background: linear-gradient(100deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  font-family: "Poppins", sans-serif;
+  color: #1b1b1b;
 }
-.background {
-  background-color: #faf9f6;
+
+/* Header */
+.dashboard-header {
+  text-align: center;
+  margin-bottom: 40px;
 }
-.outerdiv {
-  padding: 2rem 4rem 2rem 4rem;
+
+.dashboard-header h1 {
+  font-size: 2.2rem;
+  font-weight: 600;
+  color: #f8f8fa;
+  letter-spacing: 0.5px;
+  text-transform: capitalize;
+  position: relative;
 }
-.outerChart {
+
+.dashboard-header h1::after {
+  content: "";
+  display: block;
+  width: 60px;
+  height: 4px;
+  background: linear-gradient(90deg, #4e73df, #36b9cc);
+  margin: 10px auto 0;
+  border-radius: 4px;
+}
+
+/* Metrics Grid */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 25px;
+  margin-bottom: 50px;
+}
+
+/* Metric Cards */
+.metric-card {
   display: flex;
-  justify-content: space-evenly;
-  margin-bottom: 10rem;
-  width: 100%;
-  max-height: 60%;
-}
-.heading {
-  display: flex;
-  justify-content: center;
   align-items: center;
-  margin-top: 4rem;
-  margin-bottom: 4rem;
-
-  padding-bottom: 2rem;
-  font-family: "Gill Sans", "Gill Sans MT", Calibri, "Trebuchet MS", sans-serif;
-}
-.reportHeading {
-  font-family: Arial, Helvetica, sans-serif;
-  border-bottom: 2px solid black;
-}
-
-.cardReport-container {
-  display: flex;
-  justify-content: space-around;
+  background: #ffffff;
+  border-radius: 16px;
   padding: 20px;
-}
-
-.cardReport {
-  height: 23rem;
-  width: calc(50% - 20px);
-  background-color: #fff;
-  border: 1px solid #ddd;
-  border-radius: 10px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-  padding: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   transition: all 0.3s ease;
 }
 
-/* .cardReport:hover {
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
-  transform: scale(1.01);
-} */
-
-.cardReport h2 {
-  font-weight: bold;
-  margin-bottom: 10px;
+.metric-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
 }
 
-.cardReport p {
-  font-size: 16px;
-  color: #666;
+/* Icon Circle */
+.metric-icon {
+  flex-shrink: 0;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 24px;
+  margin-right: 20px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
 }
 
-.smallImg {
-  height: 3rem;
-  width: 3.25rem;
+/* Metric Info */
+.metric-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
-h2 {
-  font-family: "Montserrat", sans-serif;
-  font-size: 36px;
-  font-weight: bold;
+
+.metric-label {
+  font-size: 15px;
+  color: #6c757d;
+  font-weight: 500;
+  margin-bottom: 4px;
 }
-h4 {
-  font-family: "arial";
+
+.metric-value {
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: #2e3b5b;
 }
-h3 {
-  font-family: "Montserrat", sans-serif;
-  font-weight: bold;
+
+.metric-change {
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.metric-change.positive {
+  color: #1cc88a;
+}
+
+.metric-change.neutral {
+  color: #f6c23e;
+}
+
+.metric-change.negative {
+  color: #e74a3b;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .admin-dashboard {
+    padding: 20px;
+  }
+
+  .dashboard-header h1 {
+    font-size: 1.6rem;
+  }
+
+  .metric-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .metric-icon {
+    margin-right: 0;
+    margin-bottom: 10px;
+  }
+
+  .metric-value {
+    font-size: 1.6rem;
+  }
+}
+
+/* Dashboard inner container (for charts or subcomponents) */
+.dashboard-content {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 30px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+
+/* Optional - subtle fade-in animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.metric-card {
+  animation: fadeIn 0.4s ease forwards;
 }

@@ -1,22 +1,12 @@
 import React, { useState } from "react";
-import firebase from "firebase/app";
 import { toast } from "react-toastify";
-import "../context/style.css";
-import {
-  getFirestore,
-  collection,
-  updateDoc,
-  doc,
-  getDoc,
-  arrayUnion,
-} from "firebase/firestore";
+import "../context/transaction.css";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "../context/Firebase";
 
-export default function AddTransaction(value) {
+export default function AddTransaction({ value }) {
   const [amount, setAmount] = useState();
-
-  const [date, setDate] = useState(new Date());
-
+  const [date] = useState(new Date());
   const [transaction, setTransaction] = useState({
     amount: parseFloat(amount),
     mode: "UPI",
@@ -25,17 +15,17 @@ export default function AddTransaction(value) {
 
   const handleSubmit = async () => {
     try {
-      const docRef = doc(db, "riderDetails", value.value.id);
+      const docRef = doc(db, "riderDetails", value.id);
       const docSnap = await getDoc(docRef);
 
       if (docSnap.exists()) {
         const data = docSnap.data();
-        const Transactions = data.Transactions || [];
+        const transactions = data.Transactions || [];
 
-        Transactions.push(transaction);
+        transactions.push(transaction);
 
         await updateDoc(docRef, {
-          Transactions,
+          Transactions: transactions,
         });
 
         toast("Transaction Added!", {
@@ -51,70 +41,53 @@ export default function AddTransaction(value) {
   };
 
   return (
-    <div className="form1" key={value.value.id}>
-      <form className="row container   g-3">
-        <div class="input-group mb-1">
-          <span class="input-group-text" id="basic-addon1">
-            @
-          </span>
+    <div className="transaction-card" key={value.id}>
+      <form className="transaction-form">
+        {/* Username */}
+        <div className="form-group">
+          <label>Rider Username</label>
           <input
             type="text"
-            value={value.value.username}
-            class="form-control"
+            value={value.username}
+            className="input-field"
             disabled
-            aria-label="Username"
-            aria-describedby="basic-addon1"
           />
         </div>
-        <div className="col-md-4">
-          <label htmlFor="validationDefault01" className="form-label">
-            Amount
-          </label>
+
+        {/* Amount */}
+        <div className="form-group">
+          <label>Amount</label>
           <input
             type="number"
-            className="form-control"
-            id="validationDefault01"
+            className="input-field"
             value={amount}
             onChange={(e) =>
               setTransaction({ ...transaction, amount: e.target.valueAsNumber })
             }
-            required
+            placeholder="Enter amount"
           />
         </div>
-        <div className="col-md-4">
-          <label htmlFor="validationDefault02" className="form-label">
-            Mode
-          </label>
-          <input
-            type="text"
-            disabled
-            className="form-control"
-            id="validationDefault02"
-            value="UPI"
-            required
-          />
+
+        {/* Mode */}
+        <div className="form-group">
+          <label>Payment Mode</label>
+          <input type="text" className="input-field" value="UPI" disabled />
         </div>
-        <div className="col-md-4">
-          <label htmlFor="validationDefault02" className="form-label">
-            TimeStamp
-          </label>
-          <input
-            type="text"
-            disabled
-            className="form-control"
-            id="validationDefault02"
-            value={date}
-            required
-          />
+
+        {/* Timestamp */}
+        <div className="form-group">
+          <label>Timestamp</label>
+          <input type="text" className="input-field" value={date} disabled />
         </div>
-        <div className="col-12">
+
+        {/* Submit */}
+        <div className="form-actions">
           <button
-            className="btn btn-success"
+            className="btn-submit"
             onClick={(e) => {
               e.preventDefault();
               handleSubmit();
             }}
-            type="submit"
           >
             Add Transaction
           </button>

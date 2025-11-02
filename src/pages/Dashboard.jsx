@@ -10,7 +10,7 @@ import {
 } from "@mui/material";
 import { motion, AnimatePresence } from "framer-motion";
 import { db } from "../context/Firebase"; // Ensure you have your Firebase config imported
-import "../style/promocode.css";
+import "../style/Dashboard.css";
 import {
   collection,
   query,
@@ -499,18 +499,28 @@ const OrderChart = () => {
 
       <ResponsiveContainer width="100%" height={350}>
         <BarChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" />
+          <defs>
+            <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#6366f1" stopOpacity={0.9} />
+              <stop offset="100%" stopColor="#a855f7" stopOpacity={0.7} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
           <XAxis
             dataKey="time"
             angle={-30}
             textAnchor="end"
             height={50}
             interval={0}
-            tick={{ fontSize: 12 }}
+            tick={{ fontSize: 12, fill: "#475569" }}
           />
-          <YAxis allowDecimals={false} />
-          <Tooltip />
-          <Bar dataKey="orders" fill="#4f46e5" />
+          <YAxis tick={{ fontSize: 12, fill: "#475569" }} />
+          <Tooltip cursor={{ fill: "rgba(99,102,241,0.05)" }} />
+          <Bar
+            dataKey="orders"
+            fill="url(#barGradient)"
+            radius={[8, 8, 0, 0]}
+          />
         </BarChart>
       </ResponsiveContainer>
     </div>

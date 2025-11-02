@@ -11,13 +11,9 @@ import {
   FaBox,
   FaMotorcycle,
   FaCheckCircle,
-  FaUsers,
   FaChartLine,
-  FaShoppingCart,
-  FaMapMarkerAlt,
-  FaClock,
 } from "react-icons/fa";
-import "../style/ProductManage.css";
+import "../style/Report.css";
 import Dashboard from "./Dashboard";
 import { useUser } from "../context/adminContext";
 
@@ -29,6 +25,7 @@ const AdminDashboard = () => {
   const [totalRiders, setTotalRiders] = useState(0);
   const [deliveryRate, setDeliveryRate] = useState(null);
 
+  // Fetch metrics
   useEffect(() => {
     const fetchTotalRiders = async () => {
       try {
@@ -42,6 +39,7 @@ const AdminDashboard = () => {
         console.error("Error fetching riders:", error);
       }
     };
+
     const calculateDeliveryRate = async () => {
       try {
         const successfulQuery = query(
@@ -65,10 +63,10 @@ const AdminDashboard = () => {
         const totalRelevant = successfulCount + cancelledCount;
 
         if (totalRelevant === 0) {
-          setDeliveryRate("N/A"); // Avoid division by zero
+          setDeliveryRate("N/A");
         } else {
           const rate = (successfulCount / totalRelevant) * 100;
-          setDeliveryRate(rate.toFixed(2)); // Rounded to 2 decimal places
+          setDeliveryRate(rate.toFixed(2));
         }
       } catch (error) {
         console.error("Error calculating delivery rate:", error);
@@ -76,9 +74,9 @@ const AdminDashboard = () => {
     };
 
     calculateDeliveryRate();
-
     fetchTotalRiders();
-  }, []);
+  }, [user.storeId]);
+
   useEffect(() => {
     const fetchSuccessfulOrders = async () => {
       try {
@@ -95,7 +93,7 @@ const AdminDashboard = () => {
     };
 
     fetchSuccessfulOrders();
-  }, []);
+  }, [user.storeId]);
 
   useEffect(() => {
     const fetchTotalProducts = async () => {
@@ -112,31 +110,17 @@ const AdminDashboard = () => {
     };
 
     fetchTotalProducts();
-  }, []);
-
-  // Sample data - replace with real data from your API
-  const dashboardData = {
-    totalProducts: 1243,
-    successfulOrders: 568,
-    totalRiders: 87,
-    activeRiders: 63,
-    pendingOrders: 23,
-    deliveryRate: 94.5,
-    revenue: 125430,
-    orderTrend: [65, 59, 80, 81, 56, 55, 90, 65, 59, 80, 81, 56],
-    orderCategories: [
-      { name: "Food", value: 45 },
-      { name: "Groceries", value: 30 },
-      { name: "Electronics", value: 15 },
-      { name: "Others", value: 10 },
-    ],
-  };
+  }, [user.storeId]);
 
   return (
     <div className="admin-dashboard">
       {/* Header */}
       <div className="dashboard-header">
-        <h1>Ninja Deliveries Dashboard</h1>
+        <h1>Ninja Deliveries — Performance Dashboard</h1>
+        <p style={{ color: "#dbeafe", fontSize: "1rem", marginTop: "10px" }}>
+          Real-time analytics on store performance, delivery efficiency, and
+          rider activity.
+        </p>
       </div>
 
       {/* Metrics Cards */}
@@ -147,9 +131,11 @@ const AdminDashboard = () => {
             <FaBox />
           </div>
           <div className="metric-info">
-            <span className="metric-label">Total Products</span>
+            <span className="metric-label">Active Product Listings</span>
             <span className="metric-value">{totalProducts}</span>
-            <span className="metric-change positive"></span>
+            <span className="metric-change positive">
+              Up-to-date inventory count
+            </span>
           </div>
         </div>
 
@@ -159,9 +145,11 @@ const AdminDashboard = () => {
             <FaCheckCircle />
           </div>
           <div className="metric-info">
-            <span className="metric-label">Successful Orders</span>
+            <span className="metric-label">Completed Deliveries</span>
             <span className="metric-value">{successfulCount}</span>
-            <span className="metric-change positive"></span>
+            <span className="metric-change positive">
+              Orders successfully fulfilled
+            </span>
           </div>
         </div>
 
@@ -171,9 +159,9 @@ const AdminDashboard = () => {
             <FaMotorcycle />
           </div>
           <div className="metric-info">
-            <span className="metric-label">Total Riders</span>
+            <span className="metric-label">Registered Delivery Partners</span>
             <span className="metric-value">{totalRiders}</span>
-            <span className="metric-change"></span>
+            <span className="metric-change">Riders currently onboarded</span>
           </div>
         </div>
 
@@ -183,62 +171,19 @@ const AdminDashboard = () => {
             <FaChartLine />
           </div>
           <div className="metric-info">
-            <span className="metric-label">Delivery Rate</span>
-            <span className="metric-value">{deliveryRate}%</span>
-            <span className="metric-change neutral"></span>
+            <span className="metric-label">Delivery Success Rate</span>
+            <span className="metric-value">
+              {deliveryRate === "N/A" ? "N/A" : `${deliveryRate}%`}
+            </span>
+            <span className="metric-change neutral">
+              Percentage of successful trips out of all deliveries
+            </span>
           </div>
         </div>
       </div>
 
+      {/* Dashboard charts and insights */}
       <Dashboard />
-
-      {/* Bottom Row
-      <div className="bottom-row">
-        <div className="recent-activity">
-          <h3>Recent Deliveries</h3>
-          <div className="activity-list">
-            {[1, 2, 3, 4, 5].map((item) => (
-              <div key={item} className="activity-item">
-                <div className="activity-icon">
-                  <FaMotorcycle />
-                </div>
-                <div className="activity-details">
-                  <span className="activity-title">Order #100{item}</span>
-                  <span className="activity-location">
-                    <FaMapMarkerAlt /> Customer Address {item}
-                  </span>
-                </div>
-                <div className="activity-time">
-                  <FaClock /> {item * 15} mins ago
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="quick-stats">
-          <h3>Quick Stats</h3>
-          <div className="stats-grid">
-            <div className="stat-item">
-              <span className="stat-value">23</span>
-              <span className="stat-label">Pending Orders</span>
-            </div>
-            <div className="stat-item">
-              <span className="stat-value">
-                ₹{dashboardData.revenue.toLocaleString()}
-              </span>
-              <span className="stat-label">Total Revenue</span>
-            </div>
-            <div className="stat-item">
-              <span className="stat-value">45 min</span>
-              <span className="stat-label">Avg. Delivery Time</span>
-            </div>
-            <div className="stat-item">
-              <span className="stat-value">4.8 ★</span>
-              <span className="stat-label">Customer Rating</span>
-            </div>
-          </div>
-        </div> */}
     </div>
   );
 };

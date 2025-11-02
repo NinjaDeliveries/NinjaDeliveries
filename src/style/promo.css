@@ -1,0 +1,146 @@
+/* Container */
+.promo-container {
+  max-width: 600px;
+  margin: 50px auto;
+  padding: 30px;
+  background: #f9fafe;
+  border-radius: 16px;
+  box-shadow: 0 12px 25px rgba(0, 0, 0, 0.08);
+  font-family: "Poppins", sans-serif;
+  color: #2c3e50;
+  transition: all 0.3s ease;
+}
+
+/* Heading */
+.promo-heading {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 25px;
+  text-align: center;
+  color: #1e2a47;
+}
+
+/* Form container */
+.promo-form {
+  background: #ffffff;
+  padding: 25px 30px;
+  border-radius: 16px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+  animation: fadeInUp 0.5s ease forwards;
+}
+
+/* Fade-in animation */
+@keyframes fadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Input row (flex for code and discount fields) */
+.input-row {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+/* Form group */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 20px;
+}
+
+/* Labels */
+.label {
+  font-weight: 500;
+  margin-bottom: 8px;
+  color: #34495e;
+}
+
+/* Inputs & Select */
+input[type="text"],
+input[type="number"],
+select {
+  padding: 10px 15px;
+  border-radius: 10px;
+  border: 1px solid #ced4da;
+  font-size: 14px;
+  outline: none;
+  transition: border 0.3s ease, box-shadow 0.3s ease;
+}
+
+input:focus,
+select:focus {
+  border-color: #4e73df;
+  box-shadow: 0 0 8px rgba(78, 115, 223, 0.3);
+}
+
+/* Generate Code Button */
+.generate-btn {
+  padding: 10px 20px;
+  border-radius: 10px;
+  border: none;
+  background: #4e73df;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.generate-btn:hover {
+  background: #2e59d9;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(46, 89, 217, 0.3);
+}
+
+/* Active switch */
+.switch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 25px;
+}
+
+.switch input[type="checkbox"] {
+  width: 40px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.switch label {
+  font-weight: 500;
+  color: #34495e;
+}
+
+/* Submit button */
+.submit-btn {
+  width: 100%;
+  padding: 12px 0;
+  font-weight: 600;
+  border-radius: 12px;
+  font-size: 16px;
+  background: #1cc88a;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.submit-btn:hover {
+  background: #17a673;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(23, 166, 115, 0.3);
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .input-row {
+    flex-direction: column;
+  }
+}

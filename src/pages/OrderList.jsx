@@ -44,7 +44,7 @@ import { useUser } from "../context/adminContext";
 
 const acceptedById = "QT3M1gUaxqUdIPf6qN9a";
 
-// ========== generateBill FUNCTION (unchanged) ========== //
+// ========== generateBill FUNCTION (updated) ========== //
 const generateBill = async (order, phoneNumber) => {
   const companyRef = doc(db, "company", "cgwqfmBd4GDEFv4lUsHX");
   const companySnap = await getDoc(companyRef);
@@ -121,17 +121,26 @@ const generateBill = async (order, phoneNumber) => {
   docPDF.setFont("helvetica", "normal");
 
   // Items Table
-  const productsSnapshot = await getDocs(collection(db, "products"));
-  const products = productsSnapshot.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
-  }));
-  autoTable(docPDF, {
-    startY: 110,
-    head: [["Item", "Qty", "Store", "Unit Price", "Discount", "Total"]],
-    body: order.items.map((item) => {
+  const [productsSnapshot, saleProductsSnapshot] = await Promise.all([
+    getDocs(collection(db, "products")),
+    getDocs(collection(db, "saleProducts")),
+  ]);
+
+  const products = [
+    ...productsSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
+    ...saleProductsSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
+  ];
+  const bodyData = await Promise.all(
+    order.items.map(async (item) => {
       const product = products.find((product) => product.name === item.name);
-      const storeName = product?.isStoreAvailable ? "inStore" : "Mahamai Store";
+      let storeName = "Unknown";
+      if (product?.storeId) {
+        const zoneRef = doc(db, "delivery_zones", product.storeId);
+        const zoneSnap = await getDoc(zoneRef);
+        if (zoneSnap.exists()) {
+          storeName = zoneSnap.data().name || "Unknown";
+        }
+      }
       const displayName =
         product && product.availableAfter10PM === true
           ? `24/7 - ${item.name}`
@@ -144,7 +153,12 @@ const generateBill = async (order, phoneNumber) => {
         `Rs. ${item.discount.toFixed(2)}`,
         `Rs. ${((item.price - item.discount) * item.quantity).toFixed(2)}`,
       ];
-    }),
+    })
+  );
+  autoTable(docPDF, {
+    startY: 110,
+    head: [["Item", "Qty", "Store", "Unit Price", "Discount", "Total"]],
+    body: bodyData,
   });
 
   // Cost Summary

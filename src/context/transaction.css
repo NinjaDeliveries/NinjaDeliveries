@@ -1,0 +1,126 @@
+.transaction-card {
+  max-width: 550px;
+  margin: 30px auto;
+  padding: 30px;
+  background: linear-gradient(145deg, #ffffff, #e8f0fe);
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border: 1px solid #e0e7ff;
+}
+
+.transaction-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+}
+
+.transaction-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.form-group label {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1e3a8a;
+  letter-spacing: 0.5px;
+}
+
+.input-field {
+  padding: 14px;
+  font-size: 1rem;
+  border: 2px solid #bfdbfe;
+  border-radius: 10px;
+  background-color: #f8fafc;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease,
+    background-color 0.3s ease;
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 10px rgba(37, 99, 235, 0.3);
+  background-color: #ffffff;
+}
+
+.input-field:disabled {
+  background-color: #e5e7eb;
+  color: #4b5563;
+  border-color: #d1d5db;
+  cursor: not-allowed;
+}
+
+.input-error {
+  border-color: #dc2626;
+  box-shadow: 0 0 8px rgba(220, 38, 38, 0.3);
+}
+
+.error-text {
+  color: #dc2626;
+  font-size: 0.9rem;
+  margin-top: 4px;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 15px;
+}
+
+.btn-submit {
+  padding: 14px 32px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #ffffff;
+  background: linear-gradient(90deg, #2563eb, #1e40af);
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.btn-submit:hover {
+  background: linear-gradient(90deg, #1e40af, #2563eb);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(37, 99, 235, 0.3);
+}
+
+.btn-submit:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.2);
+}
+
+@media (max-width: 576px) {
+  .transaction-card {
+    margin: 20px 10px;
+    padding: 20px;
+    border-radius: 12px;
+  }
+
+  .input-field {
+    font-size: 0.95rem;
+    padding: 12px;
+  }
+
+  .btn-submit {
+    font-size: 1.1rem;
+    padding: 12px 24px;
+  }
+
+  .form-group label {
+    font-size: 1rem;
+  }
+
+  .error-text {
+    font-size: 0.85rem;
+  }
+}

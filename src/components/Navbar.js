@@ -4,12 +4,11 @@ import logo from "../image/ninjaimg.jpg";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../context/Firebase";
 import { useUser } from "../context/adminContext";
-
-import { Link } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 
 export default function Navbar() {
   const { user } = useUser();
-  const [StoreName, setStoreName] = useState("");
+  const [storeName, setStoreName] = useState("");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -29,36 +28,39 @@ export default function Navbar() {
 
   return (
     <nav className="admin-navbar">
-      <div className="admin-navbar-brand">
-        <img className="logo" src={logo} />
-        <span> Ninja Deliveries</span>
+      <div className="admin-navbar-left">
+        <div className="admin-navbar-brand">
+          <img className="logo" src={logo} alt="Ninja Deliveries Logo" />
+          <span className="brand-name">Ninja Deliveries</span>
+        </div>
+        <span className="store-name">🏬 {storeName || "Loading..."}</span>
       </div>
-      <div>
-        <span className="admin-navbar-item">Store Name: {StoreName}</span>
-      </div>
+
       <ul className="admin-navbar-nav">
-        <li className="admin-navbar-item">
-          <Link aria-current="page" to="/home">
+        <li>
+          <NavLink to="/home" activeclassname="active">
             Home
-          </Link>
+          </NavLink>
         </li>
-        <li className="admin-navbar-item">
-          <Link to="/productslist"> Product List</Link>
+        <li>
+          <NavLink to="/productslist" activeclassname="active">
+            Products
+          </NavLink>
         </li>
-        <li className="admin-navbar-item">
-          <Link aria-current="page" to="/riderlist">
-            Riders List{" "}
-          </Link>
+        <li>
+          <NavLink to="/riderlist" activeclassname="active">
+            Riders
+          </NavLink>
         </li>
-        <li className="admin-navbar-item">
-          <Link aria-current="page" to="/scanorder">
+        <li>
+          <NavLink to="/scanorder" activeclassname="active">
             Scan Order
-          </Link>
+          </NavLink>
         </li>
-        <li className="admin-navbar-item">
-          <Link aria-current="page" to="/report">
-            Data Reports{" "}
-          </Link>
+        <li>
+          <NavLink to="/report" activeclassname="active">
+            Reports
+          </NavLink>
         </li>
       </ul>
     </nav>

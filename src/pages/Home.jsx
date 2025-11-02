@@ -117,12 +117,7 @@ const Home = () => {
       link: "/RiderCharges",
       image: riderCharges,
     },
-    {
-      title: "Fresh Greens order board",
-      text: "See Fresh Green orders here.",
-      link: "/Fresh_Greens",
-      image: freshGreens,
-    },
+
     {
       title: "Location Radius Map",
       text: "See Location Radius Map.",
@@ -135,9 +130,11 @@ const Home = () => {
     <div className="min-h-screen bg-gray-50">
       <div className="ninja-header text-center">
         <h1 className="ninja-title">Ninja Deliveries Admin</h1>
-        <p className="ninja-subtitle">Manage your delivery operations</p>
+        <p className="ninja-subtitle">
+          Efficiently monitor and manage your delivery operations
+        </p>
         <span className="ninja-tagline">
-          Fastest Grocery Delivery in the Hills ⚡
+          Fastest grocery deliveries across the hills 🏔️
         </span>
       </div>
 

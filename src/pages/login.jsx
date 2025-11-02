@@ -19,7 +19,7 @@ import {
 } from "firebase/firestore";
 import "../style/login.css";
 
-export default function Login({ setNav, setIsadmin }) {
+export default function Login({ setNav, setIsadmin, setisEme, setis24x7 }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -59,6 +59,13 @@ export default function Login({ setNav, setIsadmin }) {
         );
       }
 
+      if (userEmail === "emestore@admin.com") {
+        setisEme(true);
+      }
+      if (userEmail === "24seven@admin.com") {
+        setis24x7(true);
+      }
+
       let isAdmin = false;
 
       try {
@@ -67,18 +74,35 @@ export default function Login({ setNav, setIsadmin }) {
           const querySnapshot = await getDocs(q);
 
           if (!querySnapshot.empty) {
-            isAdmin = true;
-            console.log("Admin found via query");
+            // Assuming each document has an array field named "adminEmail"
+            let found = false;
+
+            querySnapshot.forEach((doc) => {
+              const data = doc.data();
+              const adminEmails = data.adminEmail || [];
+
+              if (
+                Array.isArray(adminEmails) &&
+                adminEmails.includes(userEmail)
+              ) {
+                found = true;
+              }
+            });
+
+            if (found) {
+              isAdmin = true;
+              console.log("Admin found via query");
+            } else {
+              isAdmin = false;
+              console.log("User email not found in adminEmail array");
+            }
           } else {
+            isAdmin = false;
             console.log("No admin documents found via query");
           }
         } else {
-          console.error(
-            "Email type:",
-            typeof userEmail,
-            "Email value:",
-            userEmail
-          );
+          console.error("Invalid email:", userEmail);
+          isAdmin = false;
         }
       } catch (firestoreError) {
         console.error("Firestore query error:", firestoreError);

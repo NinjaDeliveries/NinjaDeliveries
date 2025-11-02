@@ -130,7 +130,7 @@ function OrderBoard() {
           if (!productId) continue;
 
           const productData = productMap.get(productId);
-          if (productData?.availableAfter10PM === true) {
+          if (productData?.availableAfter10PM === false) {
             freshGreensItems.push({
               ...item,
               name: item.name || productData.name || "Unknown",

@@ -1,0 +1,325 @@
+/* ============================================
+   GLOBAL BASE STYLES
+   ============================================ */
+
+body {
+  font-family: "Inter", "Roboto", "Segoe UI", sans-serif;
+  color: #0f172a;
+  line-height: 1.6;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  background: transparent;
+}
+
+.container-dashboard {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2.5rem;
+  padding: 2.5rem 3rem;
+  justify-content: center;
+  align-items: flex-start;
+  transition: all 0.3s ease-in-out;
+  background: transparent;
+}
+
+/* ============================================
+   CARD DESIGN (POLISHED)
+   ============================================ */
+
+.container-avg,
+.container-maxsellorder,
+.right-card,
+.orderschart {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.04);
+  transition: all 0.25s ease;
+  position: relative;
+}
+
+.container-avg:hover,
+.container-maxsellorder:hover,
+.right-card:hover,
+.orderschart:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+/* Subtle animated accent line on hover */
+.container-avg::before,
+.container-maxsellorder::before,
+.right-card::before,
+.orderschart::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 4px;
+  width: 0;
+  background: linear-gradient(90deg, #2563eb, #3b82f6);
+  border-radius: 4px 4px 0 0;
+  transition: width 0.3s ease;
+}
+
+.container-avg:hover::before,
+.container-maxsellorder:hover::before,
+.right-card:hover::before,
+.orderschart:hover::before {
+  width: 100%;
+}
+
+/* ============================================
+   HEADINGS & TEXT
+   ============================================ */
+
+.heading,
+.heading-avg {
+  font-weight: 600;
+  font-size: 1.4rem;
+  color: #0f172a;
+  text-align: left;
+  margin-bottom: 1.2rem;
+  letter-spacing: -0.015em;
+}
+
+.price-avg {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1e3a8a;
+  text-align: center;
+  margin: 1.5rem 0;
+  letter-spacing: -0.02em;
+}
+
+/* ============================================
+   BUTTON GROUPS
+   ============================================ */
+
+.button-group {
+  display: flex;
+  justify-content: center;
+  gap: 0.9rem;
+  margin-top: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.button-group .MuiButton-root {
+  border-radius: 10px !important;
+  text-transform: none !important;
+  font-weight: 500 !important;
+  padding: 0.5rem 1.4rem !important;
+  font-size: 0.9rem !important;
+  letter-spacing: 0.01em;
+  transition: all 0.25s ease !important;
+}
+
+.button-group .MuiButton-contained {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+  color: #fff !important;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3) !important;
+}
+
+.button-group .MuiButton-contained:hover {
+  background: linear-gradient(135deg, #1e40af, #1d4ed8) !important;
+  transform: translateY(-1px);
+}
+
+.button-group .MuiButton-outlined {
+  border-color: #2563eb !important;
+  color: #2563eb !important;
+}
+
+.button-group .MuiButton-outlined:hover {
+  background-color: rgba(37, 99, 235, 0.06) !important;
+}
+
+/* ============================================
+   PRODUCT CARDS
+   ============================================ */
+
+.container-maxsellorder {
+  padding: 2.2rem;
+}
+
+.product-card {
+  border: 1px solid #e2e8f0 !important;
+  margin-top: 1.5rem;
+  border-radius: 14px !important;
+  background: #fff !important;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06) !important;
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.product-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.1) !important;
+}
+
+.dashboard-image {
+  object-fit: contain;
+  width: 100%;
+  height: 160px;
+  border-bottom: 1px solid #f1f5f9;
+  border-radius: 14px 14px 0 0;
+  background-color: #f8fafc;
+}
+
+.product-card .MuiTypography-h6 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.product-card .MuiTypography-body2 {
+  color: #475569;
+  font-size: 0.88rem;
+}
+
+/* ============================================
+   CHART SECTION — CLEAN + MODERN
+   ============================================ */
+
+.orderschart {
+  margin-top: 2.5rem;
+  padding: 2rem;
+  max-width: 1150px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.orderschart .heading {
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 1.5rem;
+  text-align: left;
+}
+
+/* Recharts refined look */
+.recharts-wrapper {
+  border-radius: 12px;
+  background-color: #ffffff;
+  padding: 0.75rem;
+}
+
+.recharts-bar-rectangle path {
+  fill: url(#barGradient);
+  rx: 8;
+  ry: 8;
+}
+
+svg defs {
+  /* optional: gradient for bars */
+}
+
+.recharts-cartesian-grid line {
+  stroke: #f1f5f9;
+}
+
+.recharts-tooltip-wrapper {
+  background-color: rgba(255, 255, 255, 0.95);
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(6px);
+}
+
+.recharts-tooltip-label {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.recharts-tooltip-item {
+  color: #2563eb;
+  font-weight: 500;
+}
+
+/* ============================================
+   LAYOUT RESPONSIVENESS
+   ============================================ */
+
+.left-card {
+  flex: 2;
+  min-width: 340px;
+}
+
+.right-cards {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1.6rem;
+  min-width: 300px;
+}
+
+@media (max-width: 1200px) {
+  .container-dashboard {
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem 1.5rem;
+  }
+
+  .right-cards {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+  }
+
+  .right-card {
+    width: 100%;
+    max-width: 420px;
+  }
+}
+
+@media (max-width: 768px) {
+  .container-dashboard {
+    padding: 1.5rem;
+    gap: 1.8rem;
+  }
+
+  .container-avg,
+  .container-maxsellorder,
+  .orderschart {
+    padding: 1.4rem;
+  }
+
+  .heading {
+    font-size: 1.1rem;
+  }
+
+  .price-avg {
+    font-size: 1.4rem;
+  }
+
+  .button-group {
+    flex-direction: column;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .product-card {
+    margin-top: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .heading {
+    font-size: 1rem;
+  }
+
+  .price-avg {
+    font-size: 1.3rem;
+  }
+
+  .container-dashboard {
+    padding: 1rem;
+  }
+
+  .product-card {
+    border-radius: 10px !important;
+  }
+}

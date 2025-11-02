@@ -30,9 +30,13 @@ import CouponCampaignManager from "./pages/Coupons";
 import RiderCharges from "./pages/RiderCharges";
 import FreshGreens from "./pages/freshGreenCard";
 import RadiusMap from "./pages/locationRadiusMap";
+import StoreOrder from "./pages/emeStore";
+
 function App() {
   const [nav, setNav] = useState(false);
   const [Isadmin, setIsadmin] = useState(false);
+  const [is24x7, setis24x7] = useState(false);
+  const [isEme, setisEme] = useState(false);
 
   return (
     <div>
@@ -44,11 +48,20 @@ function App() {
             nav === true ? (
               Isadmin === true ? (
                 <Home />
+              ) : isEme === true ? (
+                <StoreOrder />
+              ) : is24x7 === true ? (
+                <FreshGreens />
               ) : (
                 <OrderQRCodeQueue />
               )
             ) : (
-              <Login setNav={setNav} setIsadmin={setIsadmin} />
+              <Login
+                setNav={setNav}
+                setIsadmin={setIsadmin}
+                setisEme={setisEme}
+                setis24x7={setis24x7}
+              />
             )
           }
         />
@@ -59,11 +72,20 @@ function App() {
             nav === true ? (
               Isadmin === true ? (
                 <Home />
+              ) : isEme === true ? (
+                <StoreOrder />
+              ) : is24x7 === true ? (
+                <FreshGreens />
               ) : (
                 <OrderQRCodeQueue />
               )
             ) : (
-              <Login setNav={setNav} setIsadmin={setIsadmin} />
+              <Login
+                setNav={setNav}
+                setIsadmin={setIsadmin}
+                setisEme={setisEme}
+                setis24x7={setis24x7}
+              />
             )
           }
         />
@@ -175,6 +197,10 @@ function App() {
         <Route
           path="/RadiusMap"
           element={nav === true ? <RadiusMap /> : <Navigate to="/" />}
+        />
+        <Route
+          path="/Test"
+          element={nav === true ? <StoreOrder /> : <Navigate to="/" />}
         />
       </Routes>
     </div>
