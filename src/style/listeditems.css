@@ -14,6 +14,41 @@
   min-height: 400px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
+.store-radio-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.store-radio-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: #111827;
+  transition: all 0.2s ease;
+}
+
+.store-radio-item input[type="radio"] {
+  accent-color: #667eea;
+  cursor: pointer;
+}
+
+.store-radio-item:hover {
+  border-color: #667eea;
+  background: #eef2ff;
+}
+
+.store-radio-item--active {
+  border-color: #667eea;
+  background: #e0e7ff;
+  box-shadow: 0 0 0 1px rgba(102, 126, 234, 0.35);
+}
 
 .loading-content {
   text-align: center;

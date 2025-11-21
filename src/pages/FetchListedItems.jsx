@@ -21,7 +21,10 @@ import "../style/listeditems.css";
 // Initialize Firebase auth
 const auth = getAuth();
 
-// ProductUpdate Component
+/* -------------------------------------------------------------------------- */
+/*                               ProductUpdate                                */
+/* -------------------------------------------------------------------------- */
+
 function ProductUpdate({ item, setEditbox }) {
   const { user } = useUser();
   const navigate = useNavigate();
@@ -56,6 +59,10 @@ function ProductUpdate({ item, setEditbox }) {
   const [imagePreview, setImagePreview] = useState(item.image);
   const [imageUrl, setImageUrl] = useState(item.image);
 
+  // NEW: dynamic store options from Firestore
+  const [storeOptions, setStoreOptions] = useState([]);
+  const [selectedStoreId, setSelectedStoreId] = useState("");
+
   // State for data fetching
   const [data, setData] = useState({
     categories: [],
@@ -64,59 +71,112 @@ function ProductUpdate({ item, setEditbox }) {
   });
   const [loading, setLoading] = useState(true);
 
-  // Fetch categories, subcategories, and products
+  // Fetch categories, subcategories, products, and child stores for this admin
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [categoriesSnapshot, subcategoriesSnapshot, productsSnapshot] =
-          await Promise.all([
-            getDocs(
-              query(
-                collection(db, "categories"),
-                where("storeId", "==", user.storeId)
-              )
-            ),
-            getDocs(
-              query(
-                collection(db, "subcategories"),
-                where("storeId", "==", user.storeId)
-              )
-            ),
-            getDocs(
-              query(
-                collection(db, "products"),
-                where("storeId", "==", user.storeId)
-              )
-            ),
-          ]);
+        const [
+          categoriesSnapshot,
+          subcategoriesSnapshot,
+          productsSnapshot,
+          storesSnapshot,
+        ] = await Promise.all([
+          getDocs(
+            query(
+              collection(db, "categories"),
+              where("storeId", "==", user.storeId)
+            )
+          ),
+          getDocs(
+            query(
+              collection(db, "subcategories"),
+              where("storeId", "==", user.storeId)
+            )
+          ),
+          getDocs(
+            query(
+              collection(db, "products"),
+              where("storeId", "==", user.storeId)
+            )
+          ),
+          getDocs(
+            query(
+              collection(db, "stores"),
+              where("parentStoreId", "==", user.storeId)
+            )
+          ),
+        ]);
 
-        const categoriesArray = categoriesSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
+        const categoriesArray = categoriesSnapshot.docs.map((docSnap) => ({
+          id: docSnap.id,
+          ...docSnap.data(),
         }));
-        const subcategoriesArray = subcategoriesSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
+        const subcategoriesArray = subcategoriesSnapshot.docs.map(
+          (docSnap) => ({
+            id: docSnap.id,
+            ...docSnap.data(),
+          })
+        );
+        const productsArray = productsSnapshot.docs.map((docSnap) => ({
+          id: docSnap.id,
+          ...docSnap.data(),
         }));
-        const productsArray = productsSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+
+        const storesArray = storesSnapshot.docs
+          .map((docSnap) => ({
+            id: docSnap.id, // this will be storeCode
+            ...docSnap.data(),
+          }))
+          // ignore inactive stores (only if active is explicitly false)
+          .filter((store) => store.active !== false);
 
         setData({
           categories: categoriesArray,
           subcategories: subcategoriesArray,
           allProducts: productsArray,
         });
+        setStoreOptions(storesArray);
+
+        // Resolve initial store selection if this admin has child stores
+        if (storesArray.length > 0) {
+          let initialId = "";
+
+          // Prefer explicit storeCode if present
+          if (item.storeCode) {
+            const m = storesArray.find((s) => s.id === item.storeCode);
+            if (m) initialId = m.id;
+          }
+
+          // Fallback to storeKey (older field)
+          if (!initialId && item.storeKey) {
+            const m = storesArray.find((s) => s.id === item.storeKey);
+            if (m) initialId = m.id;
+          }
+
+          // Fallback to storeName
+          if (!initialId && item.storeName) {
+            const m = storesArray.find((s) => s.name === item.storeName);
+            if (m) initialId = m.id;
+          }
+
+          // Final fallback → first child store
+          if (!initialId) {
+            initialId = storesArray[0].id;
+          }
+
+          setSelectedStoreId(initialId);
+        }
+
         setLoading(false);
       } catch (error) {
         console.error("Error fetching data:", error);
         toast.error("Failed to load data.");
+        setLoading(false);
       }
     };
 
     if (user?.storeId) fetchData();
-  }, [user?.storeId]);
+  }, [user?.storeId, item.storeCode, item.storeKey, item.storeName]);
 
   // Handle image selection
   const handleImageChange = (e) => {
@@ -149,9 +209,17 @@ function ProductUpdate({ item, setEditbox }) {
       }
     }
 
+    // Resolve selected store metadata (only if this admin has child stores)
+    let storeMeta = null;
+    if (storeOptions.length > 0 && selectedStoreId) {
+      storeMeta =
+        storeOptions.find((s) => s.id === selectedStoreId) || storeOptions[0];
+    }
+
     try {
       const docRef = doc(db, "products", item.id);
-      await updateDoc(docRef, {
+
+      const updatePayload = {
         name,
         categoryId,
         description,
@@ -170,7 +238,16 @@ function ProductUpdate({ item, setEditbox }) {
         keywords,
         matchingProducts,
         availableAfter10PM: isAvailableAfter10PM,
-      });
+      };
+
+      if (storeMeta) {
+        // Write store metadata only for admins with child stores
+        updatePayload.storeCode = storeMeta.id;
+        updatePayload.storeName = storeMeta.name;
+        updatePayload.storeKey = storeMeta.id; // alias for compatibility
+      }
+
+      await updateDoc(docRef, updatePayload);
       toast.success("Product updated successfully!");
     } catch (error) {
       console.error("Error updating product:", error);
@@ -268,6 +345,37 @@ function ProductUpdate({ item, setEditbox }) {
                     </select>
                   </div>
                 </div>
+
+                {/* Store Selection – only if this admin has child stores */}
+                {storeOptions.length > 0 && (
+                  <div className="form-group">
+                    <label>Store</label>
+                    <div className="store-radio-group">
+                      {storeOptions.map((store) => (
+                        <label
+                          key={store.id}
+                          className={`store-radio-item ${
+                            selectedStoreId === store.id
+                              ? "store-radio-item--active"
+                              : ""
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name={`store-${item.id}`}
+                            value={store.id}
+                            checked={selectedStoreId === store.id}
+                            onChange={(e) =>
+                              setSelectedStoreId(e.target.value)
+                            }
+                          />
+                          <span>{store.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="form-group">
                   <label>Description</label>
                   <textarea
@@ -525,7 +633,10 @@ function ProductUpdate({ item, setEditbox }) {
   );
 }
 
-// DeleteRider Component
+/* -------------------------------------------------------------------------- */
+/*                               DeleteRider                                  */
+/* -------------------------------------------------------------------------- */
+
 function DeleteRider({ item, setDelRider }) {
   const [docId] = useState(item.id);
 
@@ -565,7 +676,10 @@ function DeleteRider({ item, setDelRider }) {
   );
 }
 
-// DataBlock Component
+/* -------------------------------------------------------------------------- */
+/*                               DataBlock                                    */
+/* -------------------------------------------------------------------------- */
+
 function DataBlock({ item }) {
   const [editBox, setEditBox] = useState(false);
   const [delRider, setDelRider] = useState(false);
@@ -595,7 +709,10 @@ function DataBlock({ item }) {
   );
 }
 
-// SearchBar Component
+/* -------------------------------------------------------------------------- */
+/*                                SearchBar                                   */
+/* -------------------------------------------------------------------------- */
+
 function SearchBar() {
   const { user } = useUser();
   const [data, setData] = useState([]);
@@ -611,17 +728,17 @@ function SearchBar() {
         where("storeId", "==", user.storeId)
       );
       unsubscribe = onSnapshot(q, (snapshot) => {
-        const newData = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
+        const newData = snapshot.docs.map((docSnap) => ({
+          id: docSnap.id,
+          ...docSnap.data(),
         }));
         setData(newData);
       });
     };
 
-    const authUnsub = onAuthStateChanged(getAuth(), (user) => {
-      if (user) {
-        fetchUserData(user.storeId);
+    const authUnsub = onAuthStateChanged(getAuth(), (userAuth) => {
+      if (userAuth) {
+        fetchUserData();
       } else {
         console.warn("No user logged in");
       }
@@ -658,7 +775,10 @@ function SearchBar() {
   );
 }
 
-// FetchListedItems Component
+/* -------------------------------------------------------------------------- */
+/*                             FetchListedItems                               */
+/* -------------------------------------------------------------------------- */
+
 function FetchListedItems() {
   const { user } = useUser();
   const navigate = useNavigate();
@@ -667,7 +787,8 @@ function FetchListedItems() {
   const [selectedFilter, setSelectedFilter] = useState("all");
 
   const handleAddProduct = () => {
-    navigate("/itemAdd");
+    // Route must match App.js and Home card
+    navigate("/AddItems");
   };
 
   useEffect(() => {
@@ -679,18 +800,18 @@ function FetchListedItems() {
         where("storeId", "==", user.storeId)
       );
       unsubscribe = onSnapshot(q, (snapshot) => {
-        const newData = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
+        const newData = snapshot.docs.map((docSnap) => ({
+          id: docSnap.id,
+          ...docSnap.data(),
         }));
         setData(newData);
         setLoader(false);
       });
     };
 
-    const authUnsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        fetchUserItems(user.storeId);
+    const authUnsubscribe = onAuthStateChanged(auth, (userAuth) => {
+      if (userAuth) {
+        fetchUserItems();
       } else {
         setData([]);
         setLoader(false);
@@ -767,7 +888,10 @@ function FetchListedItems() {
   );
 }
 
-// ProductUpdateSearchBar Component
+/* -------------------------------------------------------------------------- */
+/*                         ProductUpdateSearchBar                             */
+/* -------------------------------------------------------------------------- */
+
 function ProductUpdateSearchBar({ value, setEditbox }) {
   const { user } = useUser();
   const navigate = useNavigate();
@@ -802,6 +926,10 @@ function ProductUpdateSearchBar({ value, setEditbox }) {
   const [imagePreview, setImagePreview] = useState(value.image);
   const [imageUrl, setImageUrl] = useState(value.image);
 
+  // NEW: dynamic store options from Firestore
+  const [storeOptions, setStoreOptions] = useState([]);
+  const [selectedStoreId, setSelectedStoreId] = useState("");
+
   // State for data fetching
   const [data, setData] = useState({
     categories: [],
@@ -810,59 +938,107 @@ function ProductUpdateSearchBar({ value, setEditbox }) {
   });
   const [loading, setLoading] = useState(true);
 
-  // Fetch categories, subcategories, and products
+  // Fetch categories, subcategories, products, and child stores for this admin
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [categoriesSnapshot, subcategoriesSnapshot, productsSnapshot] =
-          await Promise.all([
-            getDocs(
-              query(
-                collection(db, "categories"),
-                where("storeId", "==", user.storeId)
-              )
-            ),
-            getDocs(
-              query(
-                collection(db, "subcategories"),
-                where("storeId", "==", user.storeId)
-              )
-            ),
-            getDocs(
-              query(
-                collection(db, "products"),
-                where("storeId", "==", user.storeId)
-              )
-            ),
-          ]);
+        const [
+          categoriesSnapshot,
+          subcategoriesSnapshot,
+          productsSnapshot,
+          storesSnapshot,
+        ] = await Promise.all([
+          getDocs(
+            query(
+              collection(db, "categories"),
+              where("storeId", "==", user.storeId)
+            )
+          ),
+          getDocs(
+            query(
+              collection(db, "subcategories"),
+              where("storeId", "==", user.storeId)
+            )
+          ),
+          getDocs(
+            query(
+              collection(db, "products"),
+              where("storeId", "==", user.storeId)
+            )
+          ),
+          getDocs(
+            query(
+              collection(db, "stores"),
+              where("parentStoreId", "==", user.storeId)
+            )
+          ),
+        ]);
 
-        const categoriesArray = categoriesSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
+        const categoriesArray = categoriesSnapshot.docs.map((docSnap) => ({
+          id: docSnap.id,
+          ...docSnap.data(),
         }));
-        const subcategoriesArray = subcategoriesSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
+        const subcategoriesArray = subcategoriesSnapshot.docs.map(
+          (docSnap) => ({
+            id: docSnap.id,
+            ...docSnap.data(),
+          })
+        );
+        const productsArray = productsSnapshot.docs.map((docSnap) => ({
+          id: docSnap.id,
+          ...docSnap.data(),
         }));
-        const productsArray = productsSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+
+        const storesArray = storesSnapshot.docs
+          .map((docSnap) => ({
+            id: docSnap.id,
+            ...docSnap.data(),
+          }))
+          .filter((store) => store.active !== false);
 
         setData({
           categories: categoriesArray,
           subcategories: subcategoriesArray,
           allProducts: productsArray,
         });
+        setStoreOptions(storesArray);
+
+        // Resolve initial store selection if this admin has child stores
+        if (storesArray.length > 0) {
+          let initialId = "";
+
+          if (value.storeCode) {
+            const m = storesArray.find((s) => s.id === value.storeCode);
+            if (m) initialId = m.id;
+          }
+
+          if (!initialId && value.storeKey) {
+            const m = storesArray.find((s) => s.id === value.storeKey);
+            if (m) initialId = m.id;
+          }
+
+          if (!initialId && value.storeName) {
+            const m = storesArray.find((s) => s.name === value.storeName);
+            if (m) initialId = m.id;
+          }
+
+          if (!initialId) {
+            initialId = storesArray[0].id;
+          }
+
+          setSelectedStoreId(initialId);
+        }
+
         setLoading(false);
       } catch (error) {
         console.error("Error fetching data:", error);
         toast.error("Failed to load data.");
+        setLoading(false);
       }
     };
 
     if (user?.storeId) fetchData();
-  }, [user?.storeId]);
+  }, [user?.storeId, value.storeCode, value.storeKey, value.storeName]);
 
   // Handle image selection
   const handleImageChange = (e) => {
@@ -908,9 +1084,16 @@ function ProductUpdateSearchBar({ value, setEditbox }) {
       }
     }
 
+    let storeMeta = null;
+    if (storeOptions.length > 0 && selectedStoreId) {
+      storeMeta =
+        storeOptions.find((s) => s.id === selectedStoreId) || storeOptions[0];
+    }
+
     try {
       const docRef = doc(db, "products", value.id);
-      await updateDoc(docRef, {
+
+      const updatePayload = {
         name,
         categoryId,
         description,
@@ -929,7 +1112,15 @@ function ProductUpdateSearchBar({ value, setEditbox }) {
         keywords,
         matchingProducts,
         availableAfter10PM,
-      });
+      };
+
+      if (storeMeta) {
+        updatePayload.storeCode = storeMeta.id;
+        updatePayload.storeName = storeMeta.name;
+        updatePayload.storeKey = storeMeta.id;
+      }
+
+      await updateDoc(docRef, updatePayload);
       toast.success("Product updated successfully!");
     } catch (error) {
       console.error("Error updating product:", error);
@@ -1014,6 +1205,37 @@ function ProductUpdateSearchBar({ value, setEditbox }) {
                     </select>
                   </div>
                 </div>
+
+                {/* Store Selection – only if this admin has child stores */}
+                {storeOptions.length > 0 && (
+                  <div className="form-group">
+                    <label>Store</label>
+                    <div className="store-radio-group">
+                      {storeOptions.map((store) => (
+                        <label
+                          key={store.id}
+                          className={`store-radio-item ${
+                            selectedStoreId === store.id
+                              ? "store-radio-item--active"
+                              : ""
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name={`store-search-${value.id}`}
+                            value={store.id}
+                            checked={selectedStoreId === store.id}
+                            onChange={(e) =>
+                              setSelectedStoreId(e.target.value)
+                            }
+                          />
+                          <span>{store.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="form-group">
                   <label>Description</label>
                   <textarea
