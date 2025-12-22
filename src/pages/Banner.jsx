@@ -20,7 +20,7 @@ const BannerManagement = () => {
   const storeId = user.storeId;
 
   // Which /banner document are we using?
-  const [configDocId, setConfigDocId] = useState<string | null>(null);
+  const [configDocId, setConfigDocId] = useState(null);
 
   const [config, setConfig] = useState({
     showQuiz: false,
@@ -30,19 +30,19 @@ const BannerManagement = () => {
     storeId,
   });
 
-  const [sliderBanners, setSliderBanners] = useState<any[]>([]);
-  const [salesItems, setSalesItems] = useState<any[]>([]);
+  const [sliderBanners, setSliderBanners] = useState([]);
+  const [salesItems, setSalesItems] = useState([]);
   const [salesBanner, setSalesBanner] = useState("");
   const [uploadingSalesBanner, setUploadingSalesBanner] = useState(false);
-  const [editingBanner, setEditingBanner] = useState<any | null>(null);
-  const [editingSalesItem, setEditingSalesItem] = useState<any | null>(null);
+  const [editingBanner, setEditingBanner] = useState(null);
+  const [editingSalesItem, setEditingSalesItem] = useState(null);
 
-  // NEW: products from /products so we can pick existing SKUs for sale
-  const [allProducts, setAllProducts] = useState<any[]>([]);
+  // products from /products so we can pick existing SKUs for sale
+  const [allProducts, setAllProducts] = useState([]);
   const [productLoading, setProductLoading] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState("");
 
-  const [newBanner, setNewBanner] = useState<any>({
+  const [newBanner, setNewBanner] = useState({
     categoryId: "",
     description: "",
     clickable: true,
@@ -51,7 +51,7 @@ const BannerManagement = () => {
     storeId,
   });
 
-  const [newSalesItem, setNewSalesItem] = useState<any>({
+  const [newSalesItem, setNewSalesItem] = useState({
     description: "",
     discount: "",
     image: "",
@@ -69,14 +69,16 @@ const BannerManagement = () => {
     const fetchConfig = async () => {
       if (!storeId) return;
       try {
-        const q = query(collection(db, "banner"), where("storeId", "==", storeId));
-        const querySnapshot = await getDocs(q);
+        const qBanner = query(
+          collection(db, "banner"),
+          where("storeId", "==", storeId)
+        );
+        const querySnapshot = await getDocs(qBanner);
 
         if (!querySnapshot.empty) {
           const docs = querySnapshot.docs;
           // Prefer doc whose id == storeId if it exists
-          const snap =
-            docs.find((d) => d.id === storeId) || docs[0];
+          const snap = docs.find((d) => d.id === storeId) || docs[0];
 
           const data = snap.data();
           setConfig((prev) => ({
@@ -113,12 +115,12 @@ const BannerManagement = () => {
   // -------------------------------------------------------
   const fetchSliderBanners = async () => {
     try {
-      const q = query(
+      const qSlider = query(
         collection(db, "sliderBanner"),
         where("storeId", "==", storeId)
       );
-      const querySnapshot = await getDocs(q);
-      const banners: any[] = [];
+      const querySnapshot = await getDocs(qSlider);
+      const banners = [];
       querySnapshot.forEach((d) => {
         const data = d.data();
         let clickableValue = data.clickable;
@@ -135,12 +137,12 @@ const BannerManagement = () => {
 
   const fetchSalesItems = async () => {
     try {
-      const q = query(
+      const qSales = query(
         collection(db, "saleProducts"),
         where("storeId", "==", storeId)
       );
-      const querySnapshot = await getDocs(q);
-      const items: any[] = [];
+      const querySnapshot = await getDocs(qSales);
+      const items = [];
       querySnapshot.forEach((d) => {
         const data = d.data();
         items.push({ id: d.id, ...data });
@@ -151,16 +153,16 @@ const BannerManagement = () => {
     }
   };
 
-  // NEW: fetch products so we can link existing SKUs
+  // fetch products so we can link existing SKUs
   const fetchProducts = async () => {
     try {
       setProductLoading(true);
-      const q = query(
+      const qProducts = query(
         collection(db, "products"),
         where("storeId", "==", storeId)
       );
-      const snapshot = await getDocs(q);
-      const list: any[] = [];
+      const snapshot = await getDocs(qProducts);
+      const list = [];
       snapshot.forEach((d) => {
         list.push({ id: d.id, ...d.data() });
       });
@@ -186,8 +188,8 @@ const BannerManagement = () => {
   // -------------------------------------------------------
   // Upload / update sales banner image
   // -------------------------------------------------------
-  const handleSalesBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleSalesBannerUpload = async (e) => {
+    const file = e.target.files && e.target.files[0];
     if (!file) return;
     if (!storeId) return;
 
@@ -213,7 +215,7 @@ const BannerManagement = () => {
   // -------------------------------------------------------
   // Toggle config fields (showQuiz / showSales / showSliderBanner)
   // -------------------------------------------------------
-  const toggleConfig = async (field: "showQuiz" | "showSales" | "showSliderBanner") => {
+  const toggleConfig = async (field) => {
     try {
       if (!configDocId) return;
       const configRef = doc(db, "banner", configDocId);
@@ -233,7 +235,7 @@ const BannerManagement = () => {
     try {
       const storageInstance = getStorage();
 
-      let bannerData: any = {
+      let bannerData = {
         ...newBanner,
         storeId,
       };
@@ -278,7 +280,7 @@ const BannerManagement = () => {
     try {
       const bannerRef = doc(db, "sliderBanner", editingBanner.id);
 
-      let updatedData: any = { ...editingBanner };
+      let updatedData = { ...editingBanner };
       // normalise clickable
       updatedData.clickable =
         typeof updatedData.clickable === "boolean"
@@ -310,7 +312,7 @@ const BannerManagement = () => {
     }
   };
 
-  const handleDeleteBanner = async (id: string) => {
+  const handleDeleteBanner = async (id) => {
     try {
       await deleteDoc(doc(db, "sliderBanner", id));
       fetchSliderBanners();
@@ -325,7 +327,7 @@ const BannerManagement = () => {
   const handleAddSalesItem = async () => {
     try {
       const storageInstance = getStorage();
-      let salesData: any = {
+      let salesData = {
         ...newSalesItem,
         storeId,
       };
@@ -372,7 +374,7 @@ const BannerManagement = () => {
     if (!editingSalesItem) return;
     try {
       const storageInstance = getStorage();
-      let salesData: any = { ...editingSalesItem };
+      let salesData = { ...editingSalesItem };
 
       salesData.discount = Number(salesData.discount) || 0;
       salesData.price = Number(salesData.price) || 0;
@@ -402,7 +404,7 @@ const BannerManagement = () => {
     }
   };
 
-  const handleDeleteSalesItem = async (id: string) => {
+  const handleDeleteSalesItem = async (id) => {
     try {
       await deleteDoc(doc(db, "saleProducts", id));
       fetchSalesItems();
@@ -507,7 +509,7 @@ const BannerManagement = () => {
                 type="file"
                 accept="image/*,image/gif,video/mp4"
                 onChange={(e) => {
-                  const file = e.target.files?.[0];
+                  const file = e.target.files && e.target.files[0];
                   if (file) {
                     setNewBanner({
                       ...newBanner,
@@ -517,7 +519,7 @@ const BannerManagement = () => {
                 }}
               />
 
-              {newBanner?.imageFile && (
+              {newBanner && newBanner.imageFile && (
                 <img
                   src={URL.createObjectURL(newBanner.imageFile)}
                   alt="Preview"
@@ -607,7 +609,8 @@ const BannerManagement = () => {
                             type="file"
                             accept="image/*,image/gif,video/mp4"
                             onChange={(e) => {
-                              const file = e.target.files?.[0];
+                              const file =
+                                e.target.files && e.target.files[0];
                               if (file) {
                                 setEditingBanner({
                                   ...editingBanner,
@@ -721,7 +724,7 @@ const BannerManagement = () => {
                     maxHeight: "180px",
                     objectFit: "cover",
                     borderRadius: "10px",
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+                    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.2)",
                   }}
                 />
               </div>
@@ -735,7 +738,7 @@ const BannerManagement = () => {
           <div className="add-sales-form form-card">
             <h3>Add New Sales Item</h3>
 
-            {/* NEW: Pick an existing product to put on sale */}
+            {/* Pick an existing product to put on sale */}
             <div className="form-group">
               <label>Link existing product (optional):</label>
               <select
@@ -745,7 +748,7 @@ const BannerManagement = () => {
                   setSelectedProductId(id);
                   const prod = allProducts.find((p) => p.id === id);
                   if (prod) {
-                    setNewSalesItem((prev: any) => ({
+                    setNewSalesItem((prev) => ({
                       ...prev,
                       productId: id,
                       name: prod.name || prev.name,
@@ -854,7 +857,7 @@ const BannerManagement = () => {
                   type="file"
                   accept="image/*,image/gif"
                   onChange={(e) => {
-                    const file = e.target.files?.[0];
+                    const file = e.target.files && e.target.files[0];
                     if (file) {
                       setNewSalesItem({
                         ...newSalesItem,
@@ -864,7 +867,7 @@ const BannerManagement = () => {
                   }}
                 />
 
-                {newSalesItem?.imageFile && (
+                {newSalesItem && newSalesItem.imageFile && (
                   <img
                     src={URL.createObjectURL(newSalesItem.imageFile)}
                     alt="Preview"
@@ -963,7 +966,8 @@ const BannerManagement = () => {
                               type="file"
                               accept="image/*,image/gif"
                               onChange={(e) => {
-                                const file = e.target.files?.[0];
+                                const file =
+                                  e.target.files && e.target.files[0];
                                 if (file) {
                                   setEditingSalesItem({
                                     ...editingSalesItem,
@@ -973,7 +977,7 @@ const BannerManagement = () => {
                               }}
                             />
 
-                            {editingSalesItem?.imageFile ? (
+                            {editingSalesItem && editingSalesItem.imageFile ? (
                               <img
                                 src={URL.createObjectURL(
                                   editingSalesItem.imageFile
@@ -982,19 +986,22 @@ const BannerManagement = () => {
                                 style={{ width: "150px", marginTop: "10px" }}
                               />
                             ) : (
-                              editingSalesItem?.image && (
+                              editingSalesItem &&
+                              editingSalesItem.image && (
                                 <img
                                   src={editingSalesItem.image}
                                   alt="Current"
-                                  style={{ width: "150px", marginTop: "10px" }}
+                                  style={{
+                                    width: "150px",
+                                    marginTop: "10px",
+                                  }}
                                 />
                               )
                             )}
                           </div>
                         </div>
                         <p style={{ fontSize: 12, color: "#666" }}>
-                          Linked product:{" "}
-                          {editingSalesItem.productId || "—"}
+                          Linked product: {editingSalesItem.productId || "—"}
                         </p>
                         <div className="form-actions">
                           <button
@@ -1065,10 +1072,265 @@ const BannerManagement = () => {
         </div>
       )}
 
-      {/* styles kept same as your original, omitted here for brevity */}
       <style jsx>{`
-        /* keep your existing CSS from previous version
-           (no functional changes needed there) */
+        .banner-management {
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 20px;
+          font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+          color: #333;
+          background-color: #f5f7fa;
+        }
+
+        .app-header {
+          text-align: center;
+          margin-bottom: 30px;
+          padding: 20px;
+          background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+          color: white;
+          border-radius: 10px;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .app-header h1 {
+          margin: 0;
+          font-size: 2.5rem;
+        }
+
+        .app-header p {
+          margin: 10px 0 0;
+          opacity: 0.9;
+        }
+
+        .card {
+          background: white;
+          border-radius: 10px;
+          padding: 25px;
+          margin-bottom: 25px;
+          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+        }
+
+        .config-section {
+          text-align: center;
+        }
+
+        .config-options {
+          display: flex;
+          justify-content: center;
+          gap: 20px;
+          margin-top: 20px;
+        }
+
+        .config-option {
+          padding: 15px 25px;
+          border: 2px solid #e0e0e0;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .config-option:hover {
+          border-color: #6a11cb;
+        }
+
+        .config-option.active {
+          border-color: #6a11cb;
+          background-color: rgba(106, 17, 203, 0.1);
+        }
+
+        .config-option input {
+          margin: 0;
+        }
+
+        h2 {
+          color: #2c3e50;
+          margin-top: 0;
+          border-bottom: 2px solid #f0f0f0;
+          padding-bottom: 10px;
+        }
+
+        h3 {
+          color: #34495e;
+          margin-top: 0;
+        }
+
+        .form-card {
+          background-color: #f9fafb;
+          padding: 20px;
+          border-radius: 8px;
+          margin-bottom: 30px;
+        }
+
+        .form-group {
+          margin-bottom: 15px;
+        }
+
+        .form-row {
+          display: flex;
+          gap: 15px;
+        }
+
+        .form-row .form-group {
+          flex: 1;
+        }
+
+        label {
+          display: block;
+          margin-bottom: 5px;
+          font-weight: 600;
+          color: #555;
+        }
+
+        input,
+        select,
+        textarea {
+          width: 100%;
+          padding: 10px 12px;
+          border: 1px solid #ddd;
+          border-radius: 6px;
+          font-size: 16px;
+          transition: border 0.3s;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+          outline: none;
+          border-color: #6a11cb;
+          box-shadow: 0 0 0 2px rgba(106, 17, 203, 0.2);
+        }
+
+        textarea {
+          min-height: 80px;
+          resize: vertical;
+        }
+
+        .btn-primary,
+        .btn-secondary,
+        .btn-danger {
+          padding: 12px 20px;
+          border: none;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 16px;
+          font-weight: 600;
+          transition: all 0.2s;
+        }
+
+        .btn-primary {
+          background-color: #6a11cb;
+          color: white;
+        }
+
+        .btn-primary:hover {
+          background-color: #550ba5;
+        }
+
+        .btn-secondary {
+          background-color: #f0f0f0;
+          color: #333;
+        }
+
+        .btn-secondary:hover {
+          background-color: #e0e0e0;
+        }
+
+        .btn-danger {
+          background-color: #e74c3c;
+          color: white;
+        }
+
+        .btn-danger:hover {
+          background-color: #c0392b;
+        }
+
+        .form-actions,
+        .item-actions {
+          display: flex;
+          gap: 10px;
+          margin-top: 15px;
+        }
+
+        .cards-container {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+          gap: 20px;
+        }
+
+        .banner-item,
+        .sales-item {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .banner-image,
+        .sales-image {
+          height: 160px;
+          overflow: hidden;
+          border-radius: 8px 8px 0 0;
+        }
+
+        .banner-image img,
+        .sales-image img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .banner-details,
+        .sales-details {
+          padding: 15px;
+          flex-grow: 1;
+        }
+
+        .sales-details h4 {
+          margin: 0 0 10px;
+          color: #2c3e50;
+        }
+
+        .description {
+          color: #666;
+          font-size: 14px;
+          line-height: 1.4;
+        }
+
+        .sales-info {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 8px;
+          margin-top: 15px;
+        }
+
+        .sales-info p {
+          margin: 0;
+          font-size: 14px;
+        }
+
+        .no-data {
+          text-align: center;
+          padding: 30px;
+          color: #777;
+          font-style: italic;
+        }
+
+        @media (max-width: 768px) {
+          .config-options {
+            flex-direction: column;
+            align-items: center;
+          }
+
+          .form-row {
+            flex-direction: column;
+            gap: 0;
+          }
+
+          .cards-container {
+            grid-template-columns: 1fr;
+          }
+        }
       `}</style>
     </div>
   );

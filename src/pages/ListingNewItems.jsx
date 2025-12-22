@@ -1,7 +1,12 @@
-import React, { useState, useEffect } from "react";
-import { db } from "../context/Firebase";
-import { FormControlLabel, Switch } from "@mui/material";
+// ListingNewItems.jsx
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 
+import CircularProgress from "@mui/material/CircularProgress";
+import { Switch, TextField, Autocomplete, Chip } from "@mui/material";
+
+import { db, storage } from "../context/Firebase";
 import {
   collection,
   setDoc,
@@ -9,42 +14,50 @@ import {
   doc,
   query,
   where,
+  serverTimestamp,
 } from "firebase/firestore";
-import NinjaLogo from "../image/ninjalogo.jpg";
-import { useNavigate } from "react-router-dom";
-import { toast } from "react-toastify";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { storage } from "../context/Firebase";
-import { serverTimestamp } from "firebase/firestore";
-import { useUser } from "../context/adminContext";
-import CircularProgress from "@mui/material/CircularProgress";
 
-import { TextField, Autocomplete, Chip } from "@mui/material";
+import NinjaLogo from "../image/ninjalogo.jpg";
+import { useUser } from "../context/adminContext";
 
 export default function ListingNewItems() {
   const { user } = useUser();
   const navigate = useNavigate();
+
+  // Form fields
   const [name, setname] = useState("");
   const [discount, setDiscount] = useState("");
   const [price, setPrice] = useState("");
   const [description, setDescription] = useState("");
   const [Type, setType] = useState("Choose...");
+  const [SubType, setSubType] = useState("Choose...");
   const [quantity, setQuantity] = useState("");
   const [shelfLife, setShelfLife] = useState("");
   const [GST, setGST] = useState("");
   const [CESS, setCESS] = useState("");
-  const [image, setImage] = useState(null);
+  const [weeklySold, setWeeklySold] = useState("");
+
+  // Toggles / flags
   const [imageCdn, setImageCdn] = useState(false);
-  const [imageUrl, setImageUrl] = useState("");
-  const [imagePreview, setImagePreview] = useState("");
-  const [weeklySold, setWeeklySold] = useState();
   const [isNew, setIsNew] = useState(false);
-  const [SubType, setSubType] = useState("Choose...");
   const [isStoreAvailable, setIsStoreAvailable] = useState(false);
-  const [keywords, setKeywords] = useState([]);
-  const [matchingProducts, setMatchingProducts] = useState([]);
   const [availableAfter10PM, setAvailableAfter10PM] = useState(true);
 
+  // Related products & keywords
+  const [keywords, setKeywords] = useState([]);
+  const [matchingProducts, setMatchingProducts] = useState([]);
+
+  // Image handling
+  const [image, setImage] = useState(null);
+  const [imageUrl, setImageUrl] = useState("");
+  const [imagePreview, setImagePreview] = useState("");
+
+  // NEW: child stores (for Dharamshala parent store this will return EME / 24x7 / Cost Cutter if configured in Firestore)
+  const [storeOptions, setStoreOptions] = useState([]);
+  const [selectedStoreId, setSelectedStoreId] = useState(""); // storeCode
+
+  // Data
   const [data, setData] = useState({
     categories: [],
     subcategories: [],
@@ -59,67 +72,100 @@ export default function ListingNewItems() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        // categories/subcategories/products for the logged-in admin storeId
         const categoriesQuery = query(
           collection(db, "categories"),
           where("storeId", "==", user.storeId)
         );
-        const categoriesSnapshot = await getDocs(categoriesQuery);
-        const categoriesArray = categoriesSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-
         const subcategoriesQuery = query(
           collection(db, "subcategories"),
           where("storeId", "==", user.storeId)
         );
-        const subcategoriesSnapshot = await getDocs(subcategoriesQuery);
-        const subcategoriesArray = subcategoriesSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-
         const productsQuery = query(
           collection(db, "products"),
           where("storeId", "==", user.storeId)
         );
-        const productsSnapshot = await getDocs(productsQuery);
-        const productsArray = productsSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
+
+        // child stores under this admin (Dharamshala -> EME/24x7/CostCutter)
+        const storesQuery = query(
+          collection(db, "stores"),
+          where("parentStoreId", "==", user.storeId)
+        );
+
+        const [
+          categoriesSnapshot,
+          subcategoriesSnapshot,
+          productsSnapshot,
+          storesSnapshot,
+        ] = await Promise.all([
+          getDocs(categoriesQuery),
+          getDocs(subcategoriesQuery),
+          getDocs(productsQuery),
+          getDocs(storesQuery),
+        ]);
+
+        const categoriesArray = categoriesSnapshot.docs.map((d) => ({
+          id: d.id,
+          ...d.data(),
         }));
+
+        const subcategoriesArray = subcategoriesSnapshot.docs.map((d) => ({
+          id: d.id,
+          ...d.data(),
+        }));
+
+        const productsArray = productsSnapshot.docs.map((d) => ({
+          id: d.id,
+          ...d.data(),
+        }));
+
+        const storesArray = storesSnapshot.docs
+          .map((d) => ({
+            id: d.id, // storeCode (doc id)
+            ...d.data(),
+          }))
+          .filter((s) => s.active !== false);
 
         setData({
           categories: categoriesArray,
           subcategories: subcategoriesArray,
           allProducts: productsArray,
         });
-        setLoading(false);
+
+        setStoreOptions(storesArray);
+
+        // default store selection if child stores exist
+        if (storesArray.length > 0) {
+          setSelectedStoreId(storesArray[0].id);
+        } else {
+          setSelectedStoreId("");
+        }
       } catch (error) {
         console.error("Error fetching data:", error);
+        toast.error("Failed to load categories/subcategories/products/stores.");
+      } finally {
+        setLoading(false);
       }
     };
-    fetchData();
-  }, [user.storeId]);
+
+    if (user?.storeId) fetchData();
+  }, [user?.storeId]);
 
   if (loading) {
     return (
       <div className="loader-container">
-        <CircularProgress
-          size={40}
-          thickness={4}
-          style={{ color: " #764ba2" }}
-        />
+        <CircularProgress size={40} thickness={4} style={{ color: " #764ba2" }} />
       </div>
     );
   }
 
   const handleSelect = (e) => {
     setType(e.target.value);
+    setSubType("Choose...");
   };
 
   const handleImageChange = (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
     if (file) {
       setImage(file);
       setImagePreview(URL.createObjectURL(file));
@@ -129,44 +175,90 @@ export default function ListingNewItems() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const imageName = `images/${image.name}`;
-    const imageRef = ref(storage, imageName);
-    await uploadBytes(imageRef, image);
-    const url = await getDownloadURL(imageRef);
-    setImageUrl(url);
-
     try {
-      await setDoc(doc(db, "products", name), {
+      if (!user?.storeId) {
+        toast.error("Store not found for this user.");
+        return;
+      }
+
+      if (!name?.trim()) {
+        toast.error("Please enter product name.");
+        return;
+      }
+      if (!Type || Type === "Choose...") {
+        toast.error("Please select category.");
+        return;
+      }
+      if (!SubType || SubType === "Choose...") {
+        toast.error("Please select sub category.");
+        return;
+      }
+      if (price === "" || isNaN(Number(price))) {
+        toast.error("Please enter valid price.");
+        return;
+      }
+      if (quantity === "" || isNaN(Number(quantity))) {
+        toast.error("Please enter valid quantity.");
+        return;
+      }
+
+      // Upload image if selected
+      let url = imageUrl;
+      if (image) {
+        const safeName = `${name}`.replace(/[^\w\s-]/g, "").trim();
+        const imageName = `images/${safeName || "product"}_${Date.now()}_${image.name}`;
+        const imageRef = ref(storage, imageName);
+        await uploadBytes(imageRef, image);
+        url = await getDownloadURL(imageRef);
+        setImageUrl(url);
+      }
+
+      // Resolve store meta if child stores exist (Dharamshala case)
+      let storeMeta = null;
+      if (storeOptions.length > 0) {
+        storeMeta =
+          storeOptions.find((s) => s.id === selectedStoreId) || storeOptions[0];
+      }
+
+      // NOTE: Keeping your existing doc id behavior = name
+      const payload = {
         name: name,
         imageCdn: imageCdn,
         categoryId: Type,
         description: description,
         price: parseFloat(price),
-        discount: parseFloat(discount),
+        discount: discount === "" ? 0 : parseFloat(discount),
         shelfLife: shelfLife,
         quantity: parseFloat(quantity),
-        image: url,
+        image: url || "",
         isStoreAvailable: isStoreAvailable,
-        CGST: GST / 2,
-        SGST: GST / 2,
-        CESS: CESS,
+        CGST: GST === "" ? 0 : parseFloat(GST) / 2,
+        SGST: GST === "" ? 0 : parseFloat(GST) / 2,
+        CESS: CESS === "" ? 0 : parseFloat(CESS),
         subcategoryId: SubType,
-        storeId: user.storeId,
+        storeId: user.storeId, // parent/admin store
         createdAt: serverTimestamp(),
         isNew: isNew,
         availableAfter10PM: availableAfter10PM,
-        weeklySold: parseFloat(weeklySold) || 0,
+        weeklySold: weeklySold === "" ? 0 : parseFloat(weeklySold) || 0,
         keywords: keywords,
         matchingProducts: matchingProducts,
-      });
+      };
 
-      toast("Product listed Successful!", {
-        type: "success",
-        position: "top-center",
-      });
+      // ✅ NEW: store fields for Dharamshala (only when child stores exist)
+      if (storeMeta) {
+        payload.storeCode = storeMeta.id;   // e.g. "eme" / "24x7" / "costcutter"
+        payload.storeKey = storeMeta.id;    // alias for compatibility
+        payload.storeName = storeMeta.name; // e.g. "EME" / "24×7" / "Cost Cutter"
+      }
+
+      await setDoc(doc(db, "products", name), payload);
+
+      toast("Product listed Successful!", { type: "success", position: "top-center" });
       navigate("/home");
     } catch (error) {
       console.error("Error sending data : ", error);
+      toast.error("Failed to add product.");
     }
   };
 
@@ -186,8 +278,9 @@ export default function ListingNewItems() {
             </div>
           </div>
         </div>
+
         <div className="card-body">
-          <form className="form-grid" onSubmit={(e) => e.preventDefault()}>
+          <form className="form-grid" onSubmit={handleSubmit}>
             {/* Category & Subcategory Section */}
             <div className="section-header">
               <h3>Product Classification</h3>
@@ -199,12 +292,7 @@ export default function ListingNewItems() {
                 Category<span className="required">*</span>
               </label>
               <div className="select-wrapper">
-                <select
-                  value={Type}
-                  onChange={handleSelect}
-                  className="form-select"
-                  required
-                >
+                <select value={Type} onChange={handleSelect} className="form-select" required>
                   <option disabled value="Choose...">
                     Select Category...
                   </option>
@@ -245,6 +333,41 @@ export default function ListingNewItems() {
               </div>
             </div>
 
+            {/* ✅ NEW: Store selection (only when this admin has child stores like Dharamshala) */}
+            {storeOptions.length > 0 && (
+              <>
+                <div className="section-header">
+                  <h3>Store</h3>
+                  <div className="divider"></div>
+                </div>
+
+                <div className="form-group full-width">
+                  <label className="form-label">
+                    Select Store<span className="required">*</span>
+                  </label>
+                  <div className="store-radio-group">
+                    {storeOptions.map((store) => (
+                      <label
+                        key={store.id}
+                        className={`store-radio-item ${
+                          selectedStoreId === store.id ? "store-radio-item--active" : ""
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="store"
+                          value={store.id}
+                          checked={selectedStoreId === store.id}
+                          onChange={(e) => setSelectedStoreId(e.target.value)}
+                        />
+                        <span>{store.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
             {/* Basic Information Section */}
             <div className="section-header">
               <h3>Basic Information</h3>
@@ -261,6 +384,7 @@ export default function ListingNewItems() {
                 onChange={(e) => setname(e.target.value)}
                 className="form-control"
                 placeholder="Enter product name"
+                required
               />
             </div>
 
@@ -295,6 +419,7 @@ export default function ListingNewItems() {
                   placeholder="0.00"
                   min="0"
                   step="0.01"
+                  required
                 />
               </div>
             </div>
@@ -326,6 +451,7 @@ export default function ListingNewItems() {
                 className="form-control"
                 placeholder="0"
                 min="0"
+                required
               />
             </div>
 
@@ -380,7 +506,6 @@ export default function ListingNewItems() {
             </div>
 
             {/* Product Options Section */}
-
             <div className="section-header">
               <h3>Product Options</h3>
               <div className="divider"></div>
@@ -390,23 +515,15 @@ export default function ListingNewItems() {
               <div className="toggle-item">
                 <div className="toggle-text">
                   <div className="toggle-title">Mark as New</div>
-                  <div className="toggle-description">
-                    Display “New” badge on product
-                  </div>
+                  <div className="toggle-description">Display “New” badge on product</div>
                 </div>
-                <Switch
-                  checked={isNew}
-                  onChange={(_, checked) => setIsNew(checked)}
-                  color="secondary"
-                />
+                <Switch checked={isNew} onChange={(_, checked) => setIsNew(checked)} color="secondary" />
               </div>
 
               <div className="toggle-item">
                 <div className="toggle-text">
                   <div className="toggle-title">Available After 10PM</div>
-                  <div className="toggle-description">
-                    Product available for late orders
-                  </div>
+                  <div className="toggle-description">Product available for late orders</div>
                 </div>
                 <Switch
                   checked={availableAfter10PM}
@@ -418,9 +535,7 @@ export default function ListingNewItems() {
               <div className="toggle-item">
                 <div className="toggle-text">
                   <div className="toggle-title">Available in Store</div>
-                  <div className="toggle-description">
-                    Product available for in-store purchase
-                  </div>
+                  <div className="toggle-description">Product available for in-store purchase</div>
                 </div>
                 <Switch
                   checked={isStoreAvailable}
@@ -449,26 +564,19 @@ export default function ListingNewItems() {
                 <label htmlFor="fileInput" className="file-upload-label">
                   <div className="upload-content">
                     <i className="bi bi-cloud-upload upload-icon"></i>
-                    <span className="upload-text">
-                      {image ? image.name : "Choose file or drag here"}
-                    </span>
-                    <span className="upload-subtext">
-                      PNG, JPG, WEBP up to 10MB
-                    </span>
+                    <span className="upload-text">{image ? image.name : "Choose file or drag here"}</span>
+                    <span className="upload-subtext">PNG, JPG, WEBP up to 10MB</span>
                   </div>
                 </label>
               </div>
+
               {imagePreview && (
                 <div className="image-preview-container">
                   <div className="preview-label">
                     <i className="bi bi-eye"></i> Image Preview
                   </div>
                   <div className="preview-wrapper">
-                    <img
-                      src={imagePreview}
-                      alt="Product preview"
-                      className="img-preview"
-                    />
+                    <img src={imagePreview} alt="Product preview" className="img-preview" />
                   </div>
                 </div>
               )}
@@ -485,10 +593,8 @@ export default function ListingNewItems() {
               <Autocomplete
                 multiple
                 options={data.allProducts}
-                getOptionLabel={(option) => option.name}
-                value={data.allProducts.filter((p) =>
-                  matchingProducts.includes(p.id)
-                )}
+                getOptionLabel={(option) => option.name || ""}
+                value={data.allProducts.filter((p) => matchingProducts.includes(p.id))}
                 onChange={(event, newValue) => {
                   if (newValue.length <= 3) {
                     setMatchingProducts(newValue.map((item) => item.id));
@@ -498,20 +604,10 @@ export default function ListingNewItems() {
                 }}
                 renderTags={(value, getTagProps) =>
                   value.map((option, index) => (
-                    <Chip
-                      key={option.id}
-                      label={option.name}
-                      {...getTagProps({ index })}
-                    />
+                    <Chip key={option.id} label={option.name} {...getTagProps({ index })} />
                   ))
                 }
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    variant="outlined"
-                    placeholder="Search Products..."
-                  />
-                )}
+                renderInput={(params) => <TextField {...params} variant="outlined" placeholder="Search Products..." />}
               />
             </div>
 
@@ -525,19 +621,11 @@ export default function ListingNewItems() {
                 onChange={(event, newValue) => setKeywords(newValue)}
                 renderTags={(value, getTagProps) =>
                   value.map((option, index) => (
-                    <Chip
-                      variant="outlined"
-                      label={option}
-                      {...getTagProps({ index })}
-                    />
+                    <Chip key={`${option}-${index}`} variant="outlined" label={option} {...getTagProps({ index })} />
                   ))
                 }
                 renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    variant="outlined"
-                    placeholder="Add keywords (press Enter after each)"
-                  />
+                  <TextField {...params} variant="outlined" placeholder="Add keywords (press Enter after each)" />
                 )}
               />
             </div>
@@ -563,12 +651,13 @@ export default function ListingNewItems() {
             <div className="form-group full-width submit-section">
               <button
                 type="submit"
-                onClick={handleSubmit}
                 disabled={
                   name.length === 0 ||
                   Type === "Choose..." ||
+                  SubType === "Choose..." ||
                   price.length === 0 ||
-                  discount.length === 0
+                  quantity.length === 0 ||
+                  (storeOptions.length > 0 && !selectedStoreId)
                 }
                 className="btn-submit"
               >
@@ -649,8 +738,8 @@ export default function ListingNewItems() {
         .header-icon img {
           width: 100%;
           height: 100%;
-          object-fit: cover; /* fills container without distortion */
-          border-radius: 8px; /* match container rounding */
+          object-fit: cover;
+          border-radius: 8px;
           display: block;
         }
 
@@ -784,8 +873,8 @@ export default function ListingNewItems() {
 
         .input-group {
           display: flex;
-          align-items: center; /* instead of stretch */
-          width: 100%; /* make sure it expands properly */
+          align-items: center;
+          width: 100%;
         }
 
         .input-group-text {
@@ -796,8 +885,8 @@ export default function ListingNewItems() {
           border: 2px solid #e5e7eb;
           border-right: none;
           border-radius: 8px 0 0 8px;
-          padding: 0 0.875rem; /* narrower vertical padding */
-          height: 100%; /* ensures it matches input height */
+          padding: 0 0.875rem;
+          height: 100%;
           font-size: 0.9rem;
           font-weight: 600;
           min-width: 45px;
@@ -807,8 +896,8 @@ export default function ListingNewItems() {
         .input-group .form-control {
           border-radius: 0 8px 8px 0;
           border-left: none;
-          flex: 1; /* so it fills remaining space */
-          height: 100%; /* align with text span */
+          flex: 1;
+          height: 100%;
           box-sizing: border-box;
         }
 
@@ -862,18 +951,8 @@ export default function ListingNewItems() {
           line-height: 1.2;
         }
 
-        .toggle-switch {
-          position: relative;
-          z-index: 2;
-          pointer-events: auto;
-        }
-
         .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track {
-          background: linear-gradient(
-            135deg,
-            #667eea 0%,
-            #764ba2 100%
-          ) !important;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
           opacity: 1 !important;
         }
 
@@ -995,35 +1074,6 @@ export default function ListingNewItems() {
           overflow: hidden;
         }
 
-        .btn-submit::before {
-          content: "";
-          position: absolute;
-          top: 0;
-          left: -100%;
-          width: 100%;
-          height: 100%;
-          background: linear-gradient(
-            90deg,
-            transparent,
-            rgba(255, 255, 255, 0.2),
-            transparent
-          );
-          transition: left 0.5s;
-        }
-
-        .btn-submit:hover::before {
-          left: 100%;
-        }
-
-        .btn-submit:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-        }
-
-        .btn-submit:active {
-          transform: translateY(0);
-        }
-
         .btn-submit:disabled {
           background: linear-gradient(135deg, #cbd5e1 0%, #9ca3af 100%);
           cursor: not-allowed;
@@ -1031,14 +1081,6 @@ export default function ListingNewItems() {
           transform: none;
         }
 
-        .btn-submit:disabled:hover {
-          transform: none;
-          box-shadow: none;
-        }
-
-        .btn-submit i {
-          font-size: 1.1rem;
-        }
         .loader-container {
           display: flex;
           flex-direction: column;
@@ -1050,135 +1092,39 @@ export default function ListingNewItems() {
           gap: 1rem;
         }
 
-        .loader-text {
-          color: #ffffff;
-          font-size: 1.1rem;
-          font-weight: 600;
-          letter-spacing: 0.05em;
-          text-align: center;
+        /* ✅ NEW store selector css */
+        .store-radio-group {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.75rem;
+          align-items: center;
         }
 
-        @media (max-width: 768px) {
-          .container {
-            padding: 0 1rem;
-            margin: 1rem auto;
-          }
-
-          .card-header {
-            padding: 2rem 1.5rem;
-          }
-
-          .header-content {
-            flex-direction: row;
-            gap: 1rem;
-          }
-
-          .header-icon {
-            width: 50px;
-            height: 50px;
-            font-size: 1.5rem;
-          }
-
-          .card-header h2 {
-            font-size: 1.5rem;
-          }
-
-          .header-subtitle {
-            font-size: 0.85rem;
-          }
-
-          .card-body {
-            padding: 1.5rem 1rem;
-          }
-
-          .form-grid {
-            grid-template-columns: 1fr;
-            gap: 1.5rem;
-            padding: 1.5rem;
-          }
-
-          .submit-section {
-            justify-content: stretch;
-          }
-
-          .btn-submit {
-            width: 100%;
-            justify-content: center;
-          }
-        }
-
-        @media (min-width: 769px) and (max-width: 1024px) {
-          .form-grid {
-            grid-template-columns: repeat(2, 1fr);
-          }
-        }
-
-        /* Smooth transitions for all interactive elements */
-        input,
-        select,
-        textarea,
-        button {
-          transition: all 0.3s ease;
-        }
-
-        /* Custom scrollbar for textarea */
-        .textarea::-webkit-scrollbar {
-          width: 8px;
-        }
-
-        .textarea::-webkit-scrollbar-track {
-          background: #f1f1f1;
+        .store-radio-item {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.5rem;
+          border: 1.5px solid #e5e7eb;
+          background: #fff;
+          padding: 0.6rem 0.85rem;
           border-radius: 10px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          user-select: none;
         }
 
-        .textarea::-webkit-scrollbar-thumb {
-          background: #cbd5e1;
-          border-radius: 10px;
+        .store-radio-item:hover {
+          border-color: #cbd5e1;
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
         }
 
-        .textarea::-webkit-scrollbar-thumb:hover {
-          background: #94a3b8;
+        .store-radio-item--active {
+          border-color: #667eea;
+          box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
         }
 
-        /* Focus visible for accessibility */
-        *:focus-visible {
-          outline: 3px solid #667eea;
-          outline-offset: 2px;
-        }
-
-        /* Animation for form elements on load */
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: translateY(10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        .form-group {
-          animation: fadeIn 0.5s ease backwards;
-        }
-
-        .form-group:nth-child(1) {
-          animation-delay: 0.05s;
-        }
-        .form-group:nth-child(2) {
-          animation-delay: 0.1s;
-        }
-        .form-group:nth-child(3) {
-          animation-delay: 0.15s;
-        }
-        .form-group:nth-child(4) {
-          animation-delay: 0.2s;
-        }
-        .form-group:nth-child(5) {
-          animation-delay: 0.25s;
-        }
-        .form-group:nth-child(6) {
-          animation-delay: 0.3s;
+        .store-radio-item input {
+          accent-color: #667eea;
         }
       `}</style>
     </div>

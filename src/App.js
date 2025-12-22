@@ -31,6 +31,8 @@ import RiderCharges from "./pages/RiderCharges";
 import FreshGreens from "./pages/freshGreenCard";
 import RadiusMap from "./pages/locationRadiusMap";
 import StoreOrder from "./pages/emeStore";
+import SeedNinjaEats from "./pages/SeedNinjaEats";
+
 
 function App() {
   const [nav, setNav] = useState(false);
@@ -202,6 +204,8 @@ function App() {
           path="/Test"
           element={nav === true ? <StoreOrder /> : <Navigate to="/" />}
         />
+        <Route path="/seed-ninja-eats" element={nav === true ? <SeedNinjaEats /> : <Navigate to="/" />} />
+
       </Routes>
     </div>
   );
