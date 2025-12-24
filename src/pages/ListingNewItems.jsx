@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-
+import { addDoc } from "firebase/firestore";
 import CircularProgress from "@mui/material/CircularProgress";
 import { Switch, TextField, Autocomplete, Chip } from "@mui/material";
 
@@ -252,7 +252,7 @@ export default function ListingNewItems() {
         payload.storeName = storeMeta.name; // e.g. "EME" / "24×7" / "Cost Cutter"
       }
 
-      await setDoc(doc(db, "products", name), payload);
+      await addDoc(collection(db, "products"), payload);
 
       toast("Product listed Successful!", { type: "success", position: "top-center" });
       navigate("/home");
@@ -486,6 +486,7 @@ export default function ListingNewItems() {
                   className="form-control"
                   placeholder="0"
                   min="0"
+                  step="0.01"
                 />
               </div>
             </div>
@@ -501,6 +502,7 @@ export default function ListingNewItems() {
                   className="form-control"
                   placeholder="0"
                   min="0"
+                  step="0.01"
                 />
               </div>
             </div>
