@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   collection,
   getDocs,
@@ -14,6 +14,8 @@ import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "../context/Firebase";
 import QuestionManager from "./Questions";
 import { useUser } from "../context/adminContext";
+import { Autocomplete, TextField } from "@mui/material";
+
 
 const BannerManagement = () => {
   const { user } = useUser(); // to get user.storeId
@@ -40,7 +42,7 @@ const BannerManagement = () => {
   // products from /products so we can pick existing SKUs for sale
   const [allProducts, setAllProducts] = useState([]);
   const [productLoading, setProductLoading] = useState(false);
-  const [selectedProductId, setSelectedProductId] = useState("");
+  //'const [selectedProductId, setSelectedProductId] = useState("");
 
   const [newBanner, setNewBanner] = useState({
     categoryId: "",
@@ -113,7 +115,7 @@ const BannerManagement = () => {
   // -------------------------------------------------------
   // Fetch helper functions
   // -------------------------------------------------------
-  const fetchSliderBanners = async () => {
+  const fetchSliderBanners = useCallback(async () => {
     try {
       const qSlider = query(
         collection(db, "sliderBanner"),
@@ -133,9 +135,10 @@ const BannerManagement = () => {
     } catch (error) {
       console.error("Error fetching slider banners:", error);
     }
-  };
+  }, [storeId]);
 
-  const fetchSalesItems = async () => {
+  const fetchSalesItems = useCallback(async () => {
+
     try {
       const qSales = query(
         collection(db, "saleProducts"),
@@ -151,10 +154,11 @@ const BannerManagement = () => {
     } catch (error) {
       console.error("Error fetching sales items:", error);
     }
-  };
+  }, [storeId]);
 
   // fetch products so we can link existing SKUs
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
+
     try {
       setProductLoading(true);
       const qProducts = query(
@@ -172,7 +176,8 @@ const BannerManagement = () => {
     } finally {
       setProductLoading(false);
     }
-  };
+  }, [storeId]);
+
 
   // Fetch data when config changes
   useEffect(() => {
@@ -183,7 +188,15 @@ const BannerManagement = () => {
       fetchSalesItems();
       fetchProducts();
     }
-  }, [config.showSliderBanner, config.showSales, storeId]);
+  }, [
+  config.showSliderBanner,
+  config.showSales,
+  storeId,
+  fetchSliderBanners,
+  fetchSalesItems,
+  fetchProducts,
+]);
+
 
   // -------------------------------------------------------
   // Upload / update sales banner image
@@ -363,7 +376,7 @@ const BannerManagement = () => {
         storeId,
         productId: "",
       });
-      setSelectedProductId("");
+      //setSelectedProductId("");
       fetchSalesItems();
     } catch (error) {
       console.error("Error adding sales item:", error);
@@ -741,40 +754,41 @@ const BannerManagement = () => {
             {/* Pick an existing product to put on sale */}
             <div className="form-group">
               <label>Link existing product (optional):</label>
-              <select
-                value={selectedProductId}
-                onChange={(e) => {
-                  const id = e.target.value;
-                  setSelectedProductId(id);
-                  const prod = allProducts.find((p) => p.id === id);
+              <div className="form-group">
+                <Autocomplete
+                 disablePortal
+                options={allProducts}
+                getOptionLabel={(option) => option.name || ""}
+                onChange={(event, prod) => {
                   if (prod) {
+                    //setSelectedProductId(prod.id);
                     setNewSalesItem((prev) => ({
                       ...prev,
-                      productId: id,
+                      productId: prod.id,
                       name: prod.name || prev.name,
-                      price:
-                        typeof prod.price === "number"
-                          ? prod.price
-                          : prev.price,
-                      quantity:
-                        typeof prod.quantity === "number"
-                          ? prod.quantity
-                          : prev.quantity,
-                      image:
-                        prod.imageUrl ||
-                        prod.image ||
-                        prev.image,
-                    }));
-                  }
-                }}
-              >
-                <option value="">-- Choose product --</option>
-                {allProducts.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name || p.id}
-                  </option>
-                ))}
-              </select>
+                    price:
+                      typeof prod.price === "number" ? prod.price : prev.price,
+                    quantity:
+                      typeof prod.quantity === "number"
+                      ? prod.quantity
+                      : prev.quantity,
+                    image:
+                      prod.imageUrl ||
+                      prod.image ||
+                      prev.image,
+                  }));
+                }
+              }}
+            renderInput={(params) => (
+            <TextField
+            {...params}
+            placeholder="Search product..."
+            variant="outlined"
+          />
+        )}
+      />
+    </div>
+
               {productLoading && (
                 <p style={{ fontSize: 12, color: "#888" }}>
                   Loading products…
@@ -1331,9 +1345,31 @@ const BannerManagement = () => {
             grid-template-columns: 1fr;
           }
         }
-      `}</style>
+          /* ===== Make product name text clearly visible ===== */
+
+          /* Text inside the search input */
+          .MuiAutocomplete-input {
+          color: #111 !important;        /* dark text */
+          font-weight: 500 !important;
+        }
+
+          /* Placeholder text */
+          .MuiAutocomplete-input::placeholder {
+          color: #666 !important;        /* visible but soft */
+          opacity: 1 !important;
+        }
+
+        /* Product name inside dropdown list */
+          .MuiAutocomplete-option {
+          color: #111 !important;        /* product name visible */
+          font-size: 15px;
+        }
+
+        /* Hover effect (optional but clean) */
+          .MuiAutocomplete-option:hover {
+          background-color: #f0e9ff;
+        }`}</style>
     </div>
   );
 };
-
 export default BannerManagement;
