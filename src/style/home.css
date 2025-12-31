@@ -290,9 +290,19 @@
 .map-container {
   background: white;
   border-radius: 10px;
-  padding: 1.5rem;
+  padding: 1rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  margin-bottom: 2rem;
+  margin: 2rem auto;          /* center horizontally */
+  width: 60%;                 /* control size */
+  max-width: 700px;
+}
+
+/* actual map size */
+.map-container .leaflet-container {
+  height: 250px;              /* 👈 small map */
+  width: 100%;
+  border-radius: 8px;
+  pointer-events: none;       /* 🔥 NO ONE CAN TOUCH MAP */
 }
 
 /* Responsive Styles */
@@ -490,4 +500,136 @@ html {
 }
 .admin-card:nth-child(6) {
   animation-delay: 0.3s;
+}
+
+/* Single Rider Toggle */
+.rider-toggle-single-wrapper {
+  margin-top: 1.4rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Riders main button */
+.rider-main-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+  padding: 0.55rem 1.4rem;
+  border-radius: 24px;
+  border: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  transition: all 0.25s ease;
+}
+
+.rider-main-button:hover {
+  background: rgba(255, 255, 255, 0.35);
+  transform: translateY(-2px);
+}
+
+/* Status toggle button */
+.rider-status-toggle {
+  padding: 0.45rem 1.1rem;
+  border-radius: 20px;
+  border: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+/* Active state */
+.rider-status-toggle.active {
+  background: #4ade80;
+  color: #064e3b;
+}
+
+/* Offline state */
+.rider-status-toggle.offline {
+  background: #f87171;
+  color: #7f1d1d;
+}
+/* Base Toggle Button */
+.rider-status-toggle {
+  min-width: 120px;
+  height: 42px;
+  border-radius: 999px;
+  border: none;
+  font-weight: 600;
+  font-size: 14px;
+  color: #fff;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+
+  /* Smoothness */
+  transition:
+    background 0.4s ease,
+    transform 0.25s ease,
+    box-shadow 0.35s ease,
+    opacity 0.25s ease;
+}
+
+/* Active = Green */
+.status-active {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  box-shadow: 0 0 0 rgba(34, 197, 94, 0.6);
+  animation: pulse-green 1.8s ease-out;
+}
+
+/* Offline = Red */
+.status-offline {
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
+  box-shadow: 0 0 0 rgba(239, 68, 68, 0.6);
+  animation: pulse-red 1.8s ease-out;
+}
+
+/* Hover micro-lift */
+.rider-status-toggle:hover:not(:disabled) {
+  transform: translateY(-1px) scale(1.03);
+}
+
+/* Click feedback */
+.rider-status-toggle:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+/* Disabled state */
+.rider-status-toggle:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Green pulse */
+@keyframes pulse-green {
+  0% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.55);
+  }
+  70% {
+    box-shadow: 0 0 0 12px rgba(34, 197, 94, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+  }
+}
+
+/* Red pulse */
+@keyframes pulse-red {
+  0% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.55);
+  }
+  70% {
+    box-shadow: 0 0 0 12px rgba(239, 68, 68, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
 }
