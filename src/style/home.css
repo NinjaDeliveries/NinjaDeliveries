@@ -285,141 +285,37 @@
 .card-button:active {
   transform: translateY(0);
 }
-
-/* Map Container */
 .map-container {
-  background: white;
-  border-radius: 10px;
-  padding: 1rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  margin: 2rem auto;          /* center horizontally */
-  width: 60%;                 /* control size */
+  width: 60%;
   max-width: 700px;
-}
+  height: 250px;
 
-/* actual map size */
+  margin: 2rem auto;
+
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(118, 75, 162, 0.35);
+
+  overflow: hidden;      /* 🔑 important */
+  position: relative;
+  padding: 0;            /* 🔥 MUST be zero */
+}
 .map-container .leaflet-container {
-  height: 250px;              /* 👈 small map */
+  height: 100%;
   width: 100%;
-  border-radius: 8px;
-  pointer-events: none;       /* 🔥 NO ONE CAN TOUCH MAP */
+  border-radius: 12px;
+
+  margin: 0;
+  padding: 0;
+
+  /* ❌ REMOVE THIS */
+  /* pointer-events: none; */
 }
-
-/* Responsive Styles */
-
-/* Large Desktop - 4 columns */
-@media (min-width: 1200px) {
-  .card-grid {
-    grid-template-columns: repeat(4, 1fr);
-  }
-}
-
-/* Medium Desktop - 3 columns */
-@media (max-width: 1199px) and (min-width: 992px) {
-  .card-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-/* Tablets - 2 columns */
-@media (max-width: 991px) and (min-width: 768px) {
-  .ninja-header {
-    padding: 1.75rem 1.25rem;
-  }
-
-  .ninja-title {
-    font-size: 1.5rem;
-  }
-
-  .ninja-subtitle {
-    font-size: 0.875rem;
-  }
-
-  .ninja-tagline {
-    font-size: 0.75rem;
-  }
-
-  .card-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
-  }
-
-  .card-image-wrapper {
-    height: 130px;
-  }
-
-  .card-content {
-    padding: 0.875rem;
-  }
-
-  .card-title {
-    font-size: 0.95rem;
-  }
-
-  .card-text {
-    font-size: 0.8rem;
-  }
-
-  .card-button {
-    width: 100%;
-    height: 38px;
-    font-size: 0.95rem;
-  }
-}
-
-/* Mobile Devices - 1 column */
 @media (max-width: 767px) {
-  .ninja-header {
-    padding: 1.5rem 1rem;
-  }
-
-  .ninja-title {
-    font-size: 1.35rem;
-  }
-
-  .ninja-subtitle {
-    font-size: 0.825rem;
-  }
-
-  .ninja-tagline {
-    font-size: 0.7rem;
-    padding: 0.3rem 0.75rem;
-  }
-
-  .card-grid {
-    grid-template-columns: 1fr;
-    gap: 1rem;
-  }
-
-  .card-image-wrapper {
-    height: 120px;
-  }
-
-  .card-content {
-    padding: 0.875rem;
-  }
-
-  .card-title {
-    font-size: 0.925rem;
-  }
-
-  .card-text {
-    font-size: 0.775rem;
-  }
-
-  .card-button {
-    width: 100%;
-    height: 36px;
-    font-size: 0.875rem;
-  }
-
   .map-container {
-    padding: 1.25rem;
-  }
-
-  .container {
-    padding-left: 1rem;
-    padding-right: 1rem;
+    width: 100%;
+    height: 220px;
+    padding: 0;   /* 🔥 keep zero */
   }
 }
 

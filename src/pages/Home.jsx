@@ -137,7 +137,7 @@ const toggleStatus = async () => {
       text: "Add a New Referral Code",
       link: "/referralcode",
       image:
-      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQeTZkjHNkkAET-yG5iCmvG4JMxmu2BTbSm0Q&s",
+      "https://www.idfcfirst.bank.in/content/dam/idfcfirstbank/images/blog/earn-money-by-referring-personal-loan-717x404.jpg",
     },
     {
       title: "Transaction",
@@ -257,9 +257,14 @@ const toggleStatus = async () => {
         </div>
 
         <div className="map-container">
+          <div className="zigzag-corner zigzag-corner-top-left"></div>
+          <div className="zigzag-corner zigzag-corner-top-right"></div>
+          <div className="zigzag-corner zigzag-corner-bottom-left"></div>
+          <div className="zigzag-corner zigzag-corner-bottom-right"></div>
           <Map />
         </div>
       </div>
+      
     </div>
   );
 };

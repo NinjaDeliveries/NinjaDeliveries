@@ -94,22 +94,63 @@ function App() {
     );
   }
 
+  // Custom store location marker icon
+  const storeIcon = new L.Icon({
+    iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png",
+    shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowSize: [41, 41],
+  });
+
   return (
-    <div style={{ height: "100vh", width: "100vw", margin: 0, padding: 0 }}>
+    <div 
+      style={{ 
+        height: "100%", 
+        width: "100%", 
+        margin: 0, 
+        padding: 0, 
+        display: "block", 
+        lineHeight: 0, 
+        overflow: "hidden", 
+        borderRadius: 0,
+        position: "relative"
+      }}
+    >
       <MapContainer
         center={center}
         zoom={13}
-        style={{ height: "100%", width: "100%" }}
+        style={{ 
+          height: "100%", 
+          width: "100%", 
+          margin: 0, 
+          padding: 0, 
+          display: "block", 
+          borderRadius: 0,
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0
+        }}
         zoomControl={false}
+        
       >
         <MapUpdater center={center} />
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a>'
+          attribution=''
           url={tileLayers.OpenStreetMap}
+          
           maxZoom={19}
           tileSize={256}
           detectRetina
         />
+        {/* Store Location Marker */}
+        <Marker position={[storeLat, storeLong]} icon={storeIcon}>
+          <Popup>📍 Dharamshala Store Location</Popup>
+        </Marker>
+        {/* Delivery Locations */}
         {coords.map((coord) => (
           <Marker key={coord.id} position={[coord.lat, coord.lng]}>
             <Popup>✅ Successful Order</Popup>
