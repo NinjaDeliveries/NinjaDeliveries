@@ -8,6 +8,7 @@ import RiderDataFetch from "./context/RiderDataFetch";
 import FetchAddTransaction from "./context/FetchAddTransaction";
 import PromoCode from "./pages/PromoCode";
 import ReferralCode from "./pages/ReferralCode";
+import Register from "./pages/Register";
 import Login from "./pages/login";
 import Report from "./pages/Report";
 import "react-toastify/dist/ReactToastify.css";
@@ -32,6 +33,8 @@ import FreshGreens from "./pages/freshGreenCard";
 import RadiusMap from "./pages/locationRadiusMap";
 import StoreOrder from "./pages/emeStore";
 import SeedNinjaEats from "./pages/SeedNinjaEats";
+import Admin from "./pages/Admin";
+
 
 
 function App() {
@@ -44,6 +47,7 @@ function App() {
     <div>
       {nav && Isadmin && <Navbar />}
       <Routes>
+        {/* MAin ROUTE */}
         <Route
           path="/"
           element={
@@ -64,10 +68,15 @@ function App() {
                 setisEme={setisEme}
                 setis24x7={setis24x7}
               />
+              
             )
           }
         />
-
+        {/* REGISTER ROUTE (DIRECT LINK ONLY) */}
+        <Route 
+        path="/register"
+        element={<Register setNav={setNav} />}
+        />
         <Route
           path="/home"
           element={
@@ -205,6 +214,12 @@ function App() {
           element={nav === true ? <StoreOrder /> : <Navigate to="/" />}
         />
         <Route path="/seed-ninja-eats" element={nav === true ? <SeedNinjaEats /> : <Navigate to="/" />} />
+
+        {/* DEV ONLY – REMOVE BEFORE PRODUCTION */}
+{process.env.NODE_ENV === "development" && (
+  <Route path="/__admin_dev" element={<Admin />} />
+)}
+
 
       </Routes>
     </div>

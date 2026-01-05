@@ -3,6 +3,7 @@ import { auth } from "../context/Firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+
 import {
   FaLock,
   FaEnvelope,
@@ -16,7 +17,10 @@ import {
   query,
   where,
   getDocs,
+  doc,
+  getDoc,
 } from "firebase/firestore";
+
 import "../style/login.css";
 
 export default function Login({ setNav, setIsadmin, setisEme, setis24x7 }) {
@@ -50,7 +54,8 @@ export default function Login({ setNav, setIsadmin, setisEme, setis24x7 }) {
       );
 
       const user = userCredential.user;
-      let userEmail = user.email ? user.email.toLowerCase() : trimmedEmail;
+        let userEmail = user.email ? user.email.toLowerCase() : trimmedEmail;
+
 
       if (!userEmail) {
         console.error("No valid email found after all attempts");
@@ -67,7 +72,23 @@ export default function Login({ setNav, setIsadmin, setisEme, setis24x7 }) {
       }
 
       let isAdmin = false;
+      // 🔹 NEW ADMIN SYSTEM (admin_users collection)
+      const adminRef = doc(db, "admin_users", user.uid);
+      const adminSnap = await getDoc(adminRef);
 
+      if (adminSnap.exists()) {
+      const adminData = adminSnap.data();
+
+      if (adminData.isActive === false) {
+      toast("Admin access disabled. Contact super admin.");
+      await auth.signOut();
+      return;
+    }
+
+    isAdmin = true;
+  }
+
+      if(!isAdmin){
       try {
         if (typeof userEmail === "string" && userEmail.length > 0) {
           const q = query(collection(db, "delivery_zones"));
@@ -91,23 +112,29 @@ export default function Login({ setNav, setIsadmin, setisEme, setis24x7 }) {
 
             if (found) {
               isAdmin = true;
-              console.log("Admin found via query");
-            } else {
-              isAdmin = false;
-              console.log("User email not found in adminEmail array");
+              //console.log("Admin found via query");
+              console.log("Admin found via OLD system (delivery_zones)");
             }
-          } else {
-            isAdmin = false;
-            console.log("No admin documents found via query");
           }
-        } else {
-          console.error("Invalid email:", userEmail);
-          isAdmin = false;
         }
+
+        //     } else {
+        //       isAdmin = false;
+        //       console.log("User email not found in adminEmail array");
+        //     }
+        //   } else {
+        //     isAdmin = false;
+        //     console.log("No admin documents found via query");
+        //   }
+        // } else {
+        //   console.error("Invalid email:", userEmail);
+        //   isAdmin = false;
+        // }
       } catch (firestoreError) {
         console.error("Firestore query error:", firestoreError);
-        isAdmin = false;
+        //isAdmin = false;
       }
+    }
 
       setIsadmin(isAdmin);
       setNav(true);
