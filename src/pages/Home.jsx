@@ -13,8 +13,6 @@ import { useUser } from "../context/adminContext";
 import { useEffect, useState } from "react";
 
 
-
-
 const Home = () => {
   const [riderStatus, setRiderStatus] = useState("active");
 //   const { user } = useUser(); 
@@ -44,13 +42,16 @@ const Home = () => {
 //     setLoading(false);
 //   }
 // };
-const { user } = useUser(); // contains storeId
+//const { user } = useUser(); // contains storeId
+const { user, setUser, stores } = useUser();
+
+
+
 const [isActive, setIsActive] = useState(null);
 const [loadingStatus, setLoadingStatus] = useState(true);
 
 useEffect(() => {
   if (!user?.storeId) return;
-
   const fetchStatus = async () => {
     const ref = doc(db, "delivery_zones", user.storeId);
     const snap = await getDoc(ref);
@@ -62,12 +63,13 @@ useEffect(() => {
   };
 
   fetchStatus();
-}, [user]);
+}, [user.storeId]);
 
 const toggleStatus = async () => {
   if (!user?.storeId) return;
 
   const ref = doc(db, "delivery_zones", user.storeId);
+
   const newStatus = !isActive;
 
   await updateDoc(ref, {

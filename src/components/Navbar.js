@@ -7,8 +7,18 @@ import { useUser } from "../context/adminContext";
 import { NavLink } from "react-router-dom";
 
 export default function Navbar() {
-  const { user } = useUser();
+  const { user, stores, setUser } = useUser();
+  const [open, setOpen] = useState(false);
   const [storeName, setStoreName] = useState("");
+  const currentIndex = stores.findIndex(
+  (s) => s.id === user?.storeId
+);
+
+const nextStore =
+  stores.length > 1
+    ? stores[(currentIndex + 1) % stores.length]
+    : null;
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -25,7 +35,9 @@ export default function Navbar() {
 
     fetchData();
   }, [user]);
-
+  const currentStore = stores.find(
+  (store) => store.id === user?.storeId
+);
   return (
     <nav className="admin-navbar">
       <div className="admin-navbar-left">
@@ -33,7 +45,42 @@ export default function Navbar() {
           <img className="logo" src={logo} alt="Ninja Deliveries Logo" />
           <span className="brand-name">Ninja Deliveries</span>
         </div>
-        <span className="store-name">🏬 {storeName || "Loading..."}</span>
+        <div className="store-switch-wrapper">
+  <button
+  className="store-name"
+  onClick={() => {
+    if (!nextStore) return;
+
+    setUser((prev) => ({
+      ...prev,
+      storeId: nextStore.id,
+    }));
+  }}
+>
+  🏬 {stores.find(s => s.id === user?.storeId)?.name}
+</button>
+  {open && (
+    <div className="store-dropdown">
+      {stores
+        .filter((s) => s.id !== user?.storeId)
+        .map((store) => (
+          <div
+            key={store.id}
+            className="store-option"
+            onClick={() => {
+              setUser((prev) => ({
+                ...prev,
+                storeId: store.id,
+              }));
+              setOpen(false);
+            }}
+          >
+            {store.name}
+          </div>
+        ))}
+    </div>
+  )}
+</div>
       </div>
 
       <ul className="admin-navbar-nav">

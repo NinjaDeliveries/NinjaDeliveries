@@ -5,6 +5,8 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { db } from "../context/Firebase";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { useNavigate } from "react-router-dom";
+
 
 import {
   FaUser,
@@ -24,6 +26,8 @@ export default function Register({ setNav }) {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
+
 
   const validatePhone = (value) => {
     // Indian phone number: 10 digits
@@ -101,7 +105,7 @@ export default function Register({ setNav }) {
         position: "top-center",
       });
 
-      setNav(false); // redirect to login page
+      navigate("/"); 
 
     } catch (error) {
       console.error("Register error:", error);

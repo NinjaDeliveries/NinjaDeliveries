@@ -14,6 +14,10 @@ const UserContext = createContext();
 
 export const UserProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [stores, setStores] = useState([]);            // 🔥 all allowed stores
+  // const [activeStoreId, setActiveStoreId] = useState(null); // 🔥 selected store
+  const [loadingUser, setLoadingUser] = useState(true);
+
   const db = getFirestore();
 
   useEffect(() => {
@@ -22,10 +26,16 @@ export const UserProvider = ({ children }) => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (!currentUser) {
         setUser(null);
+        setStores([]);
+        //setActiveStoreId(null);
+        setLoadingUser(false);
         return;
       }
 
       try {
+        let storeList = [];
+
+
         /* =====================================================
            1️⃣ NEW SYSTEM → admin_users (PRIMARY)
         ===================================================== */
@@ -36,19 +46,17 @@ export const UserProvider = ({ children }) => {
           const adminData = adminSnap.data();
 
           if (adminData.isActive && adminData.storeId) {
-            // ✅ NEW USERS WORK HERE
-            setUser({
-              ...currentUser,
-              storeId: adminData.storeId,
-              role: adminData.role || "admin",
-              source: "admin_users",
-            });
-            return;
+            // 🔥 storeId can be string OR array
+            if (Array.isArray(adminData.storeId)) {
+              storeList = adminData.storeId;
+            } else {
+              storeList = [adminData.storeId];
+            }
           }
         }
 
         /* =====================================================
-           2️⃣ OLD SYSTEM → delivery_zones (FALLBACK)
+           2️⃣ OLD SYSTEM → delivery_zones (FALLBACK / ADDITION)
         ===================================================== */
         const q = query(
           collection(db, "delivery_zones"),
@@ -57,35 +65,72 @@ export const UserProvider = ({ children }) => {
 
         const zoneSnap = await getDocs(q);
 
-        if (!zoneSnap.empty) {
-          const zoneDoc = zoneSnap.docs[0];
+        zoneSnap.forEach((docSnap) => {
+          if (!storeList.includes(docSnap.id)) {
+            storeList.push(docSnap.id);
+          }
+        });
+        const storesMeta = [];
+
+for (const storeId of storeList) {
+  const ref = doc(db, "delivery_zones", storeId);
+  const snap = await getDoc(ref);
+  if (snap.exists()) {
+    storesMeta.push({
+      id: storeId,
+      name: snap.data().name, // Dharamshala / Tanda
+    });
+  }
+}
+
+
+        /* =====================================================
+           3️⃣ FINAL USER STATE
+        ===================================================== */
+        if (storeList.length > 0) {
+          setStores(storesMeta);
+          //setActiveStoreId((prev) => prev || storesMeta[0]?.id); // default store
 
           setUser({
             ...currentUser,
-            storeId: zoneDoc.id, // 🔥 THIS IS CRITICAL
-            role: "admin",
-            source: "delivery_zones",
+            storeId: storesMeta[0]?.id, // 🔥 DEFAULT (syncs with app)
+            role: adminSnap.exists()
+              ? adminSnap.data().role || "admin"
+              : "admin",
+            source: adminSnap.exists() ? "admin_users" : "delivery_zones",
           });
-          return;
+        } else {
+          console.warn("User logged in but no store assigned:", currentUser.uid);
+          setUser({ ...currentUser, storeId: null });
+          setStores([]);
+          //setActiveStoreId(null);
         }
-
-        /* =====================================================
-           3️⃣ LOGGED IN BUT NO STORE ASSIGNED
-        ===================================================== */
-        console.warn("User logged in but no store assigned:", currentUser.uid);
-        setUser({ ...currentUser, storeId: null });
 
       } catch (err) {
         console.error("adminContext error:", err);
         setUser({ ...currentUser, storeId: null });
+        setStores([]);
+        //setActiveStoreId(null);
+      } finally {
+        setLoadingUser(false);
       }
     });
 
     return () => unsubscribe();
   }, []);
 
+  
+
   return (
-    <UserContext.Provider value={{ user }}>
+   <UserContext.Provider
+  value={{
+    user,
+    setUser,     // 🔥 IMPORTANT
+    stores,
+    loadingUser,
+  }}
+>
+
       {children}
     </UserContext.Provider>
   );

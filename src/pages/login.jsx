@@ -80,7 +80,11 @@ export default function Login({ setNav, setIsadmin, setisEme, setis24x7 }) {
       const adminData = adminSnap.data();
 
       if (adminData.isActive === false) {
-      toast("Admin access disabled. Contact super admin.");
+      toast("Access pending. Please wait for approval.", {
+      position: "top-center",
+      autoClose: 3000,
+      });
+
       await auth.signOut();
       return;
     }
