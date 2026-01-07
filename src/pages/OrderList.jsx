@@ -41,7 +41,10 @@ import autoTable from "jspdf-autotable";
 import "../style/login.css";
 import { useUser } from "../context/adminContext";
 
-const acceptedById = "QT3M1gUaxqUdIPf6qN9a";
+// const acceptedById = "QT3M1gUaxqUdIPf6qN9a";
+//aryan id
+const acceptedById = "cuFZz6zhu3PY3t5rFVkG";
+
 
 // ✅ NEW: bill store fallback + store resolution helpers
 const DEFAULT_STORE_NAME = "24*7";
