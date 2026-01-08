@@ -42,7 +42,7 @@ import "../style/login.css";
 import { useUser } from "../context/adminContext";
 
 // const acceptedById = "QT3M1gUaxqUdIPf6qN9a";
-//aryan id
+//AMAN  id
 const acceptedById = "cuFZz6zhu3PY3t5rFVkG";
 
 
