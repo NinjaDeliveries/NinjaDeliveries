@@ -90,9 +90,27 @@ export const UserProvider = ({ children }) => {
   }, []);
 
   // 🔒 CRITICAL GUARD (THIS FIXES REDIRECT ON REFRESH)
-  if (loading) {
-    return null; // or spinner if you want
-  }
+if (loading) {
+  return (
+   <div className="app-loader">
+  <div className="loader-card">
+
+    {/* 🔹 Ninja GIF */}
+    <img
+      src="/loader.gif"
+      alt="Loading"
+      className="ninja-loader-gif"
+    />
+
+    {/* 🔹 Brand text */}
+    <h2>Ninja Deliveries</h2>
+
+  </div>
+</div>
+
+  );
+}
+
 
   return (
     <UserContext.Provider value={{ user }}>

@@ -511,3 +511,77 @@
 .add-product-btn:hover {
   background-color: #2980b9;
 }
+.app-loader {
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+}
+
+.loader-card {
+  background: white;
+  padding: 30px 40px;
+  border-radius: 14px;
+  text-align: center;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+}
+
+.loader-card h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: #4f46e5;
+}
+
+.loader-card p {
+  margin: 8px 0 20px;
+  color: #555;
+}
+
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 4px solid #e5e7eb;
+  border-top: 4px solid #4f46e5;
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+  margin: 0 auto;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.app-loader {
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+}
+
+.loader-card {
+  background: white;
+  padding: 32px 42px;
+  border-radius: 18px;
+  text-align: center;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.25);
+}
+
+.ninja-loader-gif {
+  width: 160px;
+  height: auto;
+  margin-bottom: 16px;
+}
+
+.loader-card h2 {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  color: #4f46e5;
+}
+
