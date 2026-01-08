@@ -1,6 +1,10 @@
 import React from "react";
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
+import {
+  setPersistence,
+  browserLocalPersistence,
+} from "firebase/auth"; // ✅ ADDED
 import { getStorage, ref, uploadBytes } from "firebase/storage";
 
 import {
@@ -28,14 +32,16 @@ const firebaseConfig = {
   measurementId: "G-DBTMJRGSR9",
 };
 
-// const firebaseApp = initializeApp(firebaseConfig, {
-//   appVerificationDisabledForTesting: true,
-// });
-// export default firebaseApp;
 const firebaseApp = initializeApp(firebaseConfig);
+
 export const firestore = getFirestore(firebaseApp);
 export const storage = getStorage(firebaseApp);
+
 export const auth = getAuth(firebaseApp);
+
+// 🔥 ONLY REQUIRED FIX (NO SIDE EFFECTS)
+setPersistence(auth, browserLocalPersistence);
+
 export const db = getFirestore(firebaseApp);
 export const refStorage = ref();
 

@@ -19,6 +19,9 @@ import {
 import { db } from "../context/Firebase";
 import { useUser } from "../context/adminContext";
 import { useEffect, useState } from "react";
+import { signOut } from "firebase/auth";
+import { auth } from "../context/Firebase";
+
 
 const Home = () => {
   const [riderStatus, setRiderStatus] = useState("active");
@@ -35,6 +38,7 @@ const [editTextColor, setEditTextColor] = useState("#ffffff");
   const { user } = useUser();
   const [isActive, setIsActive] = useState(null);
   const [loadingStatus, setLoadingStatus] = useState(true);
+  
 
   // 🔹 Fetch Delivery Zone Status
   useEffect(() => {
@@ -254,9 +258,25 @@ const [editTextColor, setEditTextColor] = useState("#ffffff");
       image: radiusMap,
     },
   ];
+ 
 
   return (
-    <div className="min-h-screen bg-gray-50">
+  <div className="min-h-screen bg-gray-50">
+
+    {/*  LOGOUT (ADDED – SAFE) */}
+    <div className="logout-wrapper">
+  <button
+    className="logout-btn"
+    onClick={async () => {
+      await signOut(auth);
+      window.location.href = "/";
+    }}
+  >
+    Logout
+  </button>
+</div>
+
+
       <div className="ninja-header text-center">
         <h1 className="ninja-title">Ninja Deliveries Admin</h1>
         <p className="ninja-subtitle">

@@ -3,6 +3,10 @@ import { auth } from "../context/Firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useUser } from "../context/adminContext";
+
 
 import {
   FaLock,
@@ -29,6 +33,15 @@ export default function Login({ setNav, setIsadmin, setisEme, setis24x7 }) {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const db = getFirestore();
+  const { user } = useUser();
+const navigate = useNavigate();
+
+useEffect(() => {
+  if (user) {
+    navigate("/home");
+  }
+}, [user]);
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();

@@ -12,7 +12,7 @@ import Register from "./pages/Register";
 import Login from "./pages/login";
 import Report from "./pages/Report";
 import "react-toastify/dist/ReactToastify.css";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ListingNewItems from "./pages/ListingNewItems";
 import ListingNewSalesItems from "./pages/ListSaleProduct";
 import FetchListedItems from "./pages/FetchListedItems";
@@ -34,15 +34,36 @@ import RadiusMap from "./pages/locationRadiusMap";
 import StoreOrder from "./pages/emeStore";
 import SeedNinjaEats from "./pages/SeedNinjaEats";
 import Admin from "./pages/Admin";
+import { useUser } from "./context/adminContext";
+import { useLocation } from "react-router-dom";
+
+
 
 
 
 function App() {
+    const { user } = useUser();
   const [nav, setNav] = useState(false);
   const [Isadmin, setIsadmin] = useState(false);
   const [is24x7, setis24x7] = useState(false);
   const [isEme, setisEme] = useState(false);
+  const location = useLocation();
 
+
+useEffect(() => {
+  if (user) {
+    setNav(true);
+    setIsadmin(user.role === "admin");
+  } else {
+    setNav(false);
+    setIsadmin(false);
+    setis24x7(false);
+    setisEme(false);
+  }
+}, [user, location.pathname]);
+
+
+  
   return (
     <div>
       {nav && Isadmin && <Navbar />}

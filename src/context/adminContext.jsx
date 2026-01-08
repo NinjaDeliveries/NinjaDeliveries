@@ -14,6 +14,7 @@ const UserContext = createContext();
 
 export const UserProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true); // ✅ ADDED
   const db = getFirestore();
 
   useEffect(() => {
@@ -22,6 +23,7 @@ export const UserProvider = ({ children }) => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (!currentUser) {
         setUser(null);
+        setLoading(false); // ✅ ADDED
         return;
       }
 
@@ -36,13 +38,13 @@ export const UserProvider = ({ children }) => {
           const adminData = adminSnap.data();
 
           if (adminData.isActive && adminData.storeId) {
-            // ✅ NEW USERS WORK HERE
             setUser({
               ...currentUser,
               storeId: adminData.storeId,
               role: adminData.role || "admin",
               source: "admin_users",
             });
+            setLoading(false); // ✅ ADDED
             return;
           }
         }
@@ -62,10 +64,11 @@ export const UserProvider = ({ children }) => {
 
           setUser({
             ...currentUser,
-            storeId: zoneDoc.id, // 🔥 THIS IS CRITICAL
+            storeId: zoneDoc.id,
             role: "admin",
             source: "delivery_zones",
           });
+          setLoading(false); // ✅ ADDED
           return;
         }
 
@@ -74,15 +77,22 @@ export const UserProvider = ({ children }) => {
         ===================================================== */
         console.warn("User logged in but no store assigned:", currentUser.uid);
         setUser({ ...currentUser, storeId: null });
+        setLoading(false); // ✅ ADDED
 
       } catch (err) {
         console.error("adminContext error:", err);
         setUser({ ...currentUser, storeId: null });
+        setLoading(false); // ✅ ADDED
       }
     });
 
     return () => unsubscribe();
   }, []);
+
+  // 🔒 CRITICAL GUARD (THIS FIXES REDIRECT ON REFRESH)
+  if (loading) {
+    return null; // or spinner if you want
+  }
 
   return (
     <UserContext.Provider value={{ user }}>
