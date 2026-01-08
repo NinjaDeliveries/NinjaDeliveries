@@ -14,7 +14,7 @@ const UserContext = createContext();
 
 export const UserProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true); // ✅ ADDED
+  const [loading, setLoading] = useState(true);
   const db = getFirestore();
 
   useEffect(() => {
@@ -23,7 +23,7 @@ export const UserProvider = ({ children }) => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (!currentUser) {
         setUser(null);
-        setLoading(false); // ✅ ADDED
+        setLoading(false);
         return;
       }
 
@@ -44,7 +44,7 @@ export const UserProvider = ({ children }) => {
               role: adminData.role || "admin",
               source: "admin_users",
             });
-            setLoading(false); // ✅ ADDED
+            setLoading(false);
             return;
           }
         }
@@ -68,7 +68,7 @@ export const UserProvider = ({ children }) => {
             role: "admin",
             source: "delivery_zones",
           });
-          setLoading(false); // ✅ ADDED
+          setLoading(false);
           return;
         }
 
@@ -77,7 +77,7 @@ export const UserProvider = ({ children }) => {
         ===================================================== */
         console.warn("User logged in but no store assigned:", currentUser.uid);
         setUser({ ...currentUser, storeId: null });
-        setLoading(false); // ✅ ADDED
+        setLoading(false); 
 
       } catch (err) {
         console.error("adminContext error:", err);

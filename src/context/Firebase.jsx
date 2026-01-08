@@ -4,7 +4,7 @@ import { getAuth } from "firebase/auth";
 import {
   setPersistence,
   browserLocalPersistence,
-} from "firebase/auth"; // ✅ ADDED
+} from "firebase/auth"; 
 import { getStorage, ref, uploadBytes } from "firebase/storage";
 
 import {
