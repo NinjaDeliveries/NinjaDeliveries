@@ -3,15 +3,7 @@ import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getStorage, ref, uploadBytes } from "firebase/storage";
 
-import {
-  getFirestore,
-  collection,
-  addDoc,
-  getDocs,
-  setDoc,
-  doc,
-  updateDoc,
-} from "firebase/firestore";
+import { getFirestore, collection, addDoc } from "firebase/firestore";
 
 import { createContext, useContext } from "react";
 const FirebaseContext = createContext(null);
@@ -38,6 +30,18 @@ export const storage = getStorage(firebaseApp);
 export const auth = getAuth(firebaseApp);
 export const db = getFirestore(firebaseApp);
 export const refStorage = ref();
+
+// Simple admin activity logger (login / logout / actions)
+export const logActivity = async (data) => {
+  try {
+    await addDoc(collection(db, "admin_activity_logs"), {
+      ...data,
+      createdAt: data.createdAt || new Date().toISOString(),
+    });
+  } catch (err) {
+    console.error("Failed to log activity:", err);
+  }
+};
 
 export const FirebaseProvider = (props) => {
   return (

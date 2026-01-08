@@ -109,6 +109,13 @@ const nextStore =
             Reports
           </NavLink>
         </li>
+        {user?.permissions?.includes("manage_users") && (
+          <li>
+            <NavLink to="/__admin_dev" activeclassname="active">
+            Admin Panel
+            </NavLink>
+          </li>
+        )}
       </ul>
     </nav>
   );

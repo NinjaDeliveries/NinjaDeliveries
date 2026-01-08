@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import { auth } from "../context/Firebase";
+import { auth, logActivity, db } from "../context/Firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { useUser } from "../context/adminContext";
 
 import {
   FaLock,
@@ -11,24 +12,17 @@ import {
   FaEye,
   FaEyeSlash,
 } from "react-icons/fa";
-import {
-  getFirestore,
-  collection,
-  query,
-  where,
-  getDocs,
-  doc,
-  getDoc,
-} from "firebase/firestore";
+import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
 
 import "../style/login.css";
+
 
 export default function Login({ setNav, setIsadmin, setisEme, setis24x7 }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const db = getFirestore();
+  const { setUser } = useUser();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -72,12 +66,15 @@ export default function Login({ setNav, setIsadmin, setisEme, setis24x7 }) {
       }
 
       let isAdmin = false;
+      let userRoleKey = null;
+      let userSource = "unknown";
+      let userStoreId = null;
       // 🔹 NEW ADMIN SYSTEM (admin_users collection)
       const adminRef = doc(db, "admin_users", user.uid);
       const adminSnap = await getDoc(adminRef);
 
       if (adminSnap.exists()) {
-      const adminData = adminSnap.data();
+        const adminData = adminSnap.data();
 
       if (adminData.isActive === false) {
       toast("Access pending. Please wait for approval.", {
@@ -88,11 +85,40 @@ export default function Login({ setNav, setIsadmin, setisEme, setis24x7 }) {
       await auth.signOut();
       return;
     }
+        if (adminData.isActive === false) {
+          toast("Admin access disabled. Contact super admin.");
+          await auth.signOut();
+          return;
+        }
 
-    isAdmin = true;
-  }
+        isAdmin = true;
+        userRoleKey = adminData.roleKey || null;
+        userSource = "admin_users";
+        userStoreId = Array.isArray(adminData.storeAccess)
+          ? adminData.storeAccess[0] || null
+          : adminData.storeId || null;
+        // // setUser({
+        // //   uid: user.uid,
+        // //   email: userEmail,
+        // //   storeId: userStoreId,
+        // //   roleKey: adminData.roleKey || null,
+        // //   permissions:
+        // //   adminData.role === "admin"
+        // //   ? [
+        // //     "manage_users",
+        // //     "manage_products",
+        // //     "manage_orders",
+        // //     "manage_riders",
+        // //     "manage_categories",
+        // //     "manage_coupons",
+        // //     "manage_banners",
+        // //     "view_reports",
+        // //   ]
+        // // : [],
+        // });
+      }
 
-      if(!isAdmin){
+      if (!isAdmin) {
       try {
         if (typeof userEmail === "string" && userEmail.length > 0) {
           const q = query(collection(db, "delivery_zones"));
@@ -116,7 +142,7 @@ export default function Login({ setNav, setIsadmin, setisEme, setis24x7 }) {
 
             if (found) {
               isAdmin = true;
-              //console.log("Admin found via query");
+              userSource = "delivery_zones";
               console.log("Admin found via OLD system (delivery_zones)");
             }
           }
@@ -140,8 +166,22 @@ export default function Login({ setNav, setIsadmin, setisEme, setis24x7 }) {
       }
     }
 
+      // Log login activity (only once after admin check)
+      await logActivity({
+        type: "login",
+        userId: user.uid,
+        email: userEmail,
+        roleKey: userRoleKey,
+        source: userSource,
+        storeId: userStoreId,
+      });
+
       setIsadmin(isAdmin);
       setNav(true);
+      if(adminSnap.exists()){
+        const adminData = adminSnap.data();
+      }
+      
 
       toast(isAdmin ? "Admin Logged In!" : "Logged In Successfully!", {
         type: "success",
