@@ -277,6 +277,7 @@ const [editTextColor, setEditTextColor] = useState("#ffffff");
 </div>
 
 
+
       <div className="ninja-header text-center">
         <h1 className="ninja-title">Ninja Deliveries Admin</h1>
         <p className="ninja-subtitle">
