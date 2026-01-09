@@ -15,6 +15,8 @@ import {
   limit,
   setDoc,
 } from "firebase/firestore";
+import { deleteDoc } from "firebase/firestore";
+
 
 /* =======================================================
    🔐 PREDEFINED RBAC ROLES (product / banner / rider / category / all-access)
@@ -98,6 +100,8 @@ export const resolveLoginRedirect = (userDoc) => {
 };
 
 export default function Admin() {
+  const [editingUser, setEditingUser] = useState(null);
+
   const [pendingUsers, setPendingUsers] = useState([]);
   const [roles, setRoles] = useState(ROLE_PRESETS);
   const [roleName, setRoleName] = useState("");
@@ -110,50 +114,47 @@ export default function Admin() {
   /* 🔹 Activity logs */
   const [activityLogs, setActivityLogs] = useState([]);
   const [logsLoading, setLogsLoading] = useState(false);
-
-  /* ================= FETCH PENDING USERS ================= */
-  useEffect(() => {
-    const fetchPendingUsers = async () => {
-      try {
-        const q = query(
-          collection(db, "admin_users"),
-          where("isActive", "==", false)
-        );
-
-        const snap = await getDocs(q);
-        const users = snap.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-
-        setPendingUsers(users);
-      } catch (err) {
-        console.error("Error fetching pending users:", err);
-      }
-    };
-
-    fetchPendingUsers();
-  }, []);
-  useEffect(() => {
-  const fetchRoles = async () => {
+  const [activeUsers, setActiveUsers] = useState([]);
+  const [selectedUser, setSelectedUser] = useState(null);
+const [selectedUserLogs, setSelectedUserLogs] = useState([]);
+/* ================= FETCH ALL ADMIN USERS ================= */
+useEffect(() => {
+  const fetchAllAdmins = async () => {
     try {
-      const snap = await getDocs(collection(db, "roles"));
-      if (!snap.empty) {
-        const dbRoles = snap.docs.map(d => d.data());
-        setRoles(dbRoles);
-      } else {
-        // fallback (first time only)
-        setRoles(ROLE_PRESETS);
-      }
+     const snap = await getDocs(collection(db, "admin_users"));
+
+      const allUsers = snap.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      
+setPendingUsers(
+  allUsers.filter(
+    u =>
+      u.isActive === false &&
+      u.roleKey === null &&
+      u.isDeleted !== true
+  )
+);
+
+setActiveUsers(
+  allUsers.filter(
+    u =>
+      u.isActive === true &&
+      u.roleKey &&
+      u.isDeleted !== true
+  )
+);
+
     } catch (err) {
-      console.error("Failed to load roles", err);
-      setRoles(ROLE_PRESETS);
+      console.error("Error fetching admin users:", err);
+      toast.error("Failed to load admin users");
     }
   };
 
-  fetchRoles();
+  fetchAllAdmins();
 }, []);
-
+/* ================= FETCH PENDING USERS ================= */
   /* ================= FETCH ACTIVITY LOGS ================= */
   const fetchActivityLogs = async () => {
     try {
@@ -194,44 +195,8 @@ export default function Admin() {
     },
   };
 
-  /* ================= APPROVE USER ================= */
-  const approveUser = async (userId, userEmail) => {
-    try {
-      const assignedRoleKey = selectedUserRoles[userId];
-const assignedRole = roles.find((r) => r.key === assignedRoleKey);
-
-if (!assignedRole) {
-  toast.error("Please assign a role before approving user");
-  return;
-}
-      const storeKey = selectedUserStores[userId];
-
-      if (!storeKey) {
-        toast.error("Please assign a store before approving user");
-        return;
-      }
-
-      const storeIds =
-  storeKey === "both"
-    ? [
-        STORES.dharamshala.storeId,
-        STORES.tanda.storeId,
-      ]
-    : [STORES[storeKey].storeId];
-
-await updateDoc(doc(db, "admin_users", userId), {
-  isActive: true,
-  roleKey: assignedRole.key,
-  permissions: assignedRole.permissions,
-  storeAccess: storeIds,
-});
-
-    /**
- * New admins are stored ONLY in admin_users.
- * delivery_zones is legacy-read-only and must NOT be updated.
- */
-
-     const approveUser = async (userId, userEmail) => {
+/* ================= APPROVE USER ================= */
+const approveUser = async (userId) => {
   try {
     const assignedRoleKey = selectedUserRoles[userId];
     const assignedRole = roles.find((r) => r.key === assignedRoleKey);
@@ -255,29 +220,31 @@ await updateDoc(doc(db, "admin_users", userId), {
           ]
         : [STORES[storeKey].storeId];
 
-    // ✅ ONLY update admin_users (single source of truth)
-    await updateDoc(doc(db, "admin_users", userId), {
-      isActive: true,
-      roleKey: assignedRole.key,
-      permissions: assignedRole.permissions,
-      storeAccess: storeIds,
-      updatedAt: new Date().toISOString(),
-    });
+    /**
+     * ✅ SINGLE SOURCE OF TRUTH
+     * Only admin_users collection is updated
+     * delivery_zones is legacy (read-only)
+     */
+await updateDoc(doc(db, "admin_users", userId), {
+  isActive: true,
+  isDeleted: false,         
+  roleKey: assignedRole.key,
+  permissions: assignedRole.permissions,
+  storeAccess: storeIds,
+  updatedAt: new Date().toISOString(),
+});
+
+
 
     toast.success("User approved successfully");
+
+    // remove from pending list
     setPendingUsers((prev) => prev.filter((u) => u.id !== userId));
   } catch (err) {
-    console.error(err);
+    console.error("Approve user failed:", err);
     toast.error("Failed to approve user");
   }
 };
-      toast.success("User approved successfully");
-      setPendingUsers((prev) => prev.filter((u) => u.id !== userId));
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to approve user");
-    }
-  };
 
   /* ================= ROLE KEY AUTO GENERATOR ================= */
   const generateRoleKey = (name) =>
@@ -444,6 +411,268 @@ await updateDoc(doc(db, "admin_users", userId), {
           </button>
         </div>
       </div>
+      <div style={styles.card}>
+  <h3>Existing Admin Users</h3>
+  {selectedUser && (
+  <div style={windowOverlay} onClick={() => setSelectedUser(null)}>
+    <div
+      style={windowCard}
+      onClick={(e) => e.stopPropagation()}
+    >
+      {/* Header */}
+      <div style={windowHeader}>
+        <h3>{selectedUser.name}</h3>
+        <button
+          style={windowClose}
+          onClick={() => setSelectedUser(null)}
+        >
+          ✕
+        </button>
+      </div>
+
+      {/* Body */}
+      <div style={{ fontSize: 14 }}>
+        <p><strong>Email:</strong> {selectedUser.email}</p>
+        <p><strong>Phone:</strong> {selectedUser.phone || "-"}</p>
+        <p>
+          <strong>Role:</strong>{" "}
+          {roles.find(r => r.key === selectedUser.roleKey)?.name}
+        </p>
+        <p>
+          <strong>Stores:</strong>{" "}
+          {selectedUser.storeAccess?.length || 0}
+        </p>
+
+        <hr style={{ margin: "14px 0" }} />
+
+        <h4>Recent Activity</h4>
+
+        {selectedUserLogs.length === 0 && (
+          <p style={{ color: "#666" }}>No activity found.</p>
+        )}
+
+        {selectedUserLogs.length > 0 && (
+          <ul style={{ paddingLeft: 16 }}>
+            {selectedUserLogs.map(log => (
+              <li key={log.id}>
+                {log.action || log.type} —{" "}
+                {log.createdAt
+                  ? new Date(log.createdAt).toLocaleString()
+                  : "-"}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div style={{ marginTop: 16, textAlign: "right" }}>
+        <button
+          style={styles.inviteButton}
+          onClick={() => {
+            setEditingUser(selectedUser);
+            setSelectedUser(null);
+          }}
+        >
+          Edit User
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+  {activeUsers.length === 0 && (
+    <p style={{ color: "#666" }}>No active users found</p>
+  )}
+
+  {activeUsers.length > 0 && (
+    <table style={{ width: "100%", marginTop: "16px" }}>
+      <thead>
+        <tr>
+          <th style={styles.logTh}>Full Name</th>
+          <th style={styles.logTh}>Role</th>
+          <th style={styles.logTh}>Store Access</th>
+          <th style={styles.logTh}>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {activeUsers.map(user => (
+          <tr key={user.id}>
+            <td style={styles.logTd}>
+  <span
+    style={{ color: "#4f46e5", cursor: "pointer", fontWeight: 600 }}
+    onClick={async () => {
+      setSelectedUser(user);
+
+      const q = query(
+        collection(db, "admin_activity_logs"),
+        where("userId", "==", user.id),
+        limit(20)
+      );
+
+      const snap = await getDocs(q);
+      setSelectedUserLogs(
+        snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      );
+    }}
+  >
+    {user.name || "Unnamed"}
+  </span>
+</td>
+
+            <td style={styles.logTd}>
+              {roles.find(r => r.key === user.roleKey)?.name || "-"}
+            </td>
+
+            <td style={styles.logTd}>
+              {user.storeAccess?.length || 0} store(s)
+            </td>
+
+            <td style={styles.logTd}>
+<button
+  style={styles.inviteButton}
+  onClick={() => setEditingUser(user)}
+>
+  Edit Role
+</button>
+
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )}
+</div>
+{editingUser && (
+  <div style={modalOverlay}>
+    <div style={modalCard}>
+
+      {/* Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
+        <h3>Edit User</h3>
+        <button
+          onClick={() => setEditingUser(null)}
+          style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer" }}
+        >
+          ✕
+        </button>
+      </div>
+
+      {/* User Info */}
+      <p>
+        <strong>{editingUser.name}</strong><br />
+        <span style={{ color: "#666" }}>{editingUser.email}</span>
+      </p>
+
+      {/* Role */}
+      <select
+        value={editingUser.roleKey || ""}
+        onChange={(e) =>
+          setEditingUser(prev => ({ ...prev, roleKey: e.target.value }))
+        }
+        style={styles.select}
+      >
+        <option value="">Select Role</option>
+        {roles.map(role => (
+          <option key={role.key} value={role.key}>
+            {role.name}
+          </option>
+        ))}
+      </select>
+
+      {/* Store Access */}
+      <select
+        value={
+          editingUser.storeAccess?.length === 2
+            ? "both"
+            : editingUser.storeAccess?.[0] === STORES.dharamshala.storeId
+            ? "dharamshala"
+            : editingUser.storeAccess?.[0] === STORES.tanda.storeId
+            ? "tanda"
+            : ""
+        }
+        onChange={(e) => {
+          const key = e.target.value;
+          const stores =
+            key === "both"
+              ? [STORES.dharamshala.storeId, STORES.tanda.storeId]
+              : key === "dharamshala"
+              ? [STORES.dharamshala.storeId]
+              : key === "tanda"
+              ? [STORES.tanda.storeId]
+              : [];
+
+          setEditingUser(prev => ({ ...prev, storeAccess: stores }));
+        }}
+        style={styles.select}
+      >
+        <option value="">Select Store Access</option>
+        <option value="dharamshala">Dharamshala</option>
+        <option value="tanda">Tanda</option>
+        <option value="both">Both Stores</option>
+      </select>
+
+      {/* Actions */}
+      <div style={{ marginTop: 16, display: "flex", gap: 10 }}>
+        <button
+          style={styles.approveButton}
+          onClick={async () => {
+            const role = roles.find(r => r.key === editingUser.roleKey);
+
+            await updateDoc(doc(db, "admin_users", editingUser.id), {
+              roleKey: role.key,
+              permissions: role.permissions,
+              storeAccess: editingUser.storeAccess || [],
+              updatedAt: new Date().toISOString(),
+            });
+
+            setActiveUsers(prev =>
+              prev.map(u =>
+                u.id === editingUser.id
+                  ? { ...u, roleKey: role.key, permissions: role.permissions }
+                  : u
+              )
+            );
+
+            toast.success("User updated successfully");
+            setEditingUser(null);
+          }}
+        >
+          Save
+        </button>
+
+        <button
+  style={{ ...styles.approveButton, background: "#e53935" }}
+  onClick={async () => {
+    if (!window.confirm("Permanently delete this user?")) return;
+
+    try {
+      await deleteDoc(doc(db, "admin_users", editingUser.id));
+
+      setActiveUsers(prev =>
+        prev.filter(u => u.id !== editingUser.id)
+      );
+
+      toast.success("User permanently deleted");
+      setEditingUser(null);
+    } catch (err) {
+      console.error(err);
+      toast.error("Delete failed");
+    }
+  }}
+>
+  Delete
+</button>
+
+
+        <button onClick={() => setEditingUser(null)}>Cancel</button>
+      </div>
+
+    </div>
+  </div>
+)}
+
+
 
       {/* Activity Logs */}
       <div style={styles.card}>
@@ -496,6 +725,65 @@ await updateDoc(doc(db, "admin_users", userId), {
 }
 
 /* ================= STYLES ================= */
+const windowOverlay = {
+  position: "fixed",
+  inset: 0,
+  background: "rgba(0,0,0,0.35)",
+  backdropFilter: "blur(3px)",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  zIndex: 9999,
+};
+
+const windowCard = {
+  width: "460px",
+  maxHeight: "80vh",
+  background: "#ffffff",
+  borderRadius: "14px",
+  padding: "22px",
+  boxShadow: "0 25px 60px rgba(0,0,0,0.3)",
+  animation: "zoomIn 0.22s ease-out",
+  overflowY: "auto",
+};
+
+const windowHeader = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  marginBottom: 10,
+};
+
+const windowClose = {
+  background: "none",
+  border: "none",
+  fontSize: 20,
+  cursor: "pointer",
+};
+
+
+const modalOverlay = {
+  position: "fixed",
+  top: 0,
+  left: 0,
+  width: "100vw",
+  height: "100vh",
+  background: "rgba(0,0,0,0.45)",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  zIndex: 9999,
+};
+
+const modalCard = {
+  width: "520px",
+  background: "#ffffff",
+  borderRadius: "16px",
+  padding: "28px",
+  boxShadow: "0 20px 50px rgba(0,0,0,0.25)",
+  animation: "scaleIn 0.2s ease",
+};
+
 const styles = {
   container: {
   padding: "48px 24px",
@@ -596,6 +884,7 @@ inviteButtonHover: {
   padding: "10px 8px",
   fontSize: "13px",
 },
+
 };
 
 /* =======================================================

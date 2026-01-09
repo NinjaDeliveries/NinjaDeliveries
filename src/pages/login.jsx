@@ -4,6 +4,8 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useUser } from "../context/adminContext";
+import { logAdminActivity } from "../utils/activityLogger";
+
 
 import {
   FaLock,
@@ -175,6 +177,20 @@ export default function Login({ setNav, setIsadmin, setisEme, setis24x7 }) {
         source: userSource,
         storeId: userStoreId,
       });
+      await logAdminActivity({
+  user,                     // Firebase auth user
+  type: "LOGIN",
+  module: "AUTH",
+  action: "Admin logged in",
+  route: "/",
+  component: "Login",
+  metadata: {
+    source: userSource,
+    roleKey: userRoleKey,
+    storeId: userStoreId,
+  },
+});
+
 
       setIsadmin(isAdmin);
       setNav(true);

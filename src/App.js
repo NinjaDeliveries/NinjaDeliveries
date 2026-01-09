@@ -36,10 +36,15 @@ import SeedNinjaEats from "./pages/SeedNinjaEats";
 import Admin from "./pages/Admin";
 import ProtectedRoute from "./ProtectedRoute";
 import { useUser } from "./context/adminContext";
+import { useLocation } from "react-router-dom";
+import { useEffect } from "react";
+import { logAdminActivity } from "./utils/activityLogger";
+
 
 
 function App() {
   const { user }= useUser();
+  const location = useLocation();
   const [nav, setNav] = useState(false);
   const [Isadmin, setIsadmin] = useState(false);
   const [is24x7, setis24x7] = useState(false);
@@ -51,6 +56,19 @@ function App() {
   // {component}
   // </ProtectedRoute>
   // );
+  useEffect(() => {
+  if (!user) return;
+
+  logAdminActivity({
+    user,
+    type: "NAVIGATION",
+    module: "ROUTE",
+    action: "Visited page",
+    route: location.pathname,
+    component: "Router",
+  });
+}, [location.pathname]);
+
 
   return (
     <div>
