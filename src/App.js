@@ -34,22 +34,22 @@ import RadiusMap from "./pages/locationRadiusMap";
 import StoreOrder from "./pages/emeStore";
 import SeedNinjaEats from "./pages/SeedNinjaEats";
 import Admin from "./pages/Admin";
-import { useUser } from "./context/adminContext";
 import { useLocation } from "react-router-dom";
-
-
-
+import { useUser } from "./context/adminContext";
+import ProtectedRoute from "./ProtectedRoute";
+import { logAdminActivity } from "./utils/activityLogger";
 
 
 function App() {
-    const { user } = useUser();
-  const [nav, setNav] = useState(false);
-  const [Isadmin, setIsadmin] = useState(false);
-  const [is24x7, setis24x7] = useState(false);
-  const [isEme, setisEme] = useState(false);
-  const location = useLocation();
+const { user } = useUser();
+const location = useLocation();
 
+const [nav, setNav] = useState(false);
+const [Isadmin, setIsadmin] = useState(false);
+const [is24x7, setis24x7] = useState(false);
+const [isEme, setisEme] = useState(false);
 
+// 🔹 UI + ROLE STATE HANDLING (HEAD)
 useEffect(() => {
   if (user) {
     setNav(true);
@@ -62,8 +62,20 @@ useEffect(() => {
   }
 }, [user, location.pathname]);
 
+// 🔹 ACTIVITY LOGGING (BRANCH)
+useEffect(() => {
+  if (!user) return;
 
-  
+  logAdminActivity({
+    user,
+    type: "NAVIGATION",
+    module: "ROUTE",
+    action: "Visited page",
+    route: location.pathname,
+    component: "Router",
+  });
+}, [user, location.pathname]);
+
   return (
     <div>
       {nav && Isadmin && <Navbar />}
@@ -160,10 +172,22 @@ useEffect(() => {
           path="/orderlist"
           element={nav === true ? <OrderList /> : <Navigate to="/" />}
         />
-        <Route
+        {/* <Route
           path="/AddItems"
           element={nav === true ? <ListingNewItems /> : <Navigate to="/" />}
-        />
+        /> */}
+        <Route
+        path="/AddItems"
+        element={
+          nav === true ? (
+        <ProtectedRoute user={user}>
+          <ListingNewItems />
+          </ProtectedRoute>
+          ) : (
+          <Navigate to="/" />
+        )
+        }
+      />
         <Route
           path="/AddSalesItems"
           element={
@@ -184,7 +208,15 @@ useEffect(() => {
         />
         <Route
           path="/categories_management"
-          element={nav === true ? <UpdateCategories /> : <Navigate to="/" />}
+          element={
+            nav === true ? (
+              <ProtectedRoute user={user}>
+                <UpdateCategories/>
+              </ProtectedRoute>    
+            ) : (      
+            <Navigate to="/" />
+          )
+        } 
         />
         <Route
           path="/pushNotification"
@@ -236,13 +268,17 @@ useEffect(() => {
         />
         <Route path="/seed-ninja-eats" element={nav === true ? <SeedNinjaEats /> : <Navigate to="/" />} />
 
-        {/* DEV ONLY – REMOVE BEFORE PRODUCTION */}
-{process.env.NODE_ENV === "development" && (
-  <Route path="/__admin_dev" element={<Admin />} />
-)}
-
-
-      </Routes>
+        {process.env.NODE_ENV === "development" && (
+          <Route
+          path="/__admin_dev"
+          element={
+            user?.permissions?.includes("manage_users")
+            ? <Admin />
+            : <Navigate to="/no-access" />
+          }
+        />
+      )}
+        </Routes>
     </div>
   );
 }

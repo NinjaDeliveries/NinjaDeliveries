@@ -5,6 +5,8 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { db } from "../context/Firebase";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { useNavigate } from "react-router-dom";
+
 
 import {
   FaUser,
@@ -16,7 +18,7 @@ import {
 } from "react-icons/fa";
 import "../style/login.css"; // ✅ reuse same styling
 
-export default function Register({ setNav }) {
+export default function Register() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -24,6 +26,8 @@ export default function Register({ setNav }) {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
+
 
   const validatePhone = (value) => {
     // Indian phone number: 10 digits
@@ -86,22 +90,30 @@ export default function Register({ setNav }) {
       });
 
       // save admin record(AUTO)
-      await setDoc(doc(db, "admin_users", user.uid), {
-      name: trimmedName,
-      email: trimmedEmail,
-      phone: trimmedPhone,
-      role: "user",
-      storeId: null,        // assign later
-      isActive: false,      // IMPORTANT: manager enables later
-      createdAt: serverTimestamp(),
-      });
+await setDoc(doc(db, "admin_users", user.uid), {
+  name: trimmedName,
+  email: trimmedEmail,
+  phone: trimmedPhone,
+
+  // 🔑 admin flow compatible fields
+  roleKey: null,
+  permissions: [],
+  storeAccess: [],
+
+  isActive: false,
+  isDeleted: false,
+
+  createdAt: serverTimestamp(),
+});
+
+
 
       toast("Registration successful! Waiting for admin approval" , {
         type: "success",
         position: "top-center",
       });
 
-      setNav(false); // redirect to login page
+      navigate("/"); 
 
     } catch (error) {
       console.error("Register error:", error);

@@ -17,9 +17,13 @@ import { useNavigate } from "react-router-dom";
 import { db, storage } from "../context/Firebase";
 import { useUser } from "../context/adminContext";
 import "../style/listeditems.css";
+import { logAdminActivity } from "../utils/activityLogger";
+
 
 // Initialize Firebase auth
 const auth = getAuth();
+
+
 
 /* -------------------------------------------------------------------------- */
 /*                               ProductUpdate                                */
@@ -637,13 +641,33 @@ function ProductUpdate({ item, setEditbox }) {
 /*                               DeleteRider                                  */
 /* -------------------------------------------------------------------------- */
 
+//* -------------------------------------------------------------------------- */
+/*                               DeleteRider                                  */
+/* -------------------------------------------------------------------------- */
+
 function DeleteRider({ item, setDelRider }) {
-  const [docId] = useState(item.id);
+  const { user } = useUser();
 
   const handleDeleteField = async () => {
     try {
-      const docRef = doc(db, "products", docId);
+      const docRef = doc(db, "products", item.id);
       await deleteDoc(docRef);
+
+      // ✅ ACTIVITY LOG (UNCHANGED BEHAVIOR)
+      await logAdminActivity({
+        user,
+        type: "DELETE",
+        module: "PRODUCTS",
+        action: "Product deleted",
+        route: "/productslist",
+        component: "DeleteRider",
+        metadata: {
+          productId: item.id,
+          productName: item.name,
+          storeId: user?.storeId || null,
+        },
+      });
+
       toast.success("Product deleted successfully!");
       setDelRider(false);
     } catch (error) {
@@ -664,10 +688,16 @@ function DeleteRider({ item, setDelRider }) {
           </p>
         </div>
         <div className="delete-modal-actions">
-          <button className="cancel-button" onClick={() => setDelRider(false)}>
+          <button
+            className="cancel-button"
+            onClick={() => setDelRider(false)}
+          >
             Cancel
           </button>
-          <button className="delete-button" onClick={handleDeleteField}>
+          <button
+            className="delete-button"
+            onClick={handleDeleteField}
+          >
             Delete
           </button>
         </div>
