@@ -110,6 +110,34 @@ export default function Admin() {
   const [roleName, setRoleName] = useState("");
   const [selectedFeatures, setSelectedFeatures] = useState([]);
 
+useEffect(() => {
+  const loadRoles = async () => {
+    try {
+      const snap = await getDocs(collection(db, "roles"));
+
+      const firestoreRoles = snap.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      const merged = [...ROLE_PRESETS];
+
+      firestoreRoles.forEach(r => {
+        if (!merged.find(p => p.key === r.key)) {
+          merged.push(r);
+        }
+      });
+
+      setRoles(merged);
+    } catch (err) {
+      console.error("Failed to load roles", err);
+      toast.error("Failed to load roles");
+    }
+  };
+
+  loadRoles();
+}, []);
+
   /* 🔹 Role selection per pending user */
   const [selectedUserRoles, setSelectedUserRoles] = useState({});
   /* 🔹 Store selection per pending user */
@@ -337,14 +365,22 @@ const handleCreateRole = async () => {
 };
 
   const AVAILABLE_FEATURES = [
-    { key: "manage_products", label: "Product Management" },
-    { key: "manage_banners", label: "Banner Management" },
-    { key: "manage_riders", label: "Rider Management" },
-    { key: "manage_categories", label: "Category Management" },
-    { key: "manage_orders", label: "Order Management" },
-    { key: "manage_users", label: "User Management" },
-    { key: "view_reports", label: "Reports View" },
-  ];
+  { key: "manage_products", label: "Add / Edit Products" },
+  { key: "manage_categories", label: "Manage Categories" },
+  { key: "manage_orders", label: "Order List" },
+  { key: "scan_orders", label: "Scan Orders" },
+  { key: "manage_riders", label: "Rider Management" },
+  { key: "rider_transactions", label: "Rider Transactions" },
+  { key: "location_radius", label: "Delivery Radius" },
+  { key: "manage_hotspots", label: "Hotspot Management" },
+  { key: "manage_banners", label: "Banner Management" },
+  { key: "push_notifications", label: "Push Notifications" },
+  { key: "manage_coupons", label: "Coupons & Promo Codes" },
+  { key: "referral_codes", label: "Referral Codes" },
+  { key: "view_reports", label: "Reports & Leaderboard" },
+  { key: "manage_users", label: "User Management" },
+];
+
 
   return (
     <div style={styles.container}>
