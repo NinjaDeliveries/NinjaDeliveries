@@ -192,7 +192,7 @@ const adminFunctions = [
     link: "/AddItems",
     image:
       "https://www.shutterstock.com/image-vector/shopping-cart-icon-flat-design-260nw-570153007.jpg",
-    permission: "manage_products",
+    permission: "page:products",
   },
   {
     title: "Add Sales Product",
@@ -200,7 +200,7 @@ const adminFunctions = [
     link: "/AddSalesItems",
     image:
       "https://th.bing.com/th/id/OIP.ikHjjaIVYrKNNHaYPdFvFwHaEK?w=307&h=180&c=7&r=0&o=7&dpr=1.3&pid=1.7&rm=3",
-    permission: "manage_products",
+    permission: "page:products",
   },
   {
     title: "Categories Management",
@@ -208,7 +208,7 @@ const adminFunctions = [
     link: "/categories_management",
     image:
       "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSlSjpT0YPXyFzHpBKIPoedcq1J-G-9c25Jxw&s",
-    permission: "manage_categories",
+    permission: "page:categories",
   },
   {
     title: "Update Event",
@@ -216,21 +216,21 @@ const adminFunctions = [
     link: "/updatesubcategory",
     image:
       "https://t3.ftcdn.net/jpg/05/19/61/54/360_F_519615427_gCUU1hkOg52fIeGejVvic2pF4MSWMp16.jpg",
-    permission: "manage_categories",
+    permission: "page:categories",
   },
   {
     title: "Question Management",
     text: "Manage quiz questions and answers",
     link: "/questions",
     image: "https://cdn-icons-png.flaticon.com/512/711/711191.png",
-    permission: "manage_categories",
+    permission: "page:questions",
   },
   {
     title: "LeaderBoard",
     text: "LeaderBoard",
     link: "/leaderboard",
     image: "https://cdn-icons-png.flaticon.com/512/3150/3150115.png",
-    permission: "view_reports",
+    permission: "page:reports",
   },
   {
     title: "Register Riders",
@@ -238,7 +238,7 @@ const adminFunctions = [
     link: "/riderregistration",
     image:
       "https://th.bing.com/th/id/OIP.iqECocLdMWBmaE8bYs_lmgHaHa?rs=1&pid=ImgDetMain",
-    permission: "manage_riders",
+    permission: "page:riders",
   },
   {
     title: "PromoCode",
@@ -246,7 +246,7 @@ const adminFunctions = [
     link: "/promocode",
     image:
       "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRy0mxFWath8sVF7DEyGuyEtIpErJ1cwxo9JA&s",
-    permission: "manage_banners",
+    permission: "page:banners",
   },
   {
     title: "Referral Code",
@@ -254,7 +254,7 @@ const adminFunctions = [
     link: "/referralcode",
     image:
       "https://www.idfcfirst.bank.in/content/dam/idfcfirstbank/images/blog/earn-money-by-referring-personal-loan-717x404.jpg",
-    permission: "manage_banners",
+    permission: "page:referrals",
   },
   {
     title: "Transaction",
@@ -262,7 +262,7 @@ const adminFunctions = [
     link: "/addtransaction",
     image:
       "https://m.economictimes.com/thumb/msid-74960608,width-1200,height-900,resizemode-4,imgsize-49172/upi-twitter.jpg",
-    permission: "manage_riders",
+    permission: "page:rider_transactions",
   },
   {
     title: "Orders List",
@@ -270,7 +270,7 @@ const adminFunctions = [
     link: "/orderlist",
     image:
       "https://img.freepik.com/free-vector/flat-payment-receipt_23-2147922105.jpg",
-    permission: "manage_orders",
+    permission: "page:orders",
   },
   {
     title: "Push Notification",
@@ -278,7 +278,7 @@ const adminFunctions = [
     link: "/pushNotification",
     image:
       "https://th.bing.com/th/id/OIP.8PhDP2AodLTDCtlkyjjt3AHaHa?w=155&h=150&c=6&o=7&dpr=1.3&pid=1.7&rm=3",
-    permission: "manage_banners",
+    permission: "page:push",
   },
   {
     title: "Add Hotspot Areas",
@@ -286,7 +286,8 @@ const adminFunctions = [
     link: "/hotspot",
     image:
       "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR-UA1171fBWRqYWcXTe3Dutocy4I_CaIQzog&s",
-    permission: "manage_riders",
+    permission: "page:hotspots",
+
   },
   {
     title: "Banner Management",
@@ -294,7 +295,8 @@ const adminFunctions = [
     link: "/banner_management",
     image:
       "https://firebasestorage.googleapis.com/v0/b/ninjadeliveries-91007.firebasestorage.app/o/banners%2Fvocal.png?alt=media&token=d5529679-ddf7-487b-8527-3e7d62887051",
-    permission: "manage_banners",
+    permission: "page:banners",
+
   },
   {
     title: "Coupons Campaign Management",
@@ -302,21 +304,21 @@ const adminFunctions = [
     link: "/coupon_management",
     image:
       "https://repository-images.githubusercontent.com/44112601/e7646680-3302-11eb-91df-9962cfb40da5",
-    permission: "manage_banners",
+    permission: "page:coupons",
   },
   {
     title: "Rider Daily charges",
     text: "daily surge + convenience fee",
     link: "/RiderCharges",
     image: riderCharges,
-    permission: "manage_riders",
+    permission: "page:riders",
   },
   {
     title: "Location Radius Map",
     text: "See Location Radius Map.",
     link: "/RadiusMap",
     image: radiusMap,
-    permission: "view_reports",
+    permission: "page:radius",
   },
 ];
 

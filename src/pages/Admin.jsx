@@ -25,37 +25,48 @@ const ROLE_PRESETS = [
   {
     name: "Product Management",
     key: "product_management",
-    permissions: ["manage_products"],
+    permissions: ["page:products"],
   },
   {
     name: "Banner Management",
     key: "banner_management",
-    permissions: ["manage_banners"],
+    permissions: ["page:banners"],
   },
   {
     name: "Rider Management",
     key: "rider_management",
-    permissions: ["manage_riders"],
+    permissions: ["page:riders", "page:scan_orders", "page:rider_transactions"],
   },
   {
     name: "Category Management",
     key: "category_management",
-    permissions: ["manage_categories"],
+    permissions: ["page:categories"],
   },
   {
     name: "All Access Admin",
     key: "all_access_admin",
     permissions: [
-      "manage_products",
-      "manage_orders",
-      "manage_users",
-      "view_reports",
-      "manage_banners",
-      "manage_riders",
-      "manage_categories",
+      "page:products",
+      "page:categories",
+      "page:orders",
+      "page:scan_orders",
+      "page:riders",
+      "page:rider_transactions",
+      "page:radius",
+      "page:hotspots",
+      "page:banners",
+      "page:push",
+      "page:coupons",
+      "page:referrals",
+      "page:reports",
+      "page:questions",
+      "page:business",
+      "page:users",
+      "page:roles",
     ],
   },
 ];
+
 
 /* =======================================================
    🚀 LOGIN REDIRECT RESOLVER (USED AFTER LOGIN)
@@ -364,22 +375,43 @@ const handleCreateRole = async () => {
   }
 };
 
-  const AVAILABLE_FEATURES = [
-  { key: "manage_products", label: "Add / Edit Products" },
-  { key: "manage_categories", label: "Manage Categories" },
-  { key: "manage_orders", label: "Order List" },
-  { key: "scan_orders", label: "Scan Orders" },
-  { key: "manage_riders", label: "Rider Management" },
-  { key: "rider_transactions", label: "Rider Transactions" },
-  { key: "location_radius", label: "Delivery Radius" },
-  { key: "manage_hotspots", label: "Hotspot Management" },
-  { key: "manage_banners", label: "Banner Management" },
-  { key: "push_notifications", label: "Push Notifications" },
-  { key: "manage_coupons", label: "Coupons & Promo Codes" },
-  { key: "referral_codes", label: "Referral Codes" },
-  { key: "view_reports", label: "Reports & Leaderboard" },
-  { key: "manage_users", label: "User Management" },
+//   const AVAILABLE_FEATURES = [
+//   { key: "manage_products", label: "Add / Edit Products" },
+//   { key: "manage_categories", label: "Manage Categories" },
+//   { key: "manage_orders", label: "Order List" },
+//   { key: "scan_orders", label: "Scan Orders" },
+//   { key: "manage_riders", label: "Rider Management" },
+//   { key: "rider_transactions", label: "Rider Transactions" },
+//   { key: "location_radius", label: "Delivery Radius" },
+//   { key: "manage_hotspots", label: "Hotspot Management" },
+//   { key: "manage_banners", label: "Banner Management" },
+//   { key: "push_notifications", label: "Push Notifications" },
+//   { key: "manage_coupons", label: "Coupons & Promo Codes" },
+//   { key: "referral_codes", label: "Referral Codes" },
+//   { key: "view_reports", label: "Reports & Leaderboard" },
+//   { key: "manage_users", label: "User Management" },
+// ];
+
+const AVAILABLE_FEATURES = [
+  { key: "page:products", label: "Products" },
+  { key: "page:categories", label: "Categories" },
+  { key: "page:orders", label: "Orders" },
+  { key: "page:scan_orders", label: "Scan Orders" },
+  { key: "page:riders", label: "Riders" },
+  { key: "page:rider_transactions", label: "Rider Transactions" },
+  { key: "page:radius", label: "Delivery Radius" },
+  { key: "page:hotspots", label: "Hotspots" },
+  { key: "page:banners", label: "Banners" },
+  { key: "page:push", label: "Push Notifications" },
+  { key: "page:coupons", label: "Coupons" },
+  { key: "page:referrals", label: "Referrals" },
+  { key: "page:reports", label: "Reports" },
+  { key: "page:questions", label: "Questions" },
+  { key: "page:users", label: "Users" },
+  { key: "page:roles", label: "Roles" },
+  { key: "page:business", label: "Business" },
 ];
+
 
 
   return (

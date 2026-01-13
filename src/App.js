@@ -53,7 +53,11 @@ const [isEme, setisEme] = useState(false);
 useEffect(() => {
   if (user) {
     setNav(true);
-    setIsadmin(user.role === "admin");
+    setIsadmin(user.roleKey === "all_access_admin");
+
+    // optional future flags
+    setis24x7(user.roleKey === "fresh_greens");
+    setisEme(user.roleKey === "eme_store");
   } else {
     setNav(false);
     setIsadmin(false);
@@ -61,6 +65,7 @@ useEffect(() => {
     setisEme(false);
   }
 }, [user, location.pathname]);
+
 
 // 🔹 ACTIVITY LOGGING (BRANCH)
 useEffect(() => {
@@ -78,7 +83,8 @@ useEffect(() => {
 
   return (
     <div>
-      {nav && Isadmin && <Navbar />}
+      {/* {nav && Isadmin && <Navbar />} */}
+      {nav && <Navbar />}
       <Routes>
         {/* MAin ROUTE */}
         <Route
@@ -272,7 +278,10 @@ useEffect(() => {
           <Route
           path="/__admin_dev"
           element={
-            user?.permissions?.includes("manage_users")
+            // user?.permissions?.includes("page:users")
+            (user?.permissions?.includes("page:users") || user?.roleKey === "all_access_admin")
+
+
             ? <Admin />
             : <Navigate to="/no-access" />
           }
