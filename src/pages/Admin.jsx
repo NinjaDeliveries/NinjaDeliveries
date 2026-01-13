@@ -277,13 +277,13 @@ const approveUser = async (userId, userEmail) => {
     });
 
     /* ---------- UPDATE delivery_zones (LEGACY SUPPORT) ---------- */
-    for (const key of storeKeys) {
-      const store = STORES[key];
-      await updateDoc(doc(db, "delivery_zones", store.storeId), {
-        adminId: arrayUnion(userId),
-        adminEmail: arrayUnion(userEmail),
-      });
-    }
+    // for (const key of storeKeys) {
+    //   const store = STORES[key];//store a users id in delivery_zone
+    //   await updateDoc(doc(db, "delivery_zones", store.storeId), {
+    //     adminId: arrayUnion(userId),
+    //     adminEmail: arrayUnion(userEmail),
+    //   });
+    // }
 
     toast.success("User approved successfully");
 

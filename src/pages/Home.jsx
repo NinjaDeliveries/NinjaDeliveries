@@ -32,6 +32,10 @@ const Home = () => {
   const [isActive, setIsActive] = useState(null);
   const [loadingStatus, setLoadingStatus] = useState(true);
 const { user, setUser, stores, loadingUser } = useUser();
+const storeId = user?.storeId || null;
+
+
+
 const [riderStatus, setRiderStatus] = useState("active");
 const [editBgColor, setEditBgColor] = useState("#ff0000");
 const [editTextColor, setEditTextColor] = useState("#ffffff");
@@ -46,11 +50,12 @@ const [editTextColor, setEditTextColor] = useState("#ffffff");
 
   // 🔹 Fetch Delivery Zone Status
 useEffect(() => {
-  if (!user?.storeId) return;
+  if (!storeId) return;
+
 
   const fetchStatus = async () => {
     try {
-      const ref = doc(db, "delivery_zones", user.storeId);
+      const ref = doc(db, "delivery_zones", storeId);
       const snap = await getDoc(ref);
 
       if (snap.exists()) {
@@ -74,13 +79,14 @@ useEffect(() => {
 
   // 🔹 Fetch Home Message
 useEffect(() => {
-  if (!user?.storeId) return;
+  if (!storeId) return;
+
 
   const fetchHomeMessage = async () => {
     try {
       const q = query(
         collection(db, "home_messages"),
-        where("storeId", "==", user.storeId)
+        where("storeId", "==", storeId)
       );
 
       const snap = await getDocs(q);
@@ -122,9 +128,9 @@ useEffect(() => {
 
   // 🔹 Toggle Store Active Status
   const toggleStatus = async () => {
-    if (!user?.storeId) return;
-
-    const ref = doc(db, "delivery_zones", user.storeId);
+const storeId = user?.storeId;
+if (!storeId) return;
+const ref = doc(db, "delivery_zones", storeId);
     const newStatus = !isActive;
 
     await updateDoc(ref, {
@@ -165,7 +171,7 @@ const saveHomeMessage = async () => {
   }
 };
 const toggleStoreStatus = async () => {
-const ref = doc(db, "delivery_zones", user.storeId);
+const ref = doc(db, "delivery_zones", storeId);
 const newStatus = !isActive;
 
 await updateDoc(ref, {
@@ -185,9 +191,13 @@ setIsActive(newStatus);
       return <div style={{ padding: 40 }}>No user session</div>;
     }
     
-    if (!user.storeId) {
-      return <div style={{ padding: 40 }}>No store access</div>;
-    }
+    // if (user?.storeId || user.storeAccess.length === 0) {
+    //   return <div style={{ padding: 40 }}>No store access</div>;
+    // }
+    if (!user?.storeId) {
+  return <div>No active store selected</div>;
+}
+
   // ✅ SAFE permissions (prevents empty dashboard)
 const effectivePermissions =
   Array.isArray(user?.permissions) && user.permissions.length > 0
@@ -527,7 +537,7 @@ const adminFunctions = [
   </div> {/* ✅ card-grid CLOSED PROPERLY */}
 
   <div className="map-container">
-    <Map />
+   {storeId && <Map />}
   </div>
 
 </div>

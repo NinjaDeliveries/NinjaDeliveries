@@ -36,7 +36,8 @@ useEffect(() => {
             email: lastUserRef.current.email || null,
             roleKey: lastUserRef.current.role || null,
             source: lastUserRef.current.source || "unknown",
-            storeId: lastUserRef.current.storeId || null,
+            storeId: lastUserRef.current?.storeId || null,
+
           });
         } catch (err) {
           console.error("logout activity log error:", err);
@@ -116,42 +117,56 @@ if (adminSnap.exists()) {
       });
 
       /* ================= STORE META ================= */
-      const storesMeta = [];
-      for (const storeId of storeList) {
-        const ref = doc(db, "delivery_zones", storeId);
-        const snap = await getDoc(ref);
-        if (snap.exists()) {
-          storesMeta.push({ id: storeId, name: snap.data().name });
-        }
-      }
+const storesMeta = [];
+
+for (const storeId of storeList) {
+  if (!storeId) continue;
+
+  const ref = doc(db, "delivery_zones", storeId);
+  const snap = await getDoc(ref);
+
+  if (snap.exists()) {
+    storesMeta.push({ id: storeId, name: snap.data().name });
+  } else {
+    // 🧠 fallback — still allow store access
+    storesMeta.push({ id: storeId, name: "Unknown Store" });
+  }
+}
+
 
       /* ================= FINAL USER ================= */
       if (storeList.length > 0) {
         setStores(storesMeta);
 
-        const finalUser = {
-          uid: currentUser.uid,
-          email: currentUser.email,
-          storeId: storeList[0],
-          storeAccess: storeList,
-          role: adminSnap.exists()
-            ? adminSnap.data().role || "admin"
-            : "admin",
-          roleKey: adminSnap.exists()
-            ? adminSnap.data().roleKey || null
-            : legacyRoleKey,
-          // permissions: adminSnap.exists()
-          //   ? adminSnap.data().permissions || []
-          //   : legacyPermissions,
-          permissions: adminSnap.exists()
-  ? Array.isArray(adminSnap.data().permissions)
-    ? adminSnap.data().permissions
-    : []
-  : legacyPermissions,
-          source: adminSnap.exists()
-            ? "admin_users"
-            : "delivery_zones",
-        };
+       const primaryStore = storeList.length > 0 ? storeList[0] : null;
+
+const finalUser = {
+  uid: currentUser.uid,
+  email: currentUser.email,
+
+  // 🧠 SINGLE SOURCE OF TRUTH
+  storeId: primaryStore,
+  storeAccess: storeList,
+
+  role: adminSnap.exists()
+    ? adminSnap.data().role || "admin"
+    : "admin",
+
+  roleKey: adminSnap.exists()
+    ? adminSnap.data().roleKey || null
+    : legacyRoleKey,
+
+  permissions: adminSnap.exists()
+    ? Array.isArray(adminSnap.data().permissions)
+      ? adminSnap.data().permissions
+      : []
+    : legacyPermissions,
+
+  source: adminSnap.exists()
+    ? "admin_users"
+    : "delivery_zones",
+};
+
 
         setUser(finalUser);
         lastUserRef.current = finalUser;
