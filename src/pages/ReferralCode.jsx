@@ -163,15 +163,23 @@ function ReferralCode() {
 
       <h2 className="heading">Referral Codes</h2>
 
-      <Autocomplete
-        {...{
-          options: data,
-          getOptionLabel: (option) => option.username || "Unknown Rider",
-        }}
-        sx={{ width: "100%" }}
-        renderInput={(params) => <TextField {...params} label="Select Rider" />}
-        onChange={(event, newValue) => setValue(newValue)}
-      />
+     <Autocomplete
+  options={data}
+  getOptionLabel={(option) => option.username || "Unknown Rider"}
+  disablePortal
+  PopperProps={{
+    style: {
+      zIndex: 9999,   
+    },
+  }}
+  sx={{ width: "100%" }}
+  renderInput={(params) => (
+    <TextField {...params} label="Select Rider" />
+  )}
+  onChange={(event, newValue) => setValue(newValue)}
+/>
+
+
 
       {!value && (
         <div className="empty-state">
@@ -223,22 +231,33 @@ function AddingReferralCode({ rider }) {
   };
 
   return (
-    <div className="form1">
-      <div className="input-group">
-        <input type="text" value={rider.username} disabled />
-      </div>
+  <div className="form1">
 
-      <div className="input-group">
-        <span className="input-group-text">Referral Code</span>
-        <input type="text" value={code} readOnly />
-        <button onClick={generateCode}>Generate</button>
+    <div className="rider-card">
+      <div className="rider-avatar">👤</div>
+      <div className="rider-info">
+        <div className="rider-name">{rider.username}</div>
+        <div className="rider-sub">Selected Rider</div>
       </div>
-
-      <button className="savebtn" onClick={handleSubmit}>
-        Assign Referral Code
-      </button>
     </div>
-  );
+
+    <div className="code-box">
+      <div className="code-label">Referral Code</div>
+      <div className="code-row">
+        <div className="code-value">{code}</div>
+        <button className="regen-btn" onClick={generateCode}>
+          🔄 Generate
+        </button>
+      </div>
+    </div>
+
+    <button className="savebtn" onClick={handleSubmit}>
+      Assign Referral Code
+    </button>
+
+  </div>
+);
+
 }
 
 export default ReferralCode;
