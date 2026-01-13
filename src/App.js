@@ -42,10 +42,16 @@ import { logAdminActivity } from "./utils/activityLogger";
 
 function App() {
 const { user } = useUser();
+const isAdmin =
+  user &&
+  (
+    user.roleKey === "all_access_admin" ||
+    (Array.isArray(user.permissions) && user.permissions.length > 0)
+  );
 const location = useLocation();
 
 const [nav, setNav] = useState(false);
-const [Isadmin, setIsadmin] = useState(false);
+// const [Isadmin, setIsadmin] = useState(false);
 const [is24x7, setis24x7] = useState(false);
 const [isEme, setisEme] = useState(false);
 
@@ -53,14 +59,14 @@ const [isEme, setisEme] = useState(false);
 useEffect(() => {
   if (user) {
     setNav(true);
-    setIsadmin(user.roleKey === "all_access_admin");
+    // setIsadmin(user.roleKey === "all_access_admin");
 
     // optional future flags
     setis24x7(user.roleKey === "fresh_greens");
     setisEme(user.roleKey === "eme_store");
   } else {
     setNav(false);
-    setIsadmin(false);
+    // setIsadmin(false);
     setis24x7(false);
     setisEme(false);
   }
@@ -87,7 +93,7 @@ useEffect(() => {
       {nav && <Navbar />}
       <Routes>
         {/* MAin ROUTE */}
-        <Route
+        {/* <Route
           path="/"
           element={
             nav === true ? (
@@ -110,17 +116,40 @@ useEffect(() => {
               
             )
           }
-        />
+        /> */}
+        <Route
+  path="/"
+  element={
+    nav ? (
+      isAdmin ? (
+        <Home />
+      ) : isEme ? (
+        <StoreOrder />
+      ) : is24x7 ? (
+        <FreshGreens />
+      ) : (
+        <OrderQRCodeQueue />
+      )
+    ) : (
+      <Login
+        setNav={setNav}
+        setIsadmin={() => {}}
+        setisEme={setisEme}
+        setis24x7={setis24x7}
+      />
+    )
+  }
+/>
         {/* REGISTER ROUTE (DIRECT LINK ONLY) */}
         <Route 
         path="/register"
         element={<Register setNav={setNav} />}
         />
-        <Route
+        {/* <Route
           path="/home"
           element={
             nav === true ? (
-              Isadmin === true ? (
+              // Isadmin === true ? (
                 <Home />
               ) : isEme === true ? (
                 <StoreOrder />
@@ -138,7 +167,17 @@ useEffect(() => {
               />
             )
           }
-        />
+        /> */}
+        <Route
+  path="/home"
+  element={
+    nav ? (
+      isAdmin ? <Home /> : <Navigate to="/" />
+    ) : (
+      <Navigate to="/" />
+    )
+  }
+/>
         <Route
           path="/bussinessregistration"
           element={

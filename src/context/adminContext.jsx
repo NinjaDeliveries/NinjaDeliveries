@@ -140,9 +140,14 @@ if (adminSnap.exists()) {
           roleKey: adminSnap.exists()
             ? adminSnap.data().roleKey || null
             : legacyRoleKey,
+          // permissions: adminSnap.exists()
+          //   ? adminSnap.data().permissions || []
+          //   : legacyPermissions,
           permissions: adminSnap.exists()
-            ? adminSnap.data().permissions || []
-            : legacyPermissions,
+  ? Array.isArray(adminSnap.data().permissions)
+    ? adminSnap.data().permissions
+    : []
+  : legacyPermissions,
           source: adminSnap.exists()
             ? "admin_users"
             : "delivery_zones",

@@ -4,22 +4,36 @@ import { PAGE_PERMISSIONS } from "./rbacConfig";
 export default function ProtectedRoute({ user, children }) {
   const location = useLocation();
 
-  if (!user) return <Navigate to="/" replace />;
+  // 🔐 Not logged in
+  if (!user) {
+    return <Navigate to="/" replace />;
+  }
 
-  const requiredPermission = PAGE_PERMISSIONS[location.pathname];
-
-  // Page does not require permission
-  if (!requiredPermission) return children;
-
-  const permissions = user.permissions || [];
-
-  // Super admin bypass
-  if (permissions.includes("super_admin")) return children;
-
-  // Permission check
-  if (permissions.includes(requiredPermission)) {
+  // ✅ ALL ACCESS ADMIN → always allowed
+  if (user.roleKey === "all_access_admin") {
     return children;
   }
 
+  // 🔎 Find matching permission (supports dynamic paths)
+  const requiredPermission = Object.keys(PAGE_PERMISSIONS).find((path) =>
+    location.pathname.startsWith(path)
+  );
+
+  // 🟢 Page does not require permission
+  if (!requiredPermission) {
+    return children;
+  }
+
+  const neededPermission = PAGE_PERMISSIONS[requiredPermission];
+  const permissions = Array.isArray(user.permissions)
+    ? user.permissions
+    : [];
+
+  // ✅ Permission match
+  if (permissions.includes(neededPermission)) {
+    return children;
+  }
+
+  // ❌ No access
   return <Navigate to="/no-access" replace />;
 }

@@ -1,23 +1,34 @@
 export const PAGE_PERMISSIONS = {
-  "/AddItems": "manage_products",
-  "/AddSalesItems": "manage_products",
+  "/AddItems": "page:products",
+  "/AddSalesItems": "page:products",
 
-  "/categories_management": "manage_categories",
-  "/updatesubcategory": "manage_categories",
+  "/categories_management": "page:categories",
+  "/updatesubcategory": "page:categories",
 
-  "/orderlist": "manage_orders",
-  "/downloadbill": "manage_orders",
+  "/orderlist": "page:orders",
+  "/downloadbill": "page:orders",
 
-  "/riderregistration": "manage_riders",
-  "/riderlist": "manage_riders",
-  "/addtransaction": "manage_riders",
+  "/riderregistration": "page:riders",
+  "/riderlist": "page:riders",
+  "/addtransaction": "page:rider_transactions",
 
-  "/banner_management": "manage_banners",
+  "/scanorder": "page:scan_orders",
 
-  "/coupon_management": "manage_coupons",
-  "/promocode": "manage_coupons",
-  "/referralcode": "manage_coupons",
+  "/hotspot": "page:hotspots",
+  "/RadiusMap": "page:radius",
 
-  "/report": "view_reports",
-  "/leaderboard": "view_reports",
+  "/banner_management": "page:banners",
+
+  "/coupon_management": "page:coupons",
+  "/promocode": "page:coupons",
+  "/referralcode": "page:referrals",
+
+  "/pushNotification": "page:push",
+
+  "/report": "page:reports",
+  "/leaderboard": "page:reports",
+
+  "/questions": "page:questions",
+
+  "/__admin_dev": "page:users"
 };

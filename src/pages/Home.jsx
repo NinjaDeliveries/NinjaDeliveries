@@ -66,6 +66,11 @@ useEffect(() => {
   fetchStatus();
 }, [user]);
 
+useEffect(() => {
+  console.log("USER:", user);
+  console.log("ROLE:", user?.roleKey);
+  console.log("PERMISSIONS:", user?.permissions);
+}, [user]);
 
   // 🔹 Fetch Home Message
 useEffect(() => {
@@ -183,7 +188,11 @@ setIsActive(newStatus);
     if (!user.storeId) {
       return <div style={{ padding: 40 }}>No store access</div>;
     }
-  
+  // ✅ SAFE permissions (prevents empty dashboard)
+const effectivePermissions =
+  Array.isArray(user?.permissions) && user.permissions.length > 0
+    ? user.permissions
+    : [];
 
 const adminFunctions = [
   {
@@ -471,10 +480,10 @@ const adminFunctions = [
         if (!card.permission) return false;
 
         // ❌ User ke paas permissions hi nahi
-        if (!Array.isArray(user?.permissions)) return false;
+        if (!Array.isArray(effectivePermissions)) return false;
 
         // ✅ Exact permission match
-        return user.permissions.includes(card.permission);
+        return effectivePermissions.includes(card.permission);
       })
       .map((card, index) => (
         <div key={index} className="admin-card">
