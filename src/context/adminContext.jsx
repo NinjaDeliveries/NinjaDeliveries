@@ -77,6 +77,9 @@ if (adminSnap.exists()) {
 
       let storeList = [];
 
+      let legacyPermissions = [];
+let legacyRoleKey = null;
+
       if (adminSnap.exists()) {
         const adminData = adminSnap.data();
 
@@ -89,32 +92,58 @@ if (adminSnap.exists()) {
         }
       }
 
+      // /* ================= LEGACY SYSTEM ================= */
+      // const q = query(
+      //   collection(db, "delivery_zones"),
+      //   where("adminId", "array-contains", currentUser.uid)
+      // );
+
+      // const zoneSnap = await getDocs(q);
+
+      // let legacyPermissions = [];
+      // let legacyRoleKey = null;
+
+      // zoneSnap.forEach((docSnap) => {
+      //   const data = docSnap.data();
+
+      //   if (!storeList.includes(docSnap.id)) {
+      //     storeList.push(docSnap.id);
+      //   }
+
+      //   if (Array.isArray(data.permissions)) {
+      //     legacyPermissions = data.permissions;
+      //   }
+
+      //   if (data.roleKey === "owner" || data.role === "owner") {
+      //     legacyRoleKey = "all_access_admin";
+      //   }
+      // });
+
       /* ================= LEGACY SYSTEM ================= */
-      const q = query(
-        collection(db, "delivery_zones"),
-        where("adminId", "array-contains", currentUser.uid)
-      );
+if (!adminSnap.exists()) {
+  const q = query(
+    collection(db, "delivery_zones"),
+    where("adminId", "array-contains", currentUser.uid)
+  );
 
-      const zoneSnap = await getDocs(q);
+  const zoneSnap = await getDocs(q);
 
-      let legacyPermissions = [];
-      let legacyRoleKey = null;
+  zoneSnap.forEach((docSnap) => {
+    const data = docSnap.data();
 
-      zoneSnap.forEach((docSnap) => {
-        const data = docSnap.data();
+    if (!storeList.includes(docSnap.id)) {
+      storeList.push(docSnap.id);
+    }
 
-        if (!storeList.includes(docSnap.id)) {
-          storeList.push(docSnap.id);
-        }
+    if (Array.isArray(data.permissions)) {
+      legacyPermissions = data.permissions;
+    }
 
-        if (Array.isArray(data.permissions)) {
-          legacyPermissions = data.permissions;
-        }
-
-        if (data.roleKey === "owner" || data.role === "owner") {
-          legacyRoleKey = "all_access_admin";
-        }
-      });
+    if (data.roleKey === "owner" || data.role === "owner") {
+      legacyRoleKey = "all_access_admin";
+    }
+  });
+}
 
       /* ================= STORE META ================= */
 const storesMeta = [];
@@ -138,7 +167,11 @@ for (const storeId of storeList) {
       if (storeList.length > 0) {
         setStores(storesMeta);
 
-       const primaryStore = storeList.length > 0 ? storeList[0] : null;
+      //  const primaryStore = storeList.length > 0 ? storeList[0] : null;
+      const primaryStore =
+  Array.isArray(storeList) && storeList.length > 0
+    ? [...storeList].sort()[0]
+    : null;
 
 const finalUser = {
   uid: currentUser.uid,

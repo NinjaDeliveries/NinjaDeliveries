@@ -49,8 +49,10 @@ const [editTextColor, setEditTextColor] = useState("#ffffff");
 
 
   // 🔹 Fetch Delivery Zone Status
+// useEffect(() => {
+//   if (!storeId) return;
 useEffect(() => {
-  if (!storeId) return;
+  if (!storeId || !user?.storeAccess?.includes(storeId)) return;
 
 
   const fetchStatus = async () => {
@@ -80,6 +82,9 @@ useEffect(() => {
   // 🔹 Fetch Home Message
 useEffect(() => {
   if (!storeId) return;
+
+  // useEffect(() => {
+  // if (!storeId || !user?.storeAccess?.includes(storeId)) return;
 
 
   const fetchHomeMessage = async () => {

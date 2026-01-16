@@ -70,7 +70,8 @@ const storeId = user?.storeId || null;
     const fetchData = async () => {
     const storeId = user?.storeId;
 
-if (!storeId) return;
+// if (!storeId) return;
+if (!storeId || !user?.storeAccess?.includes(storeId)) return;
 
 const docRef = doc(db, "delivery_zones", storeId);
       const docSnap = await getDoc(docRef);
