@@ -24,12 +24,9 @@ import { useUser } from "../context/adminContext";
 import { useEffect, useState } from "react";
 import { signOut } from "firebase/auth";
 import { logActivity } from "../context/Firebase";
-
-// add
+// add...
 const Home = () => {
-  
-  
-  const [isActive, setIsActive] = useState(null);
+ const [isActive, setIsActive] = useState(null);
   const [loadingStatus, setLoadingStatus] = useState(true);
 const { user, setUser, stores, loadingUser } = useUser();
 const storeId = user?.storeId || null;
