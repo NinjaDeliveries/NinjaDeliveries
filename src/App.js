@@ -12,7 +12,7 @@ import Register from "./pages/Register";
 import Login from "./pages/login";
 import Report from "./pages/Report";
 import "react-toastify/dist/ReactToastify.css";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ListingNewItems from "./pages/ListingNewItems";
 import ListingNewSalesItems from "./pages/ListSaleProduct";
 import FetchListedItems from "./pages/FetchListedItems";
@@ -34,21 +34,66 @@ import RadiusMap from "./pages/locationRadiusMap";
 import StoreOrder from "./pages/emeStore";
 import SeedNinjaEats from "./pages/SeedNinjaEats";
 import Admin from "./pages/Admin";
-
+import { useLocation } from "react-router-dom";
+import { useUser } from "./context/adminContext";
+import ProtectedRoute from "./ProtectedRoute";
+import { logAdminActivity } from "./utils/activityLogger";
 
 
 function App() {
-  const [nav, setNav] = useState(false);
-  const [Isadmin, setIsadmin] = useState(false);
-  const [is24x7, setis24x7] = useState(false);
-  const [isEme, setisEme] = useState(false);
+const { user } = useUser();
+const isAdmin =
+  user &&
+  (
+    user.roleKey === "all_access_admin" ||
+    (Array.isArray(user.permissions) && user.permissions.length > 0)
+  );
+const location = useLocation();
+
+const [nav, setNav] = useState(false);
+// const [Isadmin, setIsadmin] = useState(false);
+const [is24x7, setis24x7] = useState(false);
+const [isEme, setisEme] = useState(false);
+
+// 🔹 UI + ROLE STATE HANDLING (HEAD)
+useEffect(() => {
+  if (user) {
+    setNav(true);
+    // setIsadmin(user.roleKey === "all_access_admin");
+
+    // optional future flags
+    setis24x7(user.roleKey === "fresh_greens");
+    setisEme(user.roleKey === "eme_store");
+  } else {
+    setNav(false);
+    // setIsadmin(false);
+    setis24x7(false);
+    setisEme(false);
+  }
+}, [user, location.pathname]);
+
+
+// 🔹 ACTIVITY LOGGING (BRANCH)
+useEffect(() => {
+  if (!user) return;
+
+  logAdminActivity({
+    user,
+    type: "NAVIGATION",
+    module: "ROUTE",
+    action: "Visited page",
+    route: location.pathname,
+    component: "Router",
+  });
+}, [user, location.pathname]);
 
   return (
     <div>
-      {nav && Isadmin && <Navbar />}
+      {/* {nav && Isadmin && <Navbar />} */}
+      {nav && <Navbar />}
       <Routes>
         {/* MAin ROUTE */}
-        <Route
+        {/* <Route
           path="/"
           element={
             nav === true ? (
@@ -71,17 +116,40 @@ function App() {
               
             )
           }
-        />
+        /> */}
+        <Route
+  path="/"
+  element={
+    nav ? (
+      isAdmin ? (
+        <Home />
+      ) : isEme ? (
+        <StoreOrder />
+      ) : is24x7 ? (
+        <FreshGreens />
+      ) : (
+        <OrderQRCodeQueue />
+      )
+    ) : (
+      <Login
+        setNav={setNav}
+        setIsadmin={() => {}}
+        setisEme={setisEme}
+        setis24x7={setis24x7}
+      />
+    )
+  }
+/>
         {/* REGISTER ROUTE (DIRECT LINK ONLY) */}
         <Route 
         path="/register"
         element={<Register setNav={setNav} />}
         />
-        <Route
+        {/* <Route
           path="/home"
           element={
             nav === true ? (
-              Isadmin === true ? (
+              // Isadmin === true ? (
                 <Home />
               ) : isEme === true ? (
                 <StoreOrder />
@@ -99,7 +167,17 @@ function App() {
               />
             )
           }
-        />
+        /> */}
+        <Route
+  path="/home"
+  element={
+    nav ? (
+      isAdmin ? <Home /> : <Navigate to="/" />
+    ) : (
+      <Navigate to="/" />
+    )
+  }
+/>
         <Route
           path="/bussinessregistration"
           element={
@@ -139,10 +217,22 @@ function App() {
           path="/orderlist"
           element={nav === true ? <OrderList /> : <Navigate to="/" />}
         />
-        <Route
+        {/* <Route
           path="/AddItems"
           element={nav === true ? <ListingNewItems /> : <Navigate to="/" />}
-        />
+        /> */}
+        <Route
+        path="/AddItems"
+        element={
+          nav === true ? (
+        <ProtectedRoute user={user}>
+          <ListingNewItems />
+          </ProtectedRoute>
+          ) : (
+          <Navigate to="/" />
+        )
+        }
+      />
         <Route
           path="/AddSalesItems"
           element={
@@ -163,7 +253,15 @@ function App() {
         />
         <Route
           path="/categories_management"
-          element={nav === true ? <UpdateCategories /> : <Navigate to="/" />}
+          element={
+            nav === true ? (
+              <ProtectedRoute user={user}>
+                <UpdateCategories/>
+              </ProtectedRoute>    
+            ) : (      
+            <Navigate to="/" />
+          )
+        } 
         />
         <Route
           path="/pushNotification"
@@ -215,13 +313,20 @@ function App() {
         />
         <Route path="/seed-ninja-eats" element={nav === true ? <SeedNinjaEats /> : <Navigate to="/" />} />
 
-        {/* DEV ONLY – REMOVE BEFORE PRODUCTION */}
-{process.env.NODE_ENV === "development" && (
-  <Route path="/__admin_dev" element={<Admin />} />
-)}
+        {process.env.NODE_ENV === "development" && (
+          <Route
+          path="/__admin_dev"
+          element={
+            // user?.permissions?.includes("page:users")
+            (user?.permissions?.includes("page:users") || user?.roleKey === "all_access_admin")
 
 
-      </Routes>
+            ? <Admin />
+            : <Navigate to="/no-access" />
+          }
+        />
+      )}
+        </Routes>
     </div>
   );
 }

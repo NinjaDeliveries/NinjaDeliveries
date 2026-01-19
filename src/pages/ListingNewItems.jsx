@@ -20,6 +20,8 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 import NinjaLogo from "../image/ninjalogo.jpg";
 import { useUser } from "../context/adminContext";
+import { logAdminActivity } from "../utils/activityLogger";
+
 
 export default function ListingNewItems() {
   const { user } = useUser();
@@ -253,6 +255,24 @@ export default function ListingNewItems() {
       }
 
       await addDoc(collection(db, "products"), payload);
+      await logAdminActivity({
+  user,
+  type: "CREATE",
+  module: "PRODUCTS",
+  action: "Product added",
+  route: "/AddItems",
+  component: "ListingNewItems",
+  metadata: {
+    productName: name,
+    price: parseFloat(price),
+    categoryId: Type,
+    subCategoryId: SubType,
+    storeId: user.storeId,
+    storeCode: payload.storeCode || null,
+  },
+});
+
+
 
       toast("Product listed Successful!", { type: "success", position: "top-center" });
       navigate("/home");
