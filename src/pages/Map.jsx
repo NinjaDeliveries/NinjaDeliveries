@@ -28,25 +28,52 @@ const tileLayers = {
 };
 
 // Component to update map center dynamically
+// function MapUpdater({ center }) {
+//   const map = useMap();
+//   useEffect(() => {
+//     map.setView(center, 13);
+//   }, [center, map]);
+//   return null;
+// }
 function MapUpdater({ center }) {
   const map = useMap();
+
   useEffect(() => {
-    map.setView(center, 13);
-  }, [center, map]);
+    if (!map || !center) return;
+
+    // 🛡️ block calls after unmount
+    const timeout = setTimeout(() => {
+      try {
+        map.setView(center, map.getZoom());
+      } catch (e) {
+        // silently ignore Leaflet cleanup race
+      }
+    }, 0);
+
+    return () => clearTimeout(timeout);
+  }, [center]);
+
   return null;
 }
+
 
 function App() {
   const [coords, setCoords] = useState([]);
   const [storeLat, setStoreLat] = useState(null);
   const [storeLong, setStoreLong] = useState(null);
   const { user } = useUser();
+const storeId = user?.storeId || null;
+
+
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!user?.storeId) return;
+    const storeId = user?.storeId;
 
-      const docRef = doc(db, "delivery_zones", user.storeId);
+// if (!storeId) return;
+if (!storeId || !user?.storeAccess?.includes(storeId)) return;
+
+const docRef = doc(db, "delivery_zones", storeId);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         setStoreLat(docSnap.data().latitude);
@@ -57,7 +84,7 @@ function App() {
 
       const ordersQuery = query(
         collection(db, "orders"),
-        where("storeId", "==", user.storeId),
+        where("storeId", "==", storeId),
         where("status", "==", "tripEnded")
       );
       const querySnapshot = await getDocs(ordersQuery);

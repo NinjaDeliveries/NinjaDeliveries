@@ -127,3 +127,13 @@
     font-size: 0.9rem;
   }
 }
+.clickable-store {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.clickable-store:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: scale(1.03);
+}
+
