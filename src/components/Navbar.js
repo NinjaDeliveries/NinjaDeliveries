@@ -112,9 +112,9 @@ const nextStore =
         {(user?.permissions?.includes("page:users") || user?.roleKey === "all_access_admin") && (
 
           <li>
-            <NavLink to="/__admin_dev" activeclassname="active">
-            Admin Panel
-            </NavLink>
+            <NavLink to="/admin" className={({ isActive }) => isActive ? "active" : ""}>
+  Admin Panel
+</NavLink>
           </li>
         )}
       </ul>

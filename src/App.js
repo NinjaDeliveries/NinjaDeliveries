@@ -313,19 +313,15 @@ useEffect(() => {
         />
         <Route path="/seed-ninja-eats" element={nav === true ? <SeedNinjaEats /> : <Navigate to="/" />} />
 
-        {process.env.NODE_ENV === "development" && (
-          <Route
-          path="/__admin_dev"
-          element={
-            // user?.permissions?.includes("page:users")
-            (user?.permissions?.includes("page:users") || user?.roleKey === "all_access_admin")
-
-
-            ? <Admin />
-            : <Navigate to="/no-access" />
-          }
-        />
-      )}
+        <Route
+  path="/admin"
+  element={
+    (user?.permissions?.includes("page:users") ||
+      user?.roleKey === "all_access_admin")
+      ? <Admin />
+      : <Navigate to="/no-access" />
+  }
+/>
         </Routes>
     </div>
   );
