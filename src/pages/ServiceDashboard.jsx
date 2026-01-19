@@ -65,7 +65,7 @@ const ServiceDashboard = () => {
 
         <div className="sd-card">
           <div className="sd-card-title">Revenue Today</div>
-          <div className="sd-card-value green">₹25,800</div>
+          <div className="sd-card-value green">₹25,000</div>
         </div>
 
         <div className="sd-card">
