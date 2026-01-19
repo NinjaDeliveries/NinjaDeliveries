@@ -22,6 +22,8 @@ import {
 import { db, auth } from "../context/Firebase";
 import { useUser } from "../context/adminContext";
 import { useEffect, useState } from "react";
+
+
 import { signOut } from "firebase/auth";
 import { logActivity } from "../context/Firebase";
 // add...
@@ -48,41 +50,27 @@ const [editTextColor, setEditTextColor] = useState("#ffffff");
   // 🔹 Fetch Delivery Zone Status
 // useEffect(() => {
 //   if (!storeId) return;
-useEffect(() => {
-  if (!storeId || !user?.storeAccess?.includes(storeId)) return;
+// useEffect(() => {
+//   if (!storeId || !user?.storeAccess?.includes(storeId)) return;
 
 
-  const fetchStatus = async () => {
-    try {
-      const ref = doc(db, "delivery_zones", storeId);
-      const snap = await getDoc(ref);
+//   const fetchStatus = async () => {
+//     try {
+//       const ref = doc(db, "delivery_zones", storeId);
+//       const snap = await getDoc(ref);
 
-      if (snap.exists()) {
-        setIsActive(snap.data().isActive ?? false);
-      }
-    } catch (error) {
-      console.error("Failed to fetch zone status:", error);
-    } finally {
-      setLoadingStatus(false);
-    }
-  };
+//       if (snap.exists()) {
+//         setIsActive(snap.data().isActive ?? false);
+//       }
+//       setLoadingStatus(false);
+//     };
 
-  fetchStatus();
-}, [user]);
+//     fetchStatus();
+//   }, [user]);
 
-useEffect(() => {
-  console.log("USER:", user);
-  console.log("ROLE:", user?.roleKey);
-  console.log("PERMISSIONS:", user?.permissions);
-}, [user]);
-
-  // 🔹 Fetch Home Message
+// 🔹 Fetch Home Message (MISSING IN YOUR CODE)
 useEffect(() => {
   if (!storeId) return;
-
-  // useEffect(() => {
-  // if (!storeId || !user?.storeAccess?.includes(storeId)) return;
-
 
   const fetchHomeMessage = async () => {
     try {
@@ -105,10 +93,9 @@ useEffect(() => {
   };
 
   fetchHomeMessage();
-}, [user]);
+}, [storeId]);
 
-
-  // 🔹 Prefill modal when opened
+// 🔹 Prefill modal when opened (MISSING)
 useEffect(() => {
   if (homeMessage && showWelcomeModal) {
     setEditText(homeMessage.text);
@@ -118,16 +105,7 @@ useEffect(() => {
   }
 }, [homeMessage, showWelcomeModal]);
 
-//     setZoneActive(!zoneActive);
-//   } catch (error) {
-//     console.error("Failed to update zone status:", error);
-//   } finally {
-//     setLoading(false);
-//   }
-// };
-//const { user } = useUser(); // contains storeId
-
-
+  
   // 🔹 Toggle Store Active Status
   const toggleStatus = async () => {
 const storeId = user?.storeId;
@@ -141,6 +119,27 @@ const ref = doc(db, "delivery_zones", storeId);
 
     setIsActive(newStatus);
   };
+  useEffect(() => {
+  if (!storeId) return;
+
+  const fetchStatus = async () => {
+    try {
+      const ref = doc(db, "delivery_zones", storeId);
+      const snap = await getDoc(ref);
+
+      if (snap.exists()) {
+        setIsActive(snap.data().isActive ?? false);
+      }
+    } catch (error) {
+      console.error("Failed to fetch zone status:", error);
+    } finally {
+      setLoadingStatus(false);
+    }
+  };
+
+  fetchStatus();
+}, [storeId]);
+
   // 🔹 Save Home Message (🔥 MAIN FIX)
 const saveHomeMessage = async () => {
   if (!homeMessage?.id) {
@@ -188,6 +187,30 @@ setIsActive(newStatus);
     if (loadingUser) {
       return <div style={{ padding: 40 }}>Loading dashboard…</div>;
     }
+
+    // try {
+    //   const ref = doc(db, "home_messages", homeMessage.id);
+
+    //   await updateDoc(ref, {
+    //     text: editText,
+    //     enabled: editEnabled,
+    //     updatedAt: new Date(),
+    //     bgColor: editBgColor,
+    //     textColor: editTextColor,
+    //   });
+
+    //   // Update UI instantly
+    //   setHomeMessage({
+    //     ...homeMessage,
+    //     text: editText,
+    //     enabled: editEnabled,
+    //     bgColor: editBgColor,
+    //     textColor: editTextColor,
+    //   });
+
+    //   setShowWelcomeModal(false);
+    // } catch (error) {
+    //   console.error("Failed to update home message:", error);
     
     if (!user) {
       return <div style={{ padding: 40 }}>No user session</div>;
@@ -419,21 +442,19 @@ const adminFunctions = [
                   : "#fff",
             }}
           >{homeMessage?.enabled ? (
-            <>
-              <span className="message-icon">⚡</span>
-              <span className="message-text">
-                {homeMessage.text}
-              </span>
-            </>
-          ) : (
-            "Edit Message"
-          )}
+  <>
+    <span className="message-icon">⚡</span>
+    <span className="message-text">{homeMessage.text}</span>
+  </>
+) : (
+  "Edit Message"
+)}
           </button>
         </div>
       </div>
 
       {/* 🔹 Edit Message Modal */}
-      {showWelcomeModal && (
+      {/* {showWelcomeModal && (
         <div className="modal-backdrop">
           <div className="modal-box">
             <h3>Edit Home Message</h3>
@@ -478,6 +499,55 @@ const adminFunctions = [
 </div>
 </div>
 </div>
+)} */}
+
+{showWelcomeModal && (
+  <div className="modal-backdrop">
+    <div className="modal-box">
+      <h3>Edit Home Message</h3>
+
+      <textarea
+        value={editText}
+        onChange={(e) => setEditText(e.target.value)}
+      />
+
+      <label>
+        <input
+          type="checkbox"
+          checked={editEnabled}
+          onChange={() => setEditEnabled(!editEnabled)}
+        />
+        Enabled
+      </label>
+
+      <div style={{ marginTop: "10px" }}>
+        <label>Background Color</label>
+        <input
+          type="color"
+          value={editBgColor}
+          onChange={(e) => setEditBgColor(e.target.value)}
+        />
+      </div>
+
+      <div style={{ marginTop: "10px" }}>
+        <label>Text Color</label>
+        <input
+          type="color"
+          value={editTextColor}
+          onChange={(e) => setEditTextColor(e.target.value)}
+        />
+      </div>
+
+      <div className="modal-actions">
+        <button onClick={() => setShowWelcomeModal(false)}>
+          Cancel
+        </button>
+        <button onClick={saveHomeMessage}>
+          Save
+        </button>
+      </div>
+    </div>
+  </div>
 )}
 
 <div className="container mx-auto px-4">
