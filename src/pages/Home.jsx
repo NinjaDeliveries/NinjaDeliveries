@@ -341,13 +341,6 @@ const adminFunctions = [
     image: radiusMap,
     permission: "page:radius",
   },
-  {
-  title: "Service Management",
-  text: "Manage services, bookings, technicians",
-  link: "/service-dashboard",
-  image: "https://cdn-icons-png.flaticon.com/512/2972/2972185.png",
-  permission: "page:service_dashboard",
-},
 
 ];
 

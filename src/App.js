@@ -330,7 +330,15 @@ useEffect(() => {
           }
         />
       )}
-      <Route path="/service-dashboard" element={<ServiceDashboard />} />
+     <Route
+  path="/service-dashboard"
+  element={
+    <ProtectedRoute user={user}>
+      <ServiceDashboard />
+    </ProtectedRoute>
+  }
+/>
+
 <Route
   path="/service-dashboard/services"
   element={<ServiceManagement />}
