@@ -38,6 +38,10 @@ import { useLocation } from "react-router-dom";
 import { useUser } from "./context/adminContext";
 import ProtectedRoute from "./ProtectedRoute";
 import { logAdminActivity } from "./utils/activityLogger";
+import ServiceDashboard from "./pages/ServiceDashboard";
+import ServiceManagement from "./pages/service/ServiceManagement";
+import ServiceBookings from "./pages/service/ServiceBookings";
+import ServiceSlots from "./pages/service/ServiceSlots";
 
 
 function App() {
@@ -322,6 +326,33 @@ useEffect(() => {
       : <Navigate to="/no-access" />
   }
 />
+        {process.env.NODE_ENV === "development" && (
+          <Route
+          path="/__admin_dev"
+          element={
+            // user?.permissions?.includes("page:users")
+            (user?.permissions?.includes("page:users") || user?.roleKey === "all_access_admin")
+
+
+            ? <Admin />
+            : <Navigate to="/no-access" />
+          }
+        />
+      )}
+      <Route path="/service-dashboard" element={<ServiceDashboard />} />
+<Route
+  path="/service-dashboard/services"
+  element={<ServiceManagement />}
+/>
+<Route
+  path="/service-dashboard/bookings"
+  element={<ServiceBookings />}
+/>
+<Route
+  path="/service-dashboard/slots"
+  element={<ServiceSlots />}
+/>
+
         </Routes>
     </div>
   );
