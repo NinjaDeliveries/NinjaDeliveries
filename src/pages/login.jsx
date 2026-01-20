@@ -107,7 +107,6 @@ export default function Login({ setNav, setIsadmin, setisEme, setis24x7 }) {
   await auth.signOut();
   return;
 }
-
         if (adminData.isActive === false) {
           toast("Admin access disabled. Contact super admin.");
           await auth.signOut();
@@ -140,7 +139,38 @@ export default function Login({ setNav, setIsadmin, setisEme, setis24x7 }) {
         // // : [],
         // });
       }
+      
+// 🔹 SERVICE USERS CHECK (NEW)
+let isServiceUser = false;
 
+if (!isAdmin) {
+  const serviceRef = doc(db, "service_users", user.uid);
+  const serviceSnap = await getDoc(serviceRef);
+
+  if (serviceSnap.exists()) {
+    const serviceData = serviceSnap.data();
+
+    if (serviceData.isActive === false) {
+      toast("Your service account is disabled. Contact admin.", {
+        position: "top-center",
+      });
+      await auth.signOut();
+      return;
+    }
+
+    isServiceUser = true;
+    userSource = "service_users";
+
+    toast("Service Dashboard Login Successful", {
+      type: "success",
+      position: "top-center",
+    });
+
+    setNav(false); // ❌ service dashboard has its own layout
+    navigate("/service-dashboard");
+    return; // ⛔ stop admin logic here
+  }
+}
       if (!isAdmin) {
       try {
         if (typeof userEmail === "string" && userEmail.length > 0) {

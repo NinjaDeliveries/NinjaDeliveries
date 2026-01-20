@@ -42,6 +42,7 @@ import ServiceDashboard from "./pages/ServiceDashboard";
 import ServiceManagement from "./pages/service/ServiceManagement";
 import ServiceBookings from "./pages/service/ServiceBookings";
 import ServiceSlots from "./pages/service/ServiceSlots";
+import ServiceRegister from "./pages/service/ServiceRegister";
 
 
 function App() {
@@ -351,8 +352,10 @@ useEffect(() => {
   path="/service-dashboard/slots"
   element={<ServiceSlots />}
 />
-
-        </Routes>
+ {/* service regsiter */}
+ <Route path="/service-register" element={<ServiceRegister />} />
+  </Routes>
+        
     </div>
   );
 }
