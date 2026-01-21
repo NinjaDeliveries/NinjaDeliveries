@@ -19,6 +19,8 @@ import { getFirestore } from "firebase/firestore";
 import "../style/login.css";
 
 
+
+
 export default function Login({ setNav, setIsadmin, setisEme, setis24x7 }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -27,6 +29,12 @@ export default function Login({ setNav, setIsadmin, setisEme, setis24x7 }) {
   const db = getFirestore();
   const { user } = useUser();
   const navigate = useNavigate();
+
+useEffect(() => {
+  if (auth.currentUser) {
+    navigate("/", { replace: true });
+  }
+}, [navigate]);
   useEffect(() => {
     const pending = sessionStorage.getItem("pendingApproval");
   
@@ -39,11 +47,11 @@ export default function Login({ setNav, setIsadmin, setisEme, setis24x7 }) {
     }
   }, []);
   
-  useEffect(() => {
-    if (user && user.storeId) {
-    navigate("/home");
-  }
-}, [user, navigate]);
+//   useEffect(() => {
+//     if (user && user.storeId) {
+//     navigate("/home");
+//   }
+// }, [user, navigate]);
 
 
   const handleSubmit = async (e) => {

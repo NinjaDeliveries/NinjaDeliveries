@@ -204,16 +204,10 @@ const finalUser = {
         setUser(finalUser);
         lastUserRef.current = finalUser;
       } else {
-        const fallbackUser = {
-          uid: currentUser.uid,
-          email: currentUser.email,
-          storeId: null,
-          storeAccess: [],
-        };
-
-        setUser(fallbackUser);
+        // ❌ Not an admin, not legacy → treat as logged out
+        setUser(null);
         setStores([]);
-        lastUserRef.current = fallbackUser;
+        lastUserRef.current = null;
       }
     } catch (err) {
       console.error("adminContext error:", err);
