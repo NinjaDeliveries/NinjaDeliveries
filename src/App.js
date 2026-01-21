@@ -46,7 +46,7 @@ import ServiceRegister from "./pages/service/ServiceRegister";
 
 
 function App() {
-const { user } = useUser();
+const { user, loadingUser } = useUser();
 const isAdmin =
   user &&
   (
@@ -62,7 +62,7 @@ const [isEme, setisEme] = useState(false);
 
 // 🔹 UI + ROLE STATE HANDLING (HEAD)
 useEffect(() => {
-  if (user) {
+  if (user && !loadingUser) {
     setNav(true);
     // setIsadmin(user.roleKey === "all_access_admin");
 
@@ -75,7 +75,7 @@ useEffect(() => {
     setis24x7(false);
     setisEme(false);
   }
-}, [user, location.pathname]);
+}, [user, loadingUser, location.pathname]);
 
 
 // 🔹 ACTIVITY LOGGING (BRANCH)
@@ -95,7 +95,7 @@ useEffect(() => {
   return (
     <div>
       {/* {nav && Isadmin && <Navbar />} */}
-      {nav && <Navbar />}
+      {nav && user && !loadingUser && <Navbar />}
       <Routes>
         {/* MAin ROUTE */}
         {/* <Route
