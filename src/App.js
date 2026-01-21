@@ -38,11 +38,14 @@ import { useLocation } from "react-router-dom";
 import { useUser } from "./context/adminContext";
 import ProtectedRoute from "./ProtectedRoute";
 import { logAdminActivity } from "./utils/activityLogger";
-import ServiceDashboard from "./pages/ServiceDashboard";
-import ServiceManagement from "./pages/service/ServiceManagement";
-import ServiceBookings from "./pages/service/ServiceBookings";
-import ServiceSlots from "./pages/service/ServiceSlots";
+
+// servcie Dashbaord 
+import ServiceDashboard from "./pages/service/ServiceDashboard";
+// import ServiceManagement from "./pages/service/ServiceManagement";
+// import ServiceBookings from "./pages/service/ServiceBookings";
+// import ServiceSlots from "./pages/service/ServiceSlots";
 import ServiceRegister from "./pages/service/ServiceRegister";
+import ServiceRoute from "./ServiceRoute";
 
 
 function App() {
@@ -54,6 +57,8 @@ const isAdmin =
     (Array.isArray(user.permissions) && user.permissions.length > 0)
   );
 const location = useLocation();
+
+// service dashboard
 
 const [nav, setNav] = useState(false);
 // const [Isadmin, setIsadmin] = useState(false);
@@ -92,10 +97,25 @@ useEffect(() => {
   });
 }, [user, location.pathname]);
 
+if (loadingUser) {
+  return (
+    <div style={{
+      height: "100vh",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontSize: 18,
+      fontWeight: 500,
+    }}>
+      Loading…
+    </div>
+  );
+}
+
   return (
     <div>
-      {/* {nav && Isadmin && <Navbar />} */}
-      {nav && user && !loadingUser && <Navbar />}
+      {nav && isAdmin && <Navbar />}
+      {/* {nav && <Navbar />} */}
       <Routes>
         {/* MAin ROUTE */}
         {/* <Route
@@ -122,18 +142,14 @@ useEffect(() => {
             )
           }
         /> */}
-        <Route
+  <Route
   path="/"
   element={
     nav ? (
       isAdmin ? (
         <Home />
-      ) : isEme ? (
-        <StoreOrder />
-      ) : is24x7 ? (
-        <FreshGreens />
       ) : (
-        <OrderQRCodeQueue />
+        <Navigate to="/login" replace />
       )
     ) : (
       <Login
@@ -145,6 +161,7 @@ useEffect(() => {
     )
   }
 />
+
         {/* REGISTER ROUTE (DIRECT LINK ONLY) */}
         <Route 
         path="/register"
@@ -173,6 +190,19 @@ useEffect(() => {
             )
           }
         /> */}
+
+        <Route
+  path="/login"
+  element={
+    <Login
+      setNav={setNav}
+      setIsadmin={() => {}}
+      setisEme={setisEme}
+      setis24x7={setis24x7}
+    />
+  }
+/>
+        
         <Route
   path="/home"
   element={
@@ -334,23 +364,28 @@ useEffect(() => {
      <Route
   path="/service-dashboard"
   element={
-    <ProtectedRoute user={user}>
+    <ServiceRoute>
       <ServiceDashboard />
-    </ProtectedRoute>
+    </ServiceRoute>
   }
 />
 
 <Route
   path="/service-dashboard/services"
-  element={<ServiceManagement />}
+  element={
+    <ServiceRoute>
+      {/* future component */}
+    </ServiceRoute>
+  }
 />
+
 <Route
   path="/service-dashboard/bookings"
-  element={<ServiceBookings />}
-/>
-<Route
-  path="/service-dashboard/slots"
-  element={<ServiceSlots />}
+  element={
+    <ServiceRoute>
+      {/* future component */}
+    </ServiceRoute>
+  }
 />
  {/* service regsiter */}
  <Route path="/service-register" element={<ServiceRegister />} />
@@ -361,3 +396,4 @@ useEffect(() => {
 }
 
 export default App;
+

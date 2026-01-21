@@ -379,3 +379,28 @@
   background: #e6f7ee;
   color: #0f9d58;
 }
+
+.sd-logout-btn {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+
+  background: #ef4444;
+  color: white;
+  font-weight: 600;
+
+  transition: background 0.3s ease;
+}
+
+.sd-logout-btn:hover {
+  background: #dc2626;
+}
+
+.sd-footer-text {
+  margin-top: 10px;
+  font-size: 12px;
+  opacity: 0.7;
+  text-align: center;
+}
