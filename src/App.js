@@ -53,7 +53,11 @@ import Payments from "./pages/service/Payments";
 import Settings from "./pages/service/Settings";
 import Services from "./pages/service/Services";
 import Technicians from "./pages/service/Technicians";
+<<<<<<< HEAD
 import Categories from "./pages/service/Categories";
+=======
+import Works from "./pages/service/Works";
+>>>>>>> 705e70b68b88c5d9bec0f4efaa15972a4e481477
 
 function App() {
 const { user, loadingUser } = useUser();
@@ -376,6 +380,14 @@ if (loadingUser) {
     </ServiceRoute>
   }
 >
+  <Route
+  path="/service-dashboard/works"
+  element={
+    <ServiceRoute>
+      <Works />
+    </ServiceRoute>
+  }
+/>
   <Route index element={<Overview />} />
   <Route path="categories" element={<Categories />} />
   <Route path="services" element={<Services />} />
@@ -385,6 +397,8 @@ if (loadingUser) {
   <Route path="payments" element={<Payments />} />
   <Route path="settings" element={<Settings />} />
 </Route>
+
+
 
 <Route
   path="/service-dashboard/services"

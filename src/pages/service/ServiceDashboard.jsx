@@ -16,6 +16,7 @@ const ServiceDashboard = () => {
     { label: "Overview", path: "/service-dashboard" },
     { label: "Categories", path: "/service-dashboard/categories" },
     { label: "Services", path: "/service-dashboard/services" },
+    { label: "Works" , path: "/service-dashboard/works"},
     { label: "Bookings", path: "/service-dashboard/bookings" },
     { label: "Calendar / Slots", path: "/service-dashboard/slots" },
     { label: "Technicians", path: "/service-dashboard/technicians" },
