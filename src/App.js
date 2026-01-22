@@ -53,6 +53,7 @@ import Payments from "./pages/service/Payments";
 import Settings from "./pages/service/Settings";
 import Services from "./pages/service/Services";
 import Technicians from "./pages/service/Technicians";
+import Works from "./pages/service/Works";
 
 function App() {
 const { user, loadingUser } = useUser();
@@ -375,6 +376,14 @@ if (loadingUser) {
     </ServiceRoute>
   }
 >
+  <Route
+  path="/service-dashboard/works"
+  element={
+    <ServiceRoute>
+      <Works />
+    </ServiceRoute>
+  }
+/>
   <Route index element={<Overview />} />
   <Route path="services" element={<Services />} />
   <Route path="bookings" element={<Bookings />} />
@@ -383,6 +392,8 @@ if (loadingUser) {
   <Route path="payments" element={<Payments />} />
   <Route path="settings" element={<Settings />} />
 </Route>
+
+
 
 <Route
   path="/service-dashboard/services"
