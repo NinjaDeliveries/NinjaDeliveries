@@ -745,6 +745,57 @@
   margin-bottom: 4px;
 }
 
+/* ========== TECHNICIANS / WORKERS ========== */
+.sd-assigned-services {
+  margin-top: 8px;
+}
+
+.sd-service-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.sd-services-list {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 8px;
+}
+
+.sd-service-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.sd-service-checkbox:hover {
+  background-color: #f9fafb;
+}
+
+.sd-service-checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #4f46e5;
+}
+
+.sd-service-checkbox span {
+  font-weight: 500;
+  color: #374151;
+}
+
+.sd-service-checkbox small {
+  color: #6b7280;
+  font-size: 12px;
+  margin-left: auto;
+}
+
 /* ========== CREATE CATEGORY SECTION ========== */
 .sd-category-section {
   display: flex;
