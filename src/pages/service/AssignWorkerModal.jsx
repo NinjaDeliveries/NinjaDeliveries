@@ -7,6 +7,7 @@ import {
   getDocs,
   updateDoc,
   doc,
+  serverTimestamp, 
 } from "firebase/firestore";
 import "../../style/ServiceDashboard.css";
 
@@ -14,6 +15,7 @@ const AssignWorkerModal = ({ booking, onClose, onAssigned }) => {
   const [workers, setWorkers] = useState([]);
   const [selectedWorker, setSelectedWorker] = useState("");
   const [loading, setLoading] = useState(true);
+
 
   // 🔹 Fetch workers
   const fetchWorkers = async () => {
@@ -23,7 +25,7 @@ const AssignWorkerModal = ({ booking, onClose, onAssigned }) => {
 
       const q = query(
         collection(db, "service_workers"),
-        where("serviceOwnerId", "==", user.uid),
+        where("companyId", "==", user.uid),
         where("isActive", "==", true)
       );
 
@@ -43,6 +45,10 @@ const AssignWorkerModal = ({ booking, onClose, onAssigned }) => {
 
   // 🔹 Assign worker
   const handleAssign = async () => {
+    if (booking.status === "assigned"){
+      alert("Worker already assigned to this booking");
+      return;
+    }
     if (!selectedWorker) {
       alert("Please select a worker");
       return;
@@ -58,7 +64,7 @@ const AssignWorkerModal = ({ booking, onClose, onAssigned }) => {
         workerId: worker.id,
         workerName: worker.name,
         status: "assigned",
-        assignedAt: new Date(),
+        assignedAt: serverTimestamp(),
       });
 
       onAssigned(); // refresh bookings
@@ -72,6 +78,9 @@ const AssignWorkerModal = ({ booking, onClose, onAssigned }) => {
   useEffect(() => {
     fetchWorkers();
   }, []);
+  if (!booking){
+    return null;
+  }
 
   return (
     <div className="sd-modal-backdrop">
@@ -110,7 +119,11 @@ const AssignWorkerModal = ({ booking, onClose, onAssigned }) => {
           <button className="sd-secondary-btn" onClick={onClose}>
             Cancel
           </button>
-          <button className="sd-primary-btn" onClick={handleAssign}>
+          <button 
+          className="sd-primary-btn" 
+          onClick={handleAssign}
+          disabled={!selectedWorker || booking.status === "assigned"}
+          >
             Assign
           </button>
         </div>

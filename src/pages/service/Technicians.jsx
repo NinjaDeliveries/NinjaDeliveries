@@ -24,8 +24,8 @@ const Technicians = () => {
       if (!user) return;
 
       const q = query(
-        collection(db, "service_technicians"),
-        where("serviceId", "==", user.uid)
+        collection(db, "service_workers"),
+        where("companyId", "==", user.uid)
       );
 
       const snap = await getDocs(q);
@@ -49,7 +49,7 @@ const Technicians = () => {
 
       const q = query(
         collection(db, "service_categories"),
-        where("serviceId", "==", user.uid)
+        where("companyId", "==", user.uid)
       );
 
       const snap = await getDocs(q);
@@ -71,7 +71,7 @@ const Technicians = () => {
 
       const q = query(
         collection(db, "service_services"),
-        where("serviceId", "==", user.uid)
+        where("companyId", "==", user.uid)
       );
 
       const snap = await getDocs(q);
@@ -121,7 +121,7 @@ const Technicians = () => {
       }
 
       const payload = {
-        serviceId: user.uid,
+        companyId: user.uid,
         name: name.trim(),
         phone: phone.trim(),
         aadharNumber: aadharNumber.trim() || null,

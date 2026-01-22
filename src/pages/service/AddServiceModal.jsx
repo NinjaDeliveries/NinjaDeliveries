@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { auth, db } from "../../context/Firebase";
 import { collection, addDoc, doc, updateDoc, query, where, getDocs } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "../../context/Firebase";
 
 const AddServiceModal = ({ onClose, onSaved, editService }) => {
@@ -110,7 +110,7 @@ const AddServiceModal = ({ onClose, onSaved, editService }) => {
       }
 
       const payload = {
-        serviceId: user.uid,
+        companyId: user.uid,
         name: newCategoryName.trim(),
         description: newCategoryDescription.trim(),
         isActive: true,
@@ -145,7 +145,7 @@ const AddServiceModal = ({ onClose, onSaved, editService }) => {
 
       const q = query(
         collection(db, "service_categories"),
-        where("serviceId", "==", user.uid)
+        where("companyId", "==", user.uid)
       );
 
       const snap = await getDocs(q);
@@ -186,6 +186,16 @@ const AddServiceModal = ({ onClose, onSaved, editService }) => {
     try {
       const user = auth.currentUser;
       if (!user) return;
+      if (!name.trim()) {
+        alert("Service name is required");
+        return;
+      }
+      for (let p of packages) {
+        if (!p.price || Number(p.price) <= 0) {
+          alert("Each package must have a valid price");
+          return;
+        }
+      }
 
       setUploading(true);
 
@@ -197,7 +207,7 @@ const AddServiceModal = ({ onClose, onSaved, editService }) => {
       }
 
       const payload = {
-        serviceId: user.uid,
+        companyId: user.uid,
         name,
         type: "package", // Always package type
         categoryId: categoryId || null,
