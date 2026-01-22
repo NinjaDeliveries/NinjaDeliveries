@@ -53,6 +53,7 @@ import Payments from "./pages/service/Payments";
 import Settings from "./pages/service/Settings";
 import Services from "./pages/service/Services";
 import Technicians from "./pages/service/Technicians";
+import Categories from "./pages/service/Categories";
 
 function App() {
 const { user, loadingUser } = useUser();
@@ -376,6 +377,7 @@ if (loadingUser) {
   }
 >
   <Route index element={<Overview />} />
+  <Route path="categories" element={<Categories />} />
   <Route path="services" element={<Services />} />
   <Route path="bookings" element={<Bookings />} />
   <Route path="slots" element={<Slots />} />

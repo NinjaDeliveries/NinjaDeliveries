@@ -1,13 +1,19 @@
 import React, { useEffect, useState } from "react";
 import { auth, db } from "../../context/Firebase";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, query, where, getDocs, addDoc } from "firebase/firestore";
 import AddServiceModal from "./AddServiceModal";
 import "../../style/ServiceDashboard.css";
 
 const Services = () => {
   const [services, setServices] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
+  const [editService, setEditService] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [showCreateCategoryModal, setShowCreateCategoryModal] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [newCategoryDescription, setNewCategoryDescription] = useState("");
 
   const fetchServices = async () => {
     try {
@@ -33,41 +39,175 @@ const Services = () => {
     }
   };
 
+  const fetchCategories = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const q = query(
+        collection(db, "service_categories"),
+        where("serviceId", "==", user.uid)
+      );
+
+      const snap = await getDocs(q);
+      const list = snap.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      setCategories(list);
+    } catch (err) {
+      console.error("Fetch categories error:", err);
+    }
+  };
+
+  const handleAddService = () => {
+    setEditService(null);
+    setOpenModal(true);
+  };
+
+  const handleEditService = (service) => {
+    setEditService(service);
+    setOpenModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setOpenModal(false);
+    setEditService(null);
+  };
+
+  const handleCategoryChange = (e) => {
+    const value = e.target.value;
+    if (value === "create-new") {
+      setShowCreateCategoryModal(true);
+    } else {
+      setSelectedCategory(value);
+    }
+  };
+
+  const handleCreateCategory = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user || !newCategoryName.trim()) return;
+
+      const payload = {
+        serviceId: user.uid,
+        name: newCategoryName.trim(),
+        description: newCategoryDescription.trim(),
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const docRef = await addDoc(collection(db, "service_categories"), payload);
+      
+      // Add to local categories list
+      const newCategory = { id: docRef.id, ...payload };
+      setCategories(prev => [...prev, newCategory]);
+      
+      // Select the newly created category
+      setSelectedCategory(docRef.id);
+      
+      // Reset form and close
+      setNewCategoryName("");
+      setNewCategoryDescription("");
+      setShowCreateCategoryModal(false);
+      
+    } catch (error) {
+      console.error("Error creating category:", error);
+      alert("Error creating category. Please try again.");
+    }
+  };
+
+  const handleCloseCategoryModal = () => {
+    setShowCreateCategoryModal(false);
+    setNewCategoryName("");
+    setNewCategoryDescription("");
+  };
+
   useEffect(() => {
     fetchServices();
+    fetchCategories();
   }, []);
+
+  const getCategoryName = (categoryId) => {
+    if (!categoryId) return null; // Return null instead of "Uncategorized"
+    const category = categories.find(cat => cat.id === categoryId);
+    return category ? category.name : null;
+  };
+
+  const filteredServices = selectedCategory 
+    ? services.filter(service => service.categoryId === selectedCategory)
+    : services;
 
   return (
     <div className="sd-main">
       <div className="sd-header">
         <h1>Services</h1>
-        <button className="sd-primary-btn" onClick={() => setOpenModal(true)}>
-          + Add Service
-        </button>
+        <div className="sd-header-actions">
+          <select 
+            className="sd-filter-select"
+            value={selectedCategory} 
+            onChange={handleCategoryChange}
+          >
+            <option value="">All Categories</option>
+            <option value="create-new">+ Create Category</option>
+            {categories.map(category => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+          <button className="sd-primary-btn" onClick={handleAddService}>
+            + Add Service
+          </button>
+        </div>
       </div>
 
       {loading ? (
         <p>Loading services...</p>
-      ) : services.length === 0 ? (
-        <p>No services created yet.</p>
+      ) : filteredServices.length === 0 ? (
+        <p>No services found{selectedCategory ? " in this category" : ""}.</p>
       ) : (
         <div className="sd-table">
-          {services.map(service => (
+          {filteredServices.map(service => (
             <div key={service.id} className="sd-service-card">
-              <div>
-                <h3>{service.name}</h3>
-                <span className={`sd-badge ${service.type}`}>
-                  {service.type.toUpperCase()}
-                </span>
+              <div className="sd-service-info">
+                <div>
+                  <h3>{service.name}</h3>
+                  <span className={`sd-badge ${service.type}`}>
+                    {service.type.toUpperCase()}
+                  </span>
+                  {service.categoryId && getCategoryName(service.categoryId) && (
+                    <span className="sd-badge category">
+                      {getCategoryName(service.categoryId)}
+                    </span>
+                  )}
+                </div>
+
+                {service.type === "normal" && (
+                  <p>₹{service.price} ({service.priceUnit})</p>
+                )}
+
+                {service.type === "package" && service.packages && (
+                  <div className="sd-package-details">
+                    {service.packages.map((pkg, index) => (
+                      <p key={index}>
+                        {pkg.duration} {pkg.unit}(s) - ₹{pkg.price}
+                      </p>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              {service.type === "normal" && (
-                <p>₹{service.price} ({service.priceUnit})</p>
-              )}
-
-              {service.type === "package" && (
-                <p>{service.packages.length} package options</p>
-              )}
+              <div className="sd-service-actions">
+                <button 
+                  className="sd-edit-btn"
+                  onClick={() => handleEditService(service)}
+                >
+                  Edit
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -75,9 +215,48 @@ const Services = () => {
 
       {openModal && (
         <AddServiceModal
-          onClose={() => setOpenModal(false)}
+          onClose={handleCloseModal}
           onSaved={fetchServices}
+          editService={editService}
         />
+      )}
+
+      {/* Create Category Modal */}
+      {showCreateCategoryModal && (
+        <div className="sd-modal-backdrop">
+          <div className="sd-modal">
+            <h2>Create New Category</h2>
+
+            <div className="sd-form-group">
+              <label>Category Name</label>
+              <input
+                type="text"
+                placeholder="Enter category name"
+                value={newCategoryName}
+                onChange={e => setNewCategoryName(e.target.value)}
+              />
+            </div>
+
+            <div className="sd-form-group">
+              <label>Description (Optional)</label>
+              <textarea
+                placeholder="Enter category description"
+                value={newCategoryDescription}
+                onChange={e => setNewCategoryDescription(e.target.value)}
+                rows="3"
+              />
+            </div>
+
+            <div className="sd-modal-actions">
+              <button className="sd-cancel-btn" onClick={handleCloseCategoryModal}>
+                Cancel
+              </button>
+              <button className="sd-save-btn" onClick={handleCreateCategory}>
+                Create Category
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
