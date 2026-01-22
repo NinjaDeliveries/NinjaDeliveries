@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { auth, db } from "../../context/Firebase";
-import { collection, query, where, getDocs, doc, setDoc } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, setDoc, addDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import "../../style/ServiceDashboard.css";
 
 // ================= CONFIG =================
@@ -35,12 +35,50 @@ function timeToMinutes(timeStr) {
   return h * 60 + m;
 }
 
+// Generate slots for a specific date based on templates
+function generateSlotsForDate(templates, targetDate, holidays) {
+  const dayOfWeek = new Date(targetDate).getDay(); // 0 = Sunday, 1 = Monday, etc.
+  const isHoliday = holidays.some(holiday => holiday.date === targetDate);
+  
+  if (isHoliday) return [];
+  
+  return templates
+    .filter(template => {
+      if (!template.isActive) return false;
+      
+      // Check if template applies to this date
+      if (template.recurrence === "none") {
+        return template.specificDate === targetDate;
+      } else if (template.recurrence === "daily") {
+        const templateDate = new Date(template.createdAt.toDate ? template.createdAt.toDate() : template.createdAt);
+        const targetDateObj = new Date(targetDate);
+        const daysDiff = Math.floor((targetDateObj - templateDate) / (1000 * 60 * 60 * 24));
+        return daysDiff >= 0 && daysDiff <= 30; // 30 days from creation
+      } else if (template.recurrence === "weekly") {
+        const templateDate = new Date(template.createdAt.toDate ? template.createdAt.toDate() : template.createdAt);
+        const templateDayOfWeek = templateDate.getDay();
+        const targetDateObj = new Date(targetDate);
+        const weeksDiff = Math.floor((targetDateObj - templateDate) / (1000 * 60 * 60 * 24 * 7));
+        return dayOfWeek === templateDayOfWeek && weeksDiff >= 0 && weeksDiff <= 12; // 12 weeks
+      }
+      return false;
+    })
+    .map(template => ({
+      ...template,
+      id: `${template.id}_${targetDate}`, // Unique ID for this date
+      date: targetDate,
+      dynamicSlot: true,
+      assignedServiceId: template.assignedServiceId // Keep the assigned service
+    }));
+}
+
 // ================= MAIN COMPONENT =================
 export default function Slots() {
   const [selectedDate, setSelectedDate] = useState(todayISO());
   const [bookings, setBookings] = useState({});
   const [companyOpen, setCompanyOpen] = useState(true);
-  const [timeSlots, setTimeSlots] = useState([]);
+  const [slotTemplates, setSlotTemplates] = useState([]); // Changed from timeSlots
+  const [displaySlots, setDisplaySlots] = useState([]); // Slots to display for selected date
   const [services, setServices] = useState([]);
   const [workers, setWorkers] = useState([]);
   const [holidays, setHolidays] = useState([]);
@@ -66,8 +104,28 @@ export default function Slots() {
   const [filterService, setFilterService] = useState("");
   const [filterWorker, setFilterWorker] = useState("");
   const [filterDate, setFilterDate] = useState("");
+  const [filterRole, setFilterRole] = useState(""); // New role filter
+  
+  // Categories state for role filtering
+  const [categories, setCategories] = useState([]);
 
   const timeOptions = useMemo(() => generateTimeOptions(), []);
+
+  // Generate display slots whenever date or templates change
+  useEffect(() => {
+    const slots = generateSlotsForDate(slotTemplates, selectedDate, holidays);
+    setDisplaySlots(slots);
+  }, [slotTemplates, selectedDate, holidays]);
+
+  // Reset worker selection when service changes (for role-based filtering)
+  useEffect(() => {
+    if (newSlotService) {
+      const availableWorkers = getWorkersForSlotAssignment();
+      if (availableWorkers.length === 0 || !availableWorkers.find(w => w.id === newSlotWorker)) {
+        setNewSlotWorker("");
+      }
+    }
+  }, [newSlotService, workers, services]);
 
   // Load all data
   useEffect(() => {
@@ -95,7 +153,24 @@ export default function Slots() {
       const workersSnap = await getDocs(workersQuery);
       setWorkers(workersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
 
-      // Load slot configuration
+      // Load categories for role filtering
+      const categoriesQuery = query(
+        collection(db, "service_categories"),
+        where("serviceId", "==", user.uid)
+      );
+      const categoriesSnap = await getDocs(categoriesQuery);
+      setCategories(categoriesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+
+      // Load slot templates (instead of individual slots)
+      const templatesQuery = query(
+        collection(db, "service_slot_templates"),
+        where("serviceId", "==", user.uid)
+      );
+      const templatesSnap = await getDocs(templatesQuery);
+      const templates = templatesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setSlotTemplates(templates);
+
+      // Load company configuration
       const configQuery = query(
         collection(db, "service_slot_config"),
         where("serviceId", "==", user.uid)
@@ -105,7 +180,6 @@ export default function Slots() {
       if (!configSnap.empty) {
         const config = configSnap.docs[0].data();
         setCompanyOpen(config.isOpen || false);
-        setTimeSlots(config.timeSlots || []);
         setHolidays(config.holidays || []);
       }
 
@@ -140,7 +214,6 @@ export default function Slots() {
       await setDoc(configDoc, {
         serviceId: user.uid,
         isOpen: companyOpen,
-        timeSlots: timeSlots,
         holidays: holidays,
         updatedAt: new Date()
       }, { merge: true });
@@ -158,90 +231,79 @@ export default function Slots() {
       return;
     }
 
-    // Check for overlapping slots (considering buffer time)
-    const hasOverlap = timeSlots.some(slot => {
-      const slotStart = timeToMinutes(slot.startTime) - (slot.bufferTime || 0);
-      const slotEnd = timeToMinutes(slot.endTime) + (slot.bufferTime || 0);
-      const newStart = startMinutes - newSlotBuffer;
-      const newEnd = endMinutes + newSlotBuffer;
-      return (newStart < slotEnd && newEnd > slotStart);
-    });
-
-    if (hasOverlap) {
-      alert("This time slot conflicts with existing slots (including buffer time)");
+    if (newSlotCapacity < 1) {
+      alert("Capacity must be at least 1");
       return;
     }
 
-    const baseSlot = {
-      startTime: newSlotStart,
-      endTime: newSlotEnd,
-      capacity: newSlotCapacity,
-      serviceId: newSlotService || null,
-      workerId: newSlotWorker || null,
-      bufferTime: newSlotBuffer,
-      price: newSlotPrice,
-      isActive: true
-    };
-
-    let newSlots = [];
-
-    if (newSlotRecurrence === "daily") {
-      // Create slots for next 30 days
-      for (let i = 0; i < 30; i++) {
-        const date = new Date();
-        date.setDate(date.getDate() + i);
-        const dateStr = date.toISOString().split('T')[0];
-        
-        newSlots.push({
-          ...baseSlot,
-          id: `${Date.now()}_${i}`,
-          date: dateStr,
-          recurrence: "daily"
-        });
+    // Check for overlapping slots (considering buffer time)
+    // Be more lenient with overlap detection - allow multiple slots if they don't directly conflict
+    const conflictingTemplates = slotTemplates.filter(template => {
+      // Skip if template is for a different specific date and both are one-time slots
+      if (template.recurrence === "none" && newSlotRecurrence === "none") {
+        if (template.specificDate !== selectedDate) {
+          return false; // Different dates, no overlap possible
+        }
       }
-    } else if (newSlotRecurrence === "weekly") {
-      // Create slots for next 12 weeks (same day of week)
-      for (let i = 0; i < 12; i++) {
-        const date = new Date();
-        date.setDate(date.getDate() + (i * 7));
-        const dateStr = date.toISOString().split('T')[0];
-        
-        newSlots.push({
-          ...baseSlot,
-          id: `${Date.now()}_${i}`,
-          date: dateStr,
-          recurrence: "weekly"
-        });
+      
+      // For recurring slots, be more permissive - only block if exact same time
+      if (template.recurrence !== "none" || newSlotRecurrence !== "none") {
+        // Only block if it's the exact same time slot
+        return (template.startTime === newSlotStart && template.endTime === newSlotEnd);
       }
-    } else {
-      // Single slot
-      newSlots.push({
-        ...baseSlot,
-        id: Date.now().toString(),
-        date: selectedDate,
-        recurrence: "none"
-      });
+      
+      // For same-date one-time slots, check for actual time overlap with buffer
+      const templateStart = timeToMinutes(template.startTime) - (template.bufferTime || 0);
+      const templateEnd = timeToMinutes(template.endTime) + (template.bufferTime || 0);
+      const newStart = startMinutes - (newSlotBuffer || 0);
+      const newEnd = endMinutes + (newSlotBuffer || 0);
+      
+      // Check if times actually overlap
+      return (newStart < templateEnd && newEnd > templateStart);
+    });
+
+    if (conflictingTemplates.length > 0) {
+      const conflictDetails = conflictingTemplates.map(t => 
+        `${t.startTime}-${t.endTime} (${t.recurrence})`
+      ).join(", ");
+      
+      // More helpful error message
+      if (conflictingTemplates.some(t => t.startTime === newSlotStart && t.endTime === newSlotEnd)) {
+        alert(`A slot already exists for ${newSlotStart}-${newSlotEnd}.\n\nTip: You can create multiple slots with different services or workers for the same time.`);
+      } else {
+        alert(`Time conflict with: ${conflictDetails}\n\nPlease choose a different time or reduce buffer times.`);
+      }
+      return;
     }
 
-    const updatedSlots = [...timeSlots, ...newSlots].sort((a, b) => 
-      timeToMinutes(a.startTime) - timeToMinutes(b.startTime)
-    );
+    const template = {
+      serviceId: auth.currentUser.uid,
+      startTime: newSlotStart,
+      endTime: newSlotEnd,
+      capacity: newSlotCapacity || DEFAULT_CAPACITY,
+      assignedServiceId: newSlotService || null,
+      workerId: newSlotWorker || null,
+      bufferTime: newSlotBuffer || 0,
+      price: newSlotPrice || 0,
+      isActive: true,
+      recurrence: newSlotRecurrence,
+      specificDate: newSlotRecurrence === "none" ? selectedDate : null,
+      createdAt: new Date()
+    };
 
-    setTimeSlots(updatedSlots);
-    setShowAddSlot(false);
-    resetSlotForm();
-    
-    // Save to Firebase
-    const user = auth.currentUser;
-    if (user) {
-      const configDoc = doc(db, "service_slot_config", user.uid);
-      await setDoc(configDoc, {
-        serviceId: user.uid,
-        isOpen: companyOpen,
-        timeSlots: updatedSlots,
-        holidays: holidays,
-        updatedAt: new Date()
-      }, { merge: true });
+    try {
+      // Save template to Firebase
+      const docRef = await addDoc(collection(db, "service_slot_templates"), template);
+      
+      // Reload templates
+      await loadAllData();
+      setShowAddSlot(false);
+      resetSlotForm();
+      
+      alert("Slot template created successfully!");
+    } catch (error) {
+      console.error("Error creating slot template:", error);
+      alert("Error creating slot: " + error.message);
     }
   };
 
@@ -277,11 +339,18 @@ export default function Slots() {
     await saveSlotConfig();
   };
 
-  const deleteTimeSlot = async (slotId) => {
-    if (window.confirm("Are you sure you want to delete this time slot?")) {
-      const updatedSlots = timeSlots.filter(slot => slot.id !== slotId);
-      setTimeSlots(updatedSlots);
-      await saveSlotConfig();
+  const deleteTimeSlot = async (templateId) => {
+    if (window.confirm("Are you sure you want to delete this slot template? This will remove all future occurrences.")) {
+      try {
+        // Delete from Firebase
+        await deleteDoc(doc(db, "service_slot_templates", templateId));
+        
+        // Reload data
+        loadAllData();
+      } catch (error) {
+        console.error("Error deleting slot template:", error);
+        alert("Error deleting slot. Please try again.");
+      }
     }
   };
 
@@ -293,12 +362,22 @@ export default function Slots() {
     }
   };
 
-  const toggleSlotStatus = async (slotId) => {
-    const updatedSlots = timeSlots.map(slot => 
-      slot.id === slotId ? { ...slot, isActive: !slot.isActive } : slot
-    );
-    setTimeSlots(updatedSlots);
-    await saveSlotConfig();
+  const toggleSlotStatus = async (templateId) => {
+    try {
+      const template = slotTemplates.find(t => t.id === templateId);
+      if (!template) return;
+
+      await updateDoc(doc(db, "service_slot_templates", templateId), {
+        isActive: !template.isActive,
+        updatedAt: new Date()
+      });
+
+      // Reload data
+      loadAllData();
+    } catch (error) {
+      console.error("Error updating slot status:", error);
+      alert("Error updating slot. Please try again.");
+    }
   };
 
   const toggleCompanyStatus = async (status) => {
@@ -307,8 +386,8 @@ export default function Slots() {
   };
 
   // Filter slots based on current filters
-  const filteredSlots = timeSlots.filter(slot => {
-    if (filterService && slot.serviceId !== filterService) return false;
+  const filteredSlots = displaySlots.filter(slot => {
+    if (filterService && slot.assignedServiceId !== filterService) return false;
     if (filterWorker && slot.workerId !== filterWorker) return false;
     if (filterDate && slot.date !== filterDate) return false;
     return true;
@@ -331,14 +410,45 @@ export default function Slots() {
     return worker ? worker.name : "Any Worker";
   };
 
+  // Get filtered workers based on selected role
+  const getFilteredWorkers = (selectedRole = null) => {
+    const roleToFilter = selectedRole !== null ? selectedRole : filterRole;
+    if (!roleToFilter) return workers;
+    return workers.filter(worker => worker.role === roleToFilter);
+  };
+
+  // Get workers for slot assignment (filtered by newSlotService if it has a category)
+  const getWorkersForSlotAssignment = () => {
+    if (!newSlotService) return workers;
+    
+    const selectedService = services.find(s => s.id === newSlotService);
+    if (!selectedService || !selectedService.categoryId) return workers;
+    
+    // Filter workers by the service's category
+    return workers.filter(worker => worker.role === selectedService.categoryId);
+  };
+
+  // Get category name
+  const getCategoryName = (categoryId) => {
+    const category = categories.find(cat => cat.id === categoryId);
+    return category ? category.name : "Unknown Category";
+  };
+
   // Calculate revenue
   const calculateRevenue = () => {
     return Object.values(bookings).reduce((total, slotBookings) => {
       return total + slotBookings.reduce((slotTotal, booking) => {
-        const slot = timeSlots.find(s => s.id === booking.slotId);
+        const slot = displaySlots.find(s => s.id === booking.slotId);
         return slotTotal + (slot?.price || 0);
       }, 0);
     }, 0);
+  };
+
+  // Navigate dates
+  const navigateDate = (direction) => {
+    const currentDate = new Date(selectedDate);
+    currentDate.setDate(currentDate.getDate() + direction);
+    setSelectedDate(currentDate.toISOString().split('T')[0]);
   };
 
   if (loading) {
@@ -350,12 +460,52 @@ export default function Slots() {
       <div className="sd-header">
         <h1>Calendar / Slots Management</h1>
         <div className="sd-header-actions">
-          <input 
-            type="date" 
-            value={selectedDate} 
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="sd-date-input"
-          />
+          <div className="sd-date-navigation">
+            <button 
+              className="sd-nav-btn"
+              onClick={() => navigateDate(-1)}
+            >
+              ← Previous Day
+            </button>
+            <input 
+              type="date" 
+              value={selectedDate} 
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="sd-date-input"
+            />
+            <button 
+              className="sd-nav-btn"
+              onClick={() => navigateDate(1)}
+            >
+              Next Day →
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Current Date Info */}
+      <div className="sd-date-info-card">
+        <div className="sd-date-display">
+          <h2>{new Date(selectedDate).toLocaleDateString('en-US', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+          })}</h2>
+          {isHoliday(selectedDate) && (
+            <span className="sd-holiday-badge">🎉 Holiday</span>
+          )}
+        </div>
+        <div className="sd-date-stats">
+          <span className="sd-stat-item">
+            <strong>{filteredSlots.length}</strong> slots available
+          </span>
+          <span className="sd-stat-item">
+            <strong>{Object.values(bookings).reduce((total, slotBookings) => total + slotBookings.length, 0)}</strong> bookings
+          </span>
+          <span className="sd-stat-item">
+            <strong>₹{calculateRevenue()}</strong> revenue
+          </span>
         </div>
       </div>
 
@@ -390,7 +540,7 @@ export default function Slots() {
       {/* Time Slots Management */}
       <div className="sd-card">
         <div className="sd-card-header">
-          <h3>Time Slots</h3>
+          <h3>Slot Templates & Today's Schedule</h3>
           <div className="sd-header-actions">
             <button 
               className="sd-primary-btn"
@@ -402,7 +552,7 @@ export default function Slots() {
               className="sd-primary-btn"
               onClick={() => setShowAddSlot(true)}
             >
-              + Add Time Slot
+              + Create Slot Template
             </button>
           </div>
         </div>
@@ -410,6 +560,39 @@ export default function Slots() {
         {/* Filters */}
         <div className="sd-filters-section">
           <div className="sd-filter-row">
+            <div className="sd-form-group">
+              <label>Filter by Role</label>
+              <select 
+                value={filterRole} 
+                onChange={(e) => {
+                  setFilterRole(e.target.value);
+                  setFilterWorker(""); // Reset worker filter when role changes
+                }}
+                className="sd-filter-select"
+              >
+                <option value="">All Roles</option>
+                {categories.map(category => (
+                  <option key={category.id} value={category.id}>{category.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="sd-form-group">
+              <label>Filter by Worker</label>
+              <select 
+                value={filterWorker} 
+                onChange={(e) => setFilterWorker(e.target.value)}
+                className="sd-filter-select"
+              >
+                <option value="">All Workers</option>
+                {getFilteredWorkers().map(worker => (
+                  <option key={worker.id} value={worker.id}>
+                    {worker.name} {worker.role && `(${getCategoryName(worker.role)})`}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
             <div className="sd-form-group">
               <label>Filter by Service</label>
               <select 
@@ -420,20 +603,6 @@ export default function Slots() {
                 <option value="">All Services</option>
                 {services.map(service => (
                   <option key={service.id} value={service.id}>{service.name}</option>
-                ))}
-              </select>
-            </div>
-            
-            <div className="sd-form-group">
-              <label>Filter by Worker</label>
-              <select 
-                value={filterWorker} 
-                onChange={(e) => setFilterWorker(e.target.value)}
-                className="sd-filter-select"
-              >
-                <option value="">All Workers</option>
-                {workers.map(worker => (
-                  <option key={worker.id} value={worker.id}>{worker.name}</option>
                 ))}
               </select>
             </div>
@@ -504,6 +673,10 @@ export default function Slots() {
           <div className="sd-add-slot-form">
             <h4>Create New Time Slot</h4>
             
+            <div className="sd-slot-help">
+              <p><strong>💡 Multiple Slots:</strong> You can create multiple slots for the same time with different services or workers. This allows offering various services simultaneously.</p>
+            </div>
+            
             <div className="sd-slot-form-row">
               <div className="sd-form-group">
                 <label>Start Time</label>
@@ -535,11 +708,15 @@ export default function Slots() {
                 <label>Capacity</label>
                 <input
                   type="number"
-                  value={newSlotCapacity}
-                  onChange={(e) => setNewSlotCapacity(Number(e.target.value))}
+                  value={newSlotCapacity === 0 ? "" : newSlotCapacity}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setNewSlotCapacity(value === "" ? 1 : Math.max(1, Number(value)));
+                  }}
                   min="1"
                   max="20"
                   className="sd-capacity-input"
+                  placeholder="Enter capacity"
                 />
               </div>
             </div>
@@ -567,21 +744,31 @@ export default function Slots() {
                   className="sd-time-select"
                 >
                   <option value="">Any Worker</option>
-                  {workers.map(worker => (
-                    <option key={worker.id} value={worker.id}>{worker.name}</option>
+                  {getWorkersForSlotAssignment().map(worker => (
+                    <option key={worker.id} value={worker.id}>
+                      {worker.name} {worker.role && `(${getCategoryName(worker.role)})`}
+                    </option>
                   ))}
                 </select>
+                {newSlotService && getWorkersForSlotAssignment().length === 0 && (
+                  <small style={{color: '#ef4444', fontSize: '12px', marginTop: '4px', display: 'block'}}>
+                    No workers available for this service category. Assign workers to the service category first.
+                  </small>
+                )}
               </div>
 
               <div className="sd-form-group">
                 <label>Price (₹)</label>
                 <input
                   type="number"
-                  value={newSlotPrice}
-                  onChange={(e) => setNewSlotPrice(Number(e.target.value))}
+                  value={newSlotPrice === 0 ? "" : newSlotPrice}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setNewSlotPrice(value === "" ? 0 : Number(value));
+                  }}
                   min="0"
                   className="sd-capacity-input"
-                  placeholder="0"
+                  placeholder="Enter price"
                 />
               </div>
             </div>
@@ -604,11 +791,15 @@ export default function Slots() {
                 <label>Buffer Time (minutes)</label>
                 <input
                   type="number"
-                  value={newSlotBuffer}
-                  onChange={(e) => setNewSlotBuffer(Number(e.target.value))}
+                  value={newSlotBuffer === 0 ? "" : newSlotBuffer}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setNewSlotBuffer(value === "" ? 0 : Number(value));
+                  }}
                   min="0"
                   max="60"
                   className="sd-capacity-input"
+                  placeholder="Enter buffer time"
                 />
               </div>
             </div>
@@ -627,7 +818,7 @@ export default function Slots() {
                 className="sd-save-btn"
                 onClick={addTimeSlot}
               >
-                Add Slot
+                Create Template
               </button>
             </div>
           </div>
@@ -654,20 +845,24 @@ export default function Slots() {
                       {slot.date && <div className="sd-slot-date">{slot.date}</div>}
                       {slot.recurrence !== "none" && (
                         <div className="sd-slot-recurrence">
-                          {slot.recurrence === "daily" ? "🔄 Daily" : "📅 Weekly"}
+                          {slot.recurrence === "daily" ? "🔄 Daily Template" : "📅 Weekly Template"}
                         </div>
+                      )}
+                      {slot.dynamicSlot && (
+                        <div className="sd-dynamic-badge">⚡ Auto-Generated</div>
                       )}
                     </div>
                     <div className="sd-slot-actions">
                       <button
                         className={`sd-toggle-btn ${slot.isActive ? 'active' : 'inactive'}`}
-                        onClick={() => toggleSlotStatus(slot.id)}
+                        onClick={() => toggleSlotStatus(slot.id.split('_')[0])} // Use template ID
                       >
                         {slot.isActive ? 'Active' : 'Inactive'}
                       </button>
                       <button
                         className="sd-delete-slot-btn"
-                        onClick={() => deleteTimeSlot(slot.id)}
+                        onClick={() => deleteTimeSlot(slot.id.split('_')[0])} // Use template ID
+                        title="Delete Template"
                       >
                         ×
                       </button>
@@ -676,9 +871,9 @@ export default function Slots() {
                   
                   {/* Slot Details */}
                   <div className="sd-slot-details">
-                    {slot.serviceId && (
+                    {slot.assignedServiceId && (
                       <div className="sd-slot-service">
-                        <span className="sd-badge normal">🔧 {getServiceName(slot.serviceId)}</span>
+                        <span className="sd-badge normal">🔧 {getServiceName(slot.assignedServiceId)}</span>
                       </div>
                     )}
                     {slot.workerId && (
@@ -806,7 +1001,7 @@ export default function Slots() {
                     <div className="sd-performance-info">
                       <span className="sd-performance-time">
                         {slot.startTime} - {slot.endTime}
-                        {slot.serviceId && ` (${getServiceName(slot.serviceId)})`}
+                        {slot.assignedServiceId && ` (${getServiceName(slot.assignedServiceId)})`}
                       </span>
                       <span className="sd-performance-rate">{utilizationRate}% utilized</span>
                     </div>
@@ -879,7 +1074,7 @@ export default function Slots() {
               <h5>Service Distribution</h5>
               <p>
                 {services.length > 0 ? 
-                  `${filteredSlots.filter(slot => slot.serviceId).length} specialized slots, ${filteredSlots.filter(slot => !slot.serviceId).length} general slots` :
+                  `${filteredSlots.filter(slot => slot.assignedServiceId).length} specialized slots, ${filteredSlots.filter(slot => !slot.assignedServiceId).length} general slots` :
                   'All general service slots'
                 }
               </p>

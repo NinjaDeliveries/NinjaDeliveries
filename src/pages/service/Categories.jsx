@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { auth, db } from "../../context/Firebase";
 import { collection, query, where, getDocs, addDoc, doc, updateDoc, deleteDoc } from "firebase/firestore";
 import "../../style/ServiceDashboard.css";
@@ -18,7 +18,7 @@ const Categories = () => {
 
       const q = query(
         collection(db, "service_categories"),
-        where("companyId", "==", user.uid)
+        where("serviceId", "==", user.uid)
       );
 
       const snap = await getDocs(q);
@@ -64,7 +64,7 @@ const Categories = () => {
       }
 
       const payload = {
-        companyId: user.uid,
+        serviceId: user.uid,
         name: categoryName.trim(),
         description: categoryDescription.trim(),
         isActive: true,
@@ -131,33 +131,43 @@ const Categories = () => {
           <p>Create categories to organize your services better.</p>
         </div>
       ) : (
-        <div className="sd-table">
+        <div className="sd-services-grid">
           {categories.map(category => (
-            <div key={category.id} className="sd-service-card">
-              <div className="sd-service-info">
-                <h3>{category.name}</h3>
-                {category.description && (
-                  <p>{category.description}</p>
-                )}
-                <span className="sd-badge normal">
-                  {category.isActive ? "ACTIVE" : "INACTIVE"}
-                </span>
+            <div key={category.id} className="sd-service-card-modern">
+              {/* Category Header */}
+              <div className="sd-service-header">
+                <div className="sd-service-title">
+                  <h3>{category.name}</h3>
+                  <span className="sd-category-badge">
+                    {category.isActive ? "ACTIVE" : "INACTIVE"}
+                  </span>
+                </div>
+                <div className="sd-service-actions">
+                  <button 
+                    className="sd-edit-btn-small"
+                    onClick={() => handleEditCategory(category)}
+                    title="Edit Category"
+                  >
+                    ✏️
+                  </button>
+                  <button 
+                    className="sd-delete-btn-small"
+                    onClick={() => handleDeleteCategory(category.id)}
+                    title="Delete Category"
+                  >
+                    🗑️
+                  </button>
+                </div>
               </div>
 
-              <div className="sd-service-actions">
-                <button 
-                  className="sd-edit-btn"
-                  onClick={() => handleEditCategory(category)}
-                >
-                  Edit
-                </button>
-                <button 
-                  className="sd-delete-btn"
-                  onClick={() => handleDeleteCategory(category.id)}
-                >
-                  Delete
-                </button>
-              </div>
+              {/* Category Description */}
+              {category.description && (
+                <div className="sd-service-packages">
+                  <div className="sd-category-description">
+                    <p>{category.description}</p>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>

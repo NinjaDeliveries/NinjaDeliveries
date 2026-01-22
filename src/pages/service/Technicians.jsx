@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { auth, db } from "../../context/Firebase";
 import { collection, query, where, getDocs, addDoc, doc, updateDoc, deleteDoc } from "firebase/firestore";
 import "../../style/ServiceDashboard.css";
@@ -10,6 +10,9 @@ const Technicians = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editTechnician, setEditTechnician] = useState(null);
+  
+  // Filter states
+  const [filterRole, setFilterRole] = useState("");
   
   // Form states
   const [name, setName] = useState("");
@@ -24,8 +27,8 @@ const Technicians = () => {
       if (!user) return;
 
       const q = query(
-        collection(db, "service_workers"),
-        where("companyId", "==", user.uid)
+        collection(db, "service_technicians"),
+        where("serviceId", "==", user.uid)
       );
 
       const snap = await getDocs(q);
@@ -49,7 +52,7 @@ const Technicians = () => {
 
       const q = query(
         collection(db, "service_categories"),
-        where("companyId", "==", user.uid)
+        where("serviceId", "==", user.uid)
       );
 
       const snap = await getDocs(q);
@@ -71,7 +74,7 @@ const Technicians = () => {
 
       const q = query(
         collection(db, "service_services"),
-        where("companyId", "==", user.uid)
+        where("serviceId", "==", user.uid)
       );
 
       const snap = await getDocs(q);
@@ -121,7 +124,7 @@ const Technicians = () => {
       }
 
       const payload = {
-        companyId: user.uid,
+        serviceId: user.uid,
         name: name.trim(),
         phone: phone.trim(),
         aadharNumber: aadharNumber.trim() || null,
@@ -193,6 +196,12 @@ const Technicians = () => {
     return service ? service.name : "Unknown Service";
   };
 
+  // Filter technicians by role
+  const filteredTechnicians = technicians.filter(technician => {
+    if (!filterRole) return true;
+    return technician.role === filterRole;
+  });
+
   useEffect(() => {
     fetchTechnicians();
     fetchCategories();
@@ -203,21 +212,33 @@ const Technicians = () => {
     <div className="sd-main">
       <div className="sd-header">
         <h1>Workers</h1>
-        <button className="sd-primary-btn" onClick={handleAddTechnician}>
-          + Add Worker
-        </button>
+        <div className="sd-header-actions">
+          <select 
+            value={filterRole} 
+            onChange={(e) => setFilterRole(e.target.value)}
+            className="sd-filter-select"
+          >
+            <option value="">All Roles</option>
+            {categories.map(category => (
+              <option key={category.id} value={category.id}>{category.name}</option>
+            ))}
+          </select>
+          <button className="sd-primary-btn" onClick={handleAddTechnician}>
+            + Add Worker
+          </button>
+        </div>
       </div>
 
       {loading ? (
         <p>Loading workers...</p>
-      ) : technicians.length === 0 ? (
+      ) : filteredTechnicians.length === 0 ? (
         <div className="sd-empty-state">
-          <p>No workers added yet.</p>
-          <p>Add workers to manage your service team.</p>
+          <p>{filterRole ? "No workers found for selected role." : "No workers added yet."}</p>
+          <p>{filterRole ? "Try selecting a different role or add workers to this role." : "Add workers to manage your service team."}</p>
         </div>
       ) : (
         <div className="sd-table">
-          {technicians.map(technician => (
+          {filteredTechnicians.map(technician => (
             <div key={technician.id} className="sd-service-card">
               <div className="sd-service-info">
                 <h3>{technician.name}</h3>

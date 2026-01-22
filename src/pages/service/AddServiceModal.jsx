@@ -110,7 +110,7 @@ const AddServiceModal = ({ onClose, onSaved, editService }) => {
       }
 
       const payload = {
-        companyId: user.uid,
+        serviceId: user.uid,
         name: newCategoryName.trim(),
         description: newCategoryDescription.trim(),
         isActive: true,
@@ -145,7 +145,7 @@ const AddServiceModal = ({ onClose, onSaved, editService }) => {
 
       const q = query(
         collection(db, "service_categories"),
-        where("companyId", "==", user.uid)
+        where("serviceId", "==", user.uid)
       );
 
       const snap = await getDocs(q);
@@ -207,7 +207,7 @@ const AddServiceModal = ({ onClose, onSaved, editService }) => {
       }
 
       const payload = {
-        companyId: user.uid,
+        serviceId: user.uid,
         name,
         type: "package", // Always package type
         categoryId: categoryId || null,
