@@ -17,7 +17,7 @@ const ServiceRoute = ({ children }) => {
       }
 
       try {
-        const ref = doc(db, "service_users", user.uid);
+        const ref = doc(db, "service_company", user.uid);
         const snap = await getDoc(ref);
 
         setAllowed(snap.exists());

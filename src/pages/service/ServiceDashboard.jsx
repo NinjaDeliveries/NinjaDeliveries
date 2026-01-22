@@ -29,7 +29,7 @@ const ServiceDashboard = () => {
         const user = auth.currentUser;
         if (!user) return;
 
-        const ref = doc(db, "service_users", user.uid);
+        const ref = doc(db, "service_company", user.uid);
         const snap = await getDoc(ref);
 
         if (snap.exists()) {

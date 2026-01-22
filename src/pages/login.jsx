@@ -152,7 +152,7 @@ useEffect(() => {
 let isServiceUser = false;
 
 if (!isAdmin) {
-  const serviceRef = doc(db, "service_users", user.uid);
+  const serviceRef = doc(db, "service_company", user.uid);
   const serviceSnap = await getDoc(serviceRef);
 
   if (serviceSnap.exists()) {
@@ -167,7 +167,7 @@ if (!isAdmin) {
     }
 
     isServiceUser = true;
-    userSource = "service_users";
+    userSource = "service_company";
 
     toast("Service Dashboard Login Successful", {
       type: "success",

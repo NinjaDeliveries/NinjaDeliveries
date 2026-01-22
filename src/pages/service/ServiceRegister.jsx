@@ -71,12 +71,17 @@ const handleRegister = async (e) => {
       form.password
     );
 
-    await setDoc(doc(db, "service_users", userCred.user.uid), {
+    await setDoc(doc(db, "service_company", userCred.user.uid), {
       name: form.name,
       phone: form.phone,
       email: form.email,
       companyName: form.companyName,
       type: form.type, // service / restaurant
+
+      // location
+      deliveryZoneId: "0oS7Zig2gxj2MJesvIC2",
+      deliveryZoneName: "Dharamshala",
+      
       isActive: true,
       createdAt: new Date(),
     });
