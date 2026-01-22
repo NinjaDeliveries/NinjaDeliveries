@@ -202,7 +202,7 @@ const Technicians = () => {
   return (
     <div className="sd-main">
       <div className="sd-header">
-        <h1>Workers / Technicians</h1>
+        <h1>Workers</h1>
         <button className="sd-primary-btn" onClick={handleAddTechnician}>
           + Add Worker
         </button>
