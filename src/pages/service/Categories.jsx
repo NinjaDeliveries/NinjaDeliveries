@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { auth, db } from "../../context/Firebase";
 import { collection, query, where, getDocs, addDoc, doc, updateDoc, deleteDoc } from "firebase/firestore";
 import "../../style/ServiceDashboard.css";
+import { create } from "@mui/material/styles/createTransitions";
 
 const Categories = () => {
   const [categories, setCategories] = useState([]);
@@ -56,7 +57,7 @@ const Categories = () => {
       if (!user || !categoryName.trim()) return;
       
       const exists = categories.find(
-        c => c.name.toLowerCase() === categoryName.trim().toLowerCase()
+        c => c.name.trim().toLowerCase() === categoryName.trim().toLowerCase()
       );
       if (exists && (!editCategory || exists.id !== editCategory.id)) {
         alert("Category already exists");
@@ -76,8 +77,10 @@ const Categories = () => {
         await updateDoc(doc(db, "service_categories", editCategory.id), payload);
       } else {
         // Create new category
-        payload.createdAt = new Date();
-        await addDoc(collection(db, "service_categories"), payload);
+        await addDoc(collection(db, "service_categories"), {
+        ...payload,
+        createdAt: new Date(),
+      });
       }
 
       setShowModal(false);

@@ -14,33 +14,64 @@ const Bookings = () => {
   const [loading, setLoading] = useState(true);
   const [openAssign, setOpenAssign] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
+  const [categories, setCategories] = useState([]);
+  const user = auth.currentUser;
+console.log("BOOKINGS PAGE UID:", user?.uid);
+
 
   const fetchBookings = async () => {
-    try {
-      const user = auth.currentUser;
-      if (!user) return;
+  try {
+    const user = auth.currentUser;
+    if (!user) return;
 
-      const q = query(
-        collection(db, "service_bookings"),
-        where("companyId", "==", user.uid)
-      );
+    console.log("BOOKINGS PAGE UID:", user.uid);
 
-      const snap = await getDocs(q);
-      const list = snap.docs.map((d) => ({
-        id: d.id,
-        ...d.data(),
-      }));
+    const q = query(
+      collection(db, "service_bookings"),
+      where("companyId", "==", user.uid)
+    );
 
-      setBookings(list);
-    } catch (err) {
-      console.error("Fetch bookings error:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const snap = await getDocs(q);
+
+    const list = snap.docs.map((d) => ({
+      id: d.id,
+      ...d.data(),
+    }));
+
+    console.log("BOOKINGS SNAP SIZE:", list.length);
+
+    setBookings(list);
+  } catch (err) {
+    console.error("Fetch bookings error:", err);
+  } finally {
+    setLoading(false);
+  }
+};
+const fetchCategories = async () => {
+  try {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const q = query(
+      collection(db, "service_categories"),
+      where("companyId", "==", user.uid)
+    );
+
+    const snap = await getDocs(q);
+    const list = snap.docs.map(d => ({
+      id: d.id,
+      ...d.data(),
+    }));
+
+    setCategories(list);
+  } catch (err) {
+    console.error("Fetch categories error:", err);
+  }
+};
 
   useEffect(() => {
     fetchBookings();
+    fetchCategories();
   }, []);
 
   return (
@@ -90,6 +121,7 @@ const Bookings = () => {
       {openAssign && (
         <AssignWorkerModal
           booking={selectedBooking}
+          categories={categories}
           onClose={() => setOpenAssign(false)}
           onAssigned={fetchBookings}
         />

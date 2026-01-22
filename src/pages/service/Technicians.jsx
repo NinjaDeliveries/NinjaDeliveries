@@ -133,11 +133,11 @@ const Technicians = () => {
 
       if (editTechnician) {
         // Update existing technician
-        await updateDoc(doc(db, "service_technicians", editTechnician.id), payload);
+        await updateDoc(doc(db, "service_workers", editTechnician.id), payload);
       } else {
         // Create new technician
         payload.createdAt = new Date();
-        await addDoc(collection(db, "service_technicians"), payload);
+        await addDoc(collection(db, "service_workers"), payload);
       }
 
       setShowModal(false);
@@ -152,7 +152,7 @@ const Technicians = () => {
   const handleDeleteTechnician = async (technicianId) => {
     if (window.confirm("Are you sure you want to delete this technician?")) {
       try {
-        await deleteDoc(doc(db, "service_technicians", technicianId));
+        await deleteDoc(doc(db, "service_workers", technicianId));
         fetchTechnicians();
       } catch (error) {
         console.error("Error deleting technician:", error);

@@ -11,10 +11,14 @@ import {
 } from "firebase/firestore";
 import "../../style/ServiceDashboard.css";
 
-const AssignWorkerModal = ({ booking, onClose, onAssigned }) => {
+const AssignWorkerModal = ({ booking, categories = [], onClose, onAssigned }) => {
   const [workers, setWorkers] = useState([]);
   const [selectedWorker, setSelectedWorker] = useState("");
   const [loading, setLoading] = useState(true);
+  const getCategoryName = (categoryId) => {
+  const cat = categories.find(c => c.id === categoryId);
+  return cat ? cat.name : "";
+};
 
 
   // 🔹 Fetch workers
@@ -107,10 +111,12 @@ const AssignWorkerModal = ({ booking, onClose, onAssigned }) => {
             onChange={(e) => setSelectedWorker(e.target.value)}
           >
             <option value="">Select Worker</option>
-            {workers.map((w) => (
-              <option key={w.id} value={w.id}>
-                {w.name} ({w.role})
-              </option>
+            
+              {workers.map((w) => (
+                <option key={w.id} value={w.id}>
+                  {w.name}
+                  {w.role ? ` (${getCategoryName(w.role)})` : ""}
+                  </option>
             ))}
           </select>
         )}
