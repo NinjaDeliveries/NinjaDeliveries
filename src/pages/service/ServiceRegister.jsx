@@ -212,25 +212,24 @@ const handleRegister = async (e) => {
   );
 };
 const Page = styled.div`
-  min-height: calc(100vh - 70px);
-  padding-top: 70px;
+  min-height: 100vh;
   display: grid;
   place-items: center;
-  background: #f1f5f9;
+  background: linear-gradient(180deg, #f5f7fb 0%, #eef1f7 100%);
+  padding: 20px;
 `;
 
 const StyledWrapper = styled.div`
   .modern-form {
-  width: 400px; 
-
-   padding: 18px 20px;
-
+    width: 420px; 
+    padding: 32px 28px;
     background: #ffffff;
-    border-radius: 16px;
+    border-radius: 20px;
     box-shadow:
-      0 10px 25px rgba(0, 0, 0, 0.08),
-      inset 0 0 0 1px rgba(148, 163, 184, 0.15);
-    font-family: system-ui, sans-serif;
+      0 20px 50px rgba(0, 0, 0, 0.12),
+      0 0 0 1px rgba(148, 163, 184, 0.1);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    border: 1px solid rgba(255, 255, 255, 0.2);
   }
 
   .form-title {
@@ -243,24 +242,24 @@ const StyledWrapper = styled.div`
 
   .input-wrapper {
     position: relative;
-  margin-bottom: 10px;
-}
-
+    margin-bottom: 16px;
+  }
 
   .form-input {
     width: 100%;
-    height: 38px;
-    padding: 0 14px 0 38px;
-    border-radius: 10px;
+    height: 44px;
+    padding: 0 16px 0 42px;
+    border-radius: 12px;
     border: 1px solid #e2e8f0;
     background: #f8fafc;
-    font-size: 14px;
+    font-size: 15px;
+    transition: all 0.3s ease;
   }
 
   .form-input:focus {
     outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.15);
     background: #fff;
   }
 
@@ -404,50 +403,18 @@ const StyledWrapper = styled.div`
 // logo
 .login-header {
   text-align: center;
-  margin-bottom: 32px;
-}
-
-.logo-wrapper {
-  width: 80px;
-  height: 80px;
-  margin: 0 auto 20px;
-
-  border-radius: 50%;
-  background: linear-gradient(135deg, #4caf50, #45a049);
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  box-shadow:
-    0 10px 30px rgba(76, 175, 80, 0.3),
-    0 0 0 8px rgba(76, 175, 80, 0.1);
-
-  animation: logoFloat 3s ease-in-out infinite;
-}
-
-.logo-wrapper img {
-  width: 70%;
-  height: 70%;
-  object-fit: contain;
-  background: white;
-  border-radius: 50%;
-  padding: 6px;
-}
-
-@keyframes logoFloat {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
+  margin-bottom: 28px;
 }
 
 .login-header h2 {
-  font-size: 28px;
+  font-size: 32px;
   font-weight: 700;
-  color: #333;
+  color: #1f2937;
+  margin: 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 `;

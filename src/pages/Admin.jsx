@@ -217,12 +217,18 @@ setActiveUsers(
     }
   };
 
-  /* ================= REGISTER LINK ================= */
+  /* ================= REGISTER LINKS ================= */
   const registerLink = `${window.location.origin}/admin.html#/Register`;
+  const serviceRegisterLink = `${window.location.origin}/admin.html#/service-register`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(registerLink);
-    toast.success("Register link copied!", { position: "top-center" });
+    toast.success("Ninja User Register link copied!", { position: "top-center" });
+  };
+
+  const handleServiceCopy = () => {
+    navigator.clipboard.writeText(serviceRegisterLink);
+    toast.success("Service Management Register link copied!", { position: "top-center" });
   };
 
   /* ================= STORES ================= */
@@ -424,12 +430,29 @@ const AVAILABLE_FEATURES = [
       <div style={styles.topRow}>
         <div style={styles.inviteSide}>
           <div style={styles.card}>
-            <h3>Invite Admin</h3>
-            <div style={styles.inviteCompact}>
-              <input value={registerLink} readOnly style={styles.inviteInput} />
-              <button onClick={handleCopy} style={styles.inviteButton}>
-                Copy
-              </button>
+            <h3>Invite Users</h3>
+            <div style={{ marginBottom: "15px" }}>
+              <label style={{ fontSize: "14px", fontWeight: "600", color: "#555", marginBottom: "5px", display: "block" }}>
+                Ninja User Register Link
+              </label>
+              <div style={styles.inviteCompact}>
+                <input value={registerLink} readOnly style={styles.inviteInput} />
+                <button onClick={handleCopy} style={styles.inviteButton}>
+                  Copy
+                </button>
+              </div>
+            </div>
+            
+            <div>
+              <label style={{ fontSize: "14px", fontWeight: "600", color: "#555", marginBottom: "5px", display: "block" }}>
+                Service Management Register Link
+              </label>
+              <div style={styles.inviteCompact}>
+                <input value={serviceRegisterLink} readOnly style={styles.inviteInput} />
+                <button onClick={handleServiceCopy} style={styles.inviteButton}>
+                  Copy
+                </button>
+              </div>
             </div>
           </div>
         </div>

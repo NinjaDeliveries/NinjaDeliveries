@@ -1,26 +1,14 @@
 import { useEffect, useState } from "react";
 import "../style/navbar.css";
 import logo from "../image/ninjaimg.jpg";
-import { doc, getDoc } from "firebase/firestore";
 import { db, auth } from "../context/Firebase";
 import { useUser } from "../context/adminContext";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import { signOut } from "firebase/auth";
 
 export default function Navbar() {
   const { user, stores, setUser } = useUser();
   const [open, setOpen] = useState(false);
-  const [storeName, setStoreName] = useState("");
-  const navigate = useNavigate();
-  
-  const currentIndex = user && stores ? stores.findIndex(
-  (s) => s.id === user.storeId
-) : -1;
-
-const nextStore =
-  stores && stores.length > 1 && currentIndex !== -1
-    ? stores[(currentIndex + 1) % stores.length]
-    : null;
 
   const handleLogout = async () => {
     try {
@@ -37,27 +25,6 @@ const nextStore =
   };
 
   useEffect(() => {
-    const fetchData = async () => {
-      if (!user?.storeId) return;
-
-      try {
-        const docRef = doc(db, "delivery_zones", user.storeId);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          setStoreName(docSnap.data().storeId);
-        } else {
-          console.log("No such document!");
-        }
-      } catch (error) {
-        console.error("Error fetching store data:", error);
-      }
-    };
-
-    fetchData();
-  }, [user?.storeId]);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
     if (!open) return; // Don't add listener if dropdown is closed
     
     const handleClickOutside = (event) => {
@@ -71,10 +38,6 @@ const nextStore =
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [open]);
-  
-  const currentStore = user && stores ? stores.find(
-  (store) => store.id === user.storeId
-) : null;
 
   // Don't render navbar if user is not loaded yet
   if (!user) {
@@ -122,16 +85,6 @@ const nextStore =
             {store.name}
           </div>
         ))}
-      {stores.filter((s) => s.id !== user.storeId).length > 0 && (
-        <div style={{ 
-          height: '1px', 
-          background: 'linear-gradient(90deg, transparent, rgba(0,0,0,0.1), transparent)',
-          margin: '2px 0'
-        }}></div>
-      )}
-      <div className="logout-option" onClick={handleLogout}>
-        <span className="logout-text">Logout</span>
-      </div>
     </div>
   )}
 </div>
@@ -164,13 +117,22 @@ const nextStore =
           </NavLink>
         </li>
         {(user?.permissions?.includes("page:users") || user?.roleKey === "all_access_admin") && (
-
           <li>
             <NavLink to="/__admin_dev" activeclassname="active">
             Admin Panel
             </NavLink>
           </li>
         )}
+        <li>
+          <button className="logout-btn" onClick={handleLogout}>
+            <div className="sign">
+              <svg viewBox="0 0 512 512">
+                <path d="M377.9 105.9L500.7 228.7c7.2 7.2 11.3 17.1 11.3 27.3s-4.1 20.1-11.3 27.3L377.9 406.1c-6.4 6.4-15 9.9-24 9.9c-18.7 0-33.9-15.2-33.9-33.9l0-62.1-128 0c-17.7 0-32-14.3-32-32l0-64c0-17.7 14.3-32 32-32l128 0 0-62.1c0-18.7 15.2-33.9 33.9-33.9c9 0 17.6 3.6 24 9.9zM160 96L96 96c-17.7 0-32 14.3-32 32l0 256c0 17.7 14.3 32 32 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-64 0c-53 0-96-43-96-96L0 128C0 75 43 32 96 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32z" />
+              </svg>
+            </div>
+            <div className="text">Logout</div>
+          </button>
+        </li>
       </ul>
     </nav>
   );

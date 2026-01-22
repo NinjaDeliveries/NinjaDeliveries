@@ -10,6 +10,91 @@
   color: #2c3e50;
   transition: all 0.3s ease;
 }
+/*Referalcode*/
+.rider-card {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  background: linear-gradient(135deg, #eef2ff, #f8fafc);
+  padding: 18px;
+  border-radius: 14px;
+  margin-bottom: 25px;
+  box-shadow: inset 0 0 0 1px rgba(78,115,223,0.15);
+}
+
+.rider-avatar {
+  width: 48px;
+  height: 48px;
+  background: #4e73df;
+  color: white;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+}
+
+.rider-name {
+  font-weight: 700;
+  font-size: 16px;
+  color: #1e2a47;
+}
+
+.rider-sub {
+  font-size: 12px;
+  color: #6c757d;
+}
+
+/* Referral code block */
+
+.code-box {
+  background: linear-gradient(135deg, #ffffff, #f5f7fb);
+  padding: 20px;
+  border-radius: 14px;
+  margin-bottom: 25px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.06);
+}
+
+.code-label {
+  font-size: 13px;
+  color: #6c757d;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.code-row {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.code-value {
+  flex: 1;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: 3px;
+  background: #eef2ff;
+  padding: 14px 20px;
+  border-radius: 12px;
+  color: #4e73df;
+  text-align: center;
+}
+
+.regen-btn {
+  background: linear-gradient(135deg, #4e73df, #2e59d9);
+  border: none;
+  color: white;
+  padding: 12px 18px;
+  border-radius: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.regen-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(78,115,223,0.35);
+}
+
 
 /* Heading */
 .promo-heading {
