@@ -46,7 +46,13 @@ import ServiceDashboard from "./pages/service/ServiceDashboard";
 // import ServiceSlots from "./pages/service/ServiceSlots";
 import ServiceRegister from "./pages/service/ServiceRegister";
 import ServiceRoute from "./ServiceRoute";
-
+import Overview from "./pages/service/Overview";
+import Bookings from "./pages/service/Bookings";
+import Slots from "./pages/service/Slots";
+import Payments from "./pages/service/Payments";
+import Settings from "./pages/service/Settings";
+import Services from "./pages/service/Services";
+import Technicians from "./pages/service/Technicians";
 
 function App() {
 const { user, loadingUser } = useUser();
@@ -361,14 +367,22 @@ if (loadingUser) {
           }
         />
       )}
-     <Route
+      <Route
   path="/service-dashboard"
   element={
     <ServiceRoute>
       <ServiceDashboard />
     </ServiceRoute>
   }
-/>
+>
+  <Route index element={<Overview />} />
+  <Route path="services" element={<Services />} />
+  <Route path="bookings" element={<Bookings />} />
+  <Route path="slots" element={<Slots />} />
+  <Route path="technicians" element={<Technicians />} />
+  <Route path="payments" element={<Payments />} />
+  <Route path="settings" element={<Settings />} />
+</Route>
 
 <Route
   path="/service-dashboard/services"
