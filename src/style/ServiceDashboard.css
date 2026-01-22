@@ -893,6 +893,320 @@
   min-width: 0;
 }
 
+/* ========== SLOT MANAGEMENT STYLES ========== */
+.sd-date-input {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  background: white;
+}
+
+.sd-card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  margin-bottom: 20px;
+}
+
+.sd-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.sd-card-header h3 {
+  margin: 0;
+  font-size: 20px;
+  color: #1f2937;
+}
+
+.sd-status-indicator {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.sd-status-open {
+  color: #16a34a;
+  font-weight: 700;
+}
+
+.sd-status-closed {
+  color: #dc2626;
+  font-weight: 700;
+}
+
+.sd-control-buttons {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.sd-status-btn {
+  flex: 1;
+  padding: 12px 20px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f9fafb;
+  color: #6b7280;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sd-status-btn.active {
+  border-color: #4f46e5;
+  background: #4f46e5;
+  color: white;
+}
+
+.sd-status-btn:hover {
+  border-color: #4f46e5;
+  color: #4f46e5;
+}
+
+.sd-status-btn.active:hover {
+  background: #4338ca;
+  border-color: #4338ca;
+  color: white;
+}
+
+.sd-working-windows h4 {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  color: #374151;
+}
+
+.sd-window-controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.sd-time-select {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+}
+
+.sd-to-text {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.sd-add-window-btn {
+  background: #4f46e5;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+
+.sd-add-window-btn:hover {
+  background: #4338ca;
+}
+
+.sd-windows-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sd-window-item {
+  background: #f3f4f6;
+  padding: 12px 16px;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sd-remove-window-btn {
+  background: #ef4444;
+  color: white;
+  border: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.sd-remove-window-btn:hover {
+  background: #dc2626;
+}
+
+.sd-slot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.sd-slot-btn {
+  padding: 12px 8px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  min-height: 48px;
+}
+
+.sd-slot-available {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.sd-slot-available:hover {
+  background: #d1d5db;
+  transform: translateY(-1px);
+}
+
+.sd-slot-selected {
+  background: #4f46e5;
+  color: white;
+}
+
+.sd-slot-unavailable {
+  background: #9ca3af;
+  color: white;
+  cursor: not-allowed;
+}
+
+.sd-slot-full {
+  background: #ef4444;
+  color: white;
+  cursor: not-allowed;
+}
+
+.sd-slot-closed {
+  background: #6b7280;
+  color: white;
+  cursor: not-allowed;
+}
+
+.sd-selection-info {
+  background: #dbeafe;
+  padding: 12px 16px;
+  border-radius: 8px;
+  text-align: center;
+  margin-bottom: 16px;
+  color: #1e40af;
+}
+
+.sd-slot-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.sd-confirm-btn {
+  flex: 1;
+  background: #22c55e;
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background-color 0.2s ease;
+}
+
+.sd-confirm-btn:hover {
+  background: #16a34a;
+}
+
+.sd-reset-btn {
+  flex: 1;
+  background: #9ca3af;
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background-color 0.2s ease;
+}
+
+.sd-reset-btn:hover {
+  background: #6b7280;
+}
+
+.sd-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.sd-info-card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.sd-info-card h4 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  color: #374151;
+}
+
+.sd-empty-text {
+  color: #9ca3af;
+  font-style: italic;
+  margin: 0;
+}
+
+.sd-selected-slot {
+  background: #eff6ff;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  color: #1e40af;
+  font-weight: 500;
+}
+
+.sd-booking-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #f9fafb;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.sd-booking-time {
+  font-weight: 500;
+  color: #374151;
+}
+
+.sd-booking-count {
+  background: #4f46e5;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
 /* ========== CREATE CATEGORY SECTION ========== */
 .sd-category-section {
   display: flex;
