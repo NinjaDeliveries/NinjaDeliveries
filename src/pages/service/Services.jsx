@@ -22,7 +22,7 @@ const Services = () => {
 
       const q = query(
         collection(db, "service_services"),
-        where("serviceId", "==", user.uid)
+        where("companyId", "==", user.uid)
       );
 
       const snap = await getDocs(q);
@@ -46,7 +46,7 @@ const Services = () => {
 
       const q = query(
         collection(db, "service_categories"),
-        where("serviceId", "==", user.uid)
+        where("companyId", "==", user.uid)
       );
 
       const snap = await getDocs(q);
@@ -106,7 +106,7 @@ const Services = () => {
       }
 
       const payload = {
-        serviceId: user.uid,
+        companyId: user.uid,
         name: newCategoryName.trim(),
         description: newCategoryDescription.trim(),
         isActive: true,

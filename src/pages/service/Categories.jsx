@@ -18,7 +18,7 @@ const Categories = () => {
 
       const q = query(
         collection(db, "service_categories"),
-        where("serviceId", "==", user.uid)
+        where("companyId", "==", user.uid)
       );
 
       const snap = await getDocs(q);
@@ -48,14 +48,23 @@ const Categories = () => {
     setCategoryDescription(category.description || "");
     setShowModal(true);
   };
+  
 
   const handleSaveCategory = async () => {
     try {
       const user = auth.currentUser;
       if (!user || !categoryName.trim()) return;
+      
+      const exists = categories.find(
+        c => c.name.toLowerCase() === categoryName.trim().toLowerCase()
+      );
+      if (exists && (!editCategory || exists.id !== editCategory.id)) {
+        alert("Category already exists");
+        return;
+      }
 
       const payload = {
-        serviceId: user.uid,
+        companyId: user.uid,
         name: categoryName.trim(),
         description: categoryDescription.trim(),
         isActive: true,
@@ -184,6 +193,7 @@ const Categories = () => {
               <button className="sd-cancel-btn" onClick={handleCloseModal}>
                 Cancel
               </button>
+              
               <button className="sd-save-btn" onClick={handleSaveCategory}>
                 {editCategory ? "Update" : "Save"}
               </button>

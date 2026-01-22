@@ -22,7 +22,7 @@ const Bookings = () => {
 
       const q = query(
         collection(db, "service_bookings"),
-        where("serviceOwnerId", "==", user.uid)
+        where("companyId", "==", user.uid)
       );
 
       const snap = await getDocs(q);
@@ -66,22 +66,22 @@ const Bookings = () => {
                 <p>{b.workName}</p>
                 <p>{b.date} • {b.time}</p>
               </div>
-
-              <span className={`sd-badge ${b.status}`}>
-                {b.status.toUpperCase()}
-              </span>
-
+              
               <div className="sd-actions">
-                <button
+                {b.status !== "assigned" ? (
+                  <button
                   className="sd-primary-btn"
                   onClick={() => {
                     setSelectedBooking(b);
                     setOpenAssign(true);
-                  }}
-                >
-                  Assign Worker
-                </button>
-              </div>
+                }}
+            >
+                Assign Worker
+              </button>
+            ) : (
+              <span className="sd-badge assigned">ASSIGNED</span>
+            )}
+            </div>
             </div>
           ))}
         </div>
