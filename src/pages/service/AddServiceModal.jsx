@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { auth, db } from "../../context/Firebase";
 import { collection, addDoc, doc, updateDoc, query, where, getDocs } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
+import { storage } from "../../context/Firebase";
 
 const AddServiceModal = ({ onClose, onSaved, editService }) => {
   const [name, setName] = useState("");
@@ -12,6 +14,9 @@ const AddServiceModal = ({ onClose, onSaved, editService }) => {
   const [showCreateCategory, setShowCreateCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryDescription, setNewCategoryDescription] = useState("");
+  const [serviceImage, setServiceImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState("");
+  const [uploading, setUploading] = useState(false);
 
   const isEditMode = !!editService;
 
@@ -20,6 +25,7 @@ const AddServiceModal = ({ onClose, onSaved, editService }) => {
     if (editService) {
       setName(editService.name || "");
       setCategoryId(editService.categoryId || "");
+      setImagePreview(editService.imageUrl || "");
       
       if (editService.packages) {
         setPackages(editService.packages.map(p => ({
@@ -31,10 +37,58 @@ const AddServiceModal = ({ onClose, onSaved, editService }) => {
     }
   }, [editService]);
 
-  // Fetch categories
-  useEffect(() => {
-    fetchCategories();
-  }, []);
+  // Handle image upload
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        alert('Please select an image file');
+        return;
+      }
+      
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Image size should be less than 5MB');
+        return;
+      }
+      
+      setServiceImage(file);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Upload image to Firebase Storage
+  const uploadImage = async () => {
+    if (!serviceImage) return null;
+    
+    try {
+      const user = auth.currentUser;
+      const timestamp = Date.now();
+      const fileName = `service-images/${user.uid}/${timestamp}_${serviceImage.name}`;
+      const storageRef = ref(storage, fileName);
+      
+      const snapshot = await uploadBytes(storageRef, serviceImage);
+      const downloadURL = await getDownloadURL(snapshot.ref);
+      
+      return downloadURL;
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      throw error;
+    }
+  };
+
+  // Remove image
+  const removeImage = () => {
+    setServiceImage(null);
+    setImagePreview("");
+  };
 
   // Create new category
   const handleCreateCategory = async () => {
@@ -123,10 +177,24 @@ const AddServiceModal = ({ onClose, onSaved, editService }) => {
     setPackages(copy);
   };
 
+  // Fetch categories
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
   const handleSave = async () => {
     try {
       const user = auth.currentUser;
       if (!user) return;
+
+      setUploading(true);
+
+      let imageUrl = imagePreview; // Keep existing image URL if no new image
+
+      // Upload new image if selected
+      if (serviceImage) {
+        imageUrl = await uploadImage();
+      }
 
       const payload = {
         serviceId: user.uid,
@@ -138,6 +206,7 @@ const AddServiceModal = ({ onClose, onSaved, editService }) => {
           unit: p.unit,
           price: Number(p.price),
         })),
+        imageUrl: imageUrl || null,
         isActive: true,
         updatedAt: new Date(),
       };
@@ -156,6 +225,8 @@ const AddServiceModal = ({ onClose, onSaved, editService }) => {
     } catch (error) {
       console.error("Error saving service:", error);
       alert("Error saving service. Please try again.");
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -171,6 +242,41 @@ const AddServiceModal = ({ onClose, onSaved, editService }) => {
             value={name}
             onChange={e => setName(e.target.value)}
           />
+        </div>
+
+        <div className="sd-form-group">
+          <label>Service Image</label>
+          <div className="sd-image-upload">
+            {imagePreview ? (
+              <div className="sd-image-preview">
+                <img src={imagePreview} alt="Service preview" />
+                <button 
+                  type="button" 
+                  className="sd-remove-image-btn"
+                  onClick={removeImage}
+                >
+                  ×
+                </button>
+              </div>
+            ) : (
+              <div className="sd-image-placeholder">
+                <span>No image selected</span>
+              </div>
+            )}
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              className="sd-file-input"
+              id="service-image"
+            />
+            <label htmlFor="service-image" className="sd-file-label">
+              {imagePreview ? "Change Image" : "Upload Image"}
+            </label>
+          </div>
+          <small className="sd-image-help">
+            Supported formats: JPG, PNG, GIF. Max size: 5MB
+          </small>
         </div>
 
         <div className="sd-form-group">
@@ -280,9 +386,11 @@ const AddServiceModal = ({ onClose, onSaved, editService }) => {
         </div>
 
         <div className="sd-modal-actions">
-          <button className="sd-cancel-btn" onClick={onClose}>Cancel</button>
-          <button className="sd-save-btn" onClick={handleSave}>
-            {isEditMode ? "Update" : "Save"}
+          <button className="sd-cancel-btn" onClick={onClose} disabled={uploading}>
+            Cancel
+          </button>
+          <button className="sd-save-btn" onClick={handleSave} disabled={uploading}>
+            {uploading ? "Uploading..." : (isEditMode ? "Update" : "Save")}
           </button>
         </div>
       </div>

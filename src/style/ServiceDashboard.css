@@ -405,43 +405,11 @@
   text-align: center;
 }
 /* ========== SERVICE CARD IMPROVEMENTS ========== */
-.sd-service-card {
-  background: #ffffff;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-  transition: all 0.2s ease;
-}
-
-.sd-service-card:hover {
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
-  transform: translateY(-2px);
-}
-
-.sd-service-info {
-  flex: 1;
-}
-
-.sd-service-info h3 {
-  margin: 0 0 8px 0;
-  font-size: 18px;
-  color: #1f2937;
-}
-
-.sd-service-info p {
-  margin: 4px 0;
-  color: #6b7280;
-  font-size: 14px;
-}
-
 .sd-service-actions {
   display: flex;
   gap: 8px;
-  align-items: center;
+  align-items: flex-start;
+  flex-direction: column;
 }
 
 .sd-edit-btn {
@@ -812,6 +780,117 @@
   color: #6b7280;
   font-size: 12px;
   margin-left: auto;
+}
+
+/* ========== IMAGE UPLOAD STYLES ========== */
+.sd-image-upload {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sd-image-preview {
+  position: relative;
+  width: 200px;
+  height: 150px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 2px solid #e5e7eb;
+}
+
+.sd-image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sd-remove-image-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.9);
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.sd-image-placeholder {
+  width: 200px;
+  height: 150px;
+  border: 2px dashed #d1d5db;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.sd-file-input {
+  display: none;
+}
+
+.sd-file-label {
+  background: #4f46e5;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  display: inline-block;
+  transition: background-color 0.2s ease;
+}
+
+.sd-file-label:hover {
+  background: #4338ca;
+}
+
+.sd-image-help {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+/* ========== SERVICE CARD IMAGE ========== */
+.sd-service-card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  transition: all 0.2s ease;
+  gap: 16px;
+}
+
+.sd-service-image {
+  flex-shrink: 0;
+  width: 120px;
+  height: 90px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+}
+
+.sd-service-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sd-service-info {
+  flex: 1;
+  min-width: 0;
 }
 
 /* ========== CREATE CATEGORY SECTION ========== */

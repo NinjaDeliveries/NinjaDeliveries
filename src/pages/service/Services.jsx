@@ -202,6 +202,11 @@ const Services = () => {
             console.log("Rendering service:", service.name, "with ID:", service.id); // Debug log
             return (
             <div key={service.id} className="sd-service-card">
+              {service.imageUrl && (
+                <div className="sd-service-image">
+                  <img src={service.imageUrl} alt={service.name} />
+                </div>
+              )}
               <div className="sd-service-info">
                 <div>
                   <h3>{service.name}</h3>
