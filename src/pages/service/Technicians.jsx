@@ -14,6 +14,7 @@ const Technicians = () => {
   // Form states
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [aadharNumber, setAadharNumber] = useState("");
   const [role, setRole] = useState("");
   const [assignedServices, setAssignedServices] = useState([]);
 
@@ -89,6 +90,7 @@ const Technicians = () => {
     setEditTechnician(null);
     setName("");
     setPhone("");
+    setAadharNumber("");
     setRole("");
     setAssignedServices([]);
     setShowModal(true);
@@ -98,6 +100,7 @@ const Technicians = () => {
     setEditTechnician(technician);
     setName(technician.name || "");
     setPhone(technician.phone || "");
+    setAadharNumber(technician.aadharNumber || "");
     setRole(technician.role || "");
     setAssignedServices(technician.assignedServices || []);
     setShowModal(true);
@@ -111,10 +114,17 @@ const Technicians = () => {
         return;
       }
 
+      // Validate Aadhar number (12 digits)
+      if (aadharNumber && !/^\d{12}$/.test(aadharNumber)) {
+        alert("Aadhar number must be exactly 12 digits");
+        return;
+      }
+
       const payload = {
         serviceId: user.uid,
         name: name.trim(),
         phone: phone.trim(),
+        aadharNumber: aadharNumber.trim() || null,
         role: role || null,
         assignedServices: assignedServices,
         isActive: true,
@@ -154,6 +164,7 @@ const Technicians = () => {
   const resetForm = () => {
     setName("");
     setPhone("");
+    setAadharNumber("");
     setRole("");
     setAssignedServices([]);
     setEditTechnician(null);
@@ -211,6 +222,9 @@ const Technicians = () => {
               <div className="sd-service-info">
                 <h3>{technician.name}</h3>
                 <p><strong>Phone:</strong> {technician.phone}</p>
+                {technician.aadharNumber && (
+                  <p><strong>Aadhar:</strong> {technician.aadharNumber}</p>
+                )}
                 {technician.role && (
                   <p><strong>Role:</strong> {getCategoryName(technician.role)}</p>
                 )}
@@ -274,6 +288,26 @@ const Technicians = () => {
             </div>
 
             <div className="sd-form-group">
+              <label>Aadhar Card Number</label>
+              <input
+                type="text"
+                placeholder="Enter 12-digit Aadhar number"
+                value={aadharNumber}
+                onChange={e => {
+                  // Only allow digits and limit to 12 characters
+                  const value = e.target.value.replace(/\D/g, '').slice(0, 12);
+                  setAadharNumber(value);
+                }}
+                maxLength="12"
+              />
+              {aadharNumber && aadharNumber.length !== 12 && (
+                <small style={{color: '#ef4444', fontSize: '12px'}}>
+                  Aadhar number must be exactly 12 digits
+                </small>
+              )}
+            </div>
+
+            <div className="sd-form-group">
               <label>Role (Category)</label>
               <select value={role} onChange={e => setRole(e.target.value)}>
                 <option value="">Select Role (Optional)</option>
@@ -299,7 +333,6 @@ const Technicians = () => {
                         onChange={() => handleServiceToggle(service.id)}
                       />
                       <span>{service.name}</span>
-                      <small>({service.type})</small>
                     </label>
                   ))
                 )}

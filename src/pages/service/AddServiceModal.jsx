@@ -4,9 +4,6 @@ import { collection, addDoc, doc, updateDoc, query, where, getDocs } from "fireb
 
 const AddServiceModal = ({ onClose, onSaved, editService }) => {
   const [name, setName] = useState("");
-  const [type, setType] = useState("normal");
-  const [price, setPrice] = useState("");
-  const [priceUnit, setPriceUnit] = useState("per visit");
   const [categoryId, setCategoryId] = useState("");
   const [categories, setCategories] = useState([]);
   const [packages, setPackages] = useState([
@@ -22,12 +19,9 @@ const AddServiceModal = ({ onClose, onSaved, editService }) => {
   useEffect(() => {
     if (editService) {
       setName(editService.name || "");
-      setType(editService.type || "normal");
-      setPrice(editService.price?.toString() || "");
-      setPriceUnit(editService.priceUnit || "per visit");
       setCategoryId(editService.categoryId || "");
       
-      if (editService.type === "package" && editService.packages) {
+      if (editService.packages) {
         setPackages(editService.packages.map(p => ({
           duration: p.duration || 1,
           unit: p.unit || "month",
@@ -39,28 +33,6 @@ const AddServiceModal = ({ onClose, onSaved, editService }) => {
 
   // Fetch categories
   useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const user = auth.currentUser;
-        if (!user) return;
-
-        const q = query(
-          collection(db, "service_categories"),
-          where("serviceId", "==", user.uid)
-        );
-
-        const snap = await getDocs(q);
-        const list = snap.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-
-        setCategories(list);
-      } catch (err) {
-        console.error("Fetch categories error:", err);
-      }
-    };
-
     fetchCategories();
   }, []);
 
@@ -68,7 +40,20 @@ const AddServiceModal = ({ onClose, onSaved, editService }) => {
   const handleCreateCategory = async () => {
     try {
       const user = auth.currentUser;
-      if (!user || !newCategoryName.trim()) return;
+      if (!user || !newCategoryName.trim()) {
+        alert("Please enter a category name");
+        return;
+      }
+
+      // Check if category already exists
+      const existingCategory = categories.find(cat => 
+        cat.name.toLowerCase() === newCategoryName.trim().toLowerCase()
+      );
+      
+      if (existingCategory) {
+        alert("A category with this name already exists");
+        return;
+      }
 
       const payload = {
         serviceId: user.uid,
@@ -81,9 +66,8 @@ const AddServiceModal = ({ onClose, onSaved, editService }) => {
 
       const docRef = await addDoc(collection(db, "service_categories"), payload);
       
-      // Add to local categories list
-      const newCategory = { id: docRef.id, ...payload };
-      setCategories(prev => [...prev, newCategory]);
+      // Refresh categories from database to avoid duplicates
+      await fetchCategories();
       
       // Select the newly created category
       setCategoryId(docRef.id);
@@ -96,6 +80,29 @@ const AddServiceModal = ({ onClose, onSaved, editService }) => {
     } catch (error) {
       console.error("Error creating category:", error);
       alert("Error creating category. Please try again.");
+    }
+  };
+
+  // Fetch categories function
+  const fetchCategories = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const q = query(
+        collection(db, "service_categories"),
+        where("serviceId", "==", user.uid)
+      );
+
+      const snap = await getDocs(q);
+      const list = snap.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      setCategories(list);
+    } catch (err) {
+      console.error("Fetch categories error:", err);
     }
   };
 
@@ -124,27 +131,16 @@ const AddServiceModal = ({ onClose, onSaved, editService }) => {
       const payload = {
         serviceId: user.uid,
         name,
-        type,
+        type: "package", // Always package type
         categoryId: categoryId || null,
-        isActive: true,
-        updatedAt: new Date(),
-      };
-
-      if (type === "normal") {
-        payload.price = Number(price);
-        payload.priceUnit = priceUnit;
-        // Remove packages field if switching from package to normal
-        payload.packages = null;
-      } else {
-        payload.packages = packages.map(p => ({
+        packages: packages.map(p => ({
           duration: Number(p.duration),
           unit: p.unit,
           price: Number(p.price),
-        }));
-        // Remove normal service fields if switching from normal to package
-        payload.price = null;
-        payload.priceUnit = null;
-      }
+        })),
+        isActive: true,
+        updatedAt: new Date(),
+      };
 
       if (isEditMode) {
         // Update existing service
@@ -175,14 +171,6 @@ const AddServiceModal = ({ onClose, onSaved, editService }) => {
             value={name}
             onChange={e => setName(e.target.value)}
           />
-        </div>
-
-        <div className="sd-form-group">
-          <label>Service Type</label>
-          <select value={type} onChange={e => setType(e.target.value)}>
-            <option value="normal">Normal Service</option>
-            <option value="package">Package Service</option>
-          </select>
         </div>
 
         <div className="sd-form-group">
@@ -251,72 +239,45 @@ const AddServiceModal = ({ onClose, onSaved, editService }) => {
           </div>
         )}
 
-        {type === "normal" && (
-          <>
-            <div className="sd-form-group">
-              <label>Price</label>
+        <div className="sd-form-group">
+          <label>Service Packages</label>
+          {packages.map((p, i) => (
+            <div key={i} className="sd-package-row">
+              <input
+                type="number"
+                placeholder="Duration"
+                value={p.duration}
+                onChange={e => updatePackage(i, "duration", e.target.value)}
+              />
+              <select
+                value={p.unit}
+                onChange={e => updatePackage(i, "unit", e.target.value)}
+              >
+                <option value="month">month(s)</option>
+                <option value="week">week(s)</option>
+                <option value="day">day(s)</option>
+              </select>
               <input
                 type="number"
                 placeholder="Price"
-                value={price}
-                onChange={e => setPrice(e.target.value)}
+                value={p.price}
+                onChange={e => updatePackage(i, "price", e.target.value)}
               />
-            </div>
-            <div className="sd-form-group">
-              <label>Price Unit</label>
-              <select
-                value={priceUnit}
-                onChange={e => setPriceUnit(e.target.value)}
-              >
-                <option>per visit</option>
-                <option>per job</option>
-                <option>per hour</option>
-              </select>
-            </div>
-          </>
-        )}
-
-        {type === "package" && (
-          <div className="sd-form-group">
-            <label>Packages</label>
-            {packages.map((p, i) => (
-              <div key={i} className="sd-package-row">
-                <input
-                  type="number"
-                  placeholder="Duration"
-                  value={p.duration}
-                  onChange={e => updatePackage(i, "duration", e.target.value)}
-                />
-                <select
-                  value={p.unit}
-                  onChange={e => updatePackage(i, "unit", e.target.value)}
+              {packages.length > 1 && (
+                <button 
+                  type="button"
+                  className="sd-remove-btn"
+                  onClick={() => removePackageRow(i)}
                 >
-                  <option value="month">month(s)</option>
-                  <option value="week">week(s)</option>
-                  <option value="day">day(s)</option>
-                </select>
-                <input
-                  type="number"
-                  placeholder="Price"
-                  value={p.price}
-                  onChange={e => updatePackage(i, "price", e.target.value)}
-                />
-                {packages.length > 1 && (
-                  <button 
-                    type="button"
-                    className="sd-remove-btn"
-                    onClick={() => removePackageRow(i)}
-                  >
-                    Remove
-                  </button>
-                )}
-              </div>
-            ))}
-            <button type="button" className="sd-add-package-btn" onClick={addPackageRow}>
-              + Add Package
-            </button>
-          </div>
-        )}
+                  Remove
+                </button>
+              )}
+            </div>
+          ))}
+          <button type="button" className="sd-add-package-btn" onClick={addPackageRow}>
+            + Add Package
+          </button>
+        </div>
 
         <div className="sd-modal-actions">
           <button className="sd-cancel-btn" onClick={onClose}>Cancel</button>

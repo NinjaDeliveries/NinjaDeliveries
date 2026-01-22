@@ -441,6 +441,7 @@
 .sd-service-actions {
   display: flex;
   gap: 8px;
+  align-items: center;
 }
 
 .sd-edit-btn {
@@ -457,6 +458,23 @@
 
 .sd-edit-btn:hover {
   background: #4338ca;
+  transform: translateY(-1px);
+}
+
+.sd-delete-btn {
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.sd-delete-btn:hover {
+  background: #dc2626;
   transform: translateY(-1px);
 }
 

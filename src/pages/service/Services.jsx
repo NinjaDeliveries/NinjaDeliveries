@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { auth, db } from "../../context/Firebase";
-import { collection, query, where, getDocs, addDoc } from "firebase/firestore";
+import { collection, query, where, getDocs, addDoc, deleteDoc, doc } from "firebase/firestore";
 import AddServiceModal from "./AddServiceModal";
 import "../../style/ServiceDashboard.css";
 
@@ -74,6 +74,8 @@ const Services = () => {
   const handleCloseModal = () => {
     setOpenModal(false);
     setEditService(null);
+    // Refresh categories in case new ones were created
+    fetchCategories();
   };
 
   const handleCategoryChange = (e) => {
@@ -88,7 +90,20 @@ const Services = () => {
   const handleCreateCategory = async () => {
     try {
       const user = auth.currentUser;
-      if (!user || !newCategoryName.trim()) return;
+      if (!user || !newCategoryName.trim()) {
+        alert("Please enter a category name");
+        return;
+      }
+
+      // Check if category already exists
+      const existingCategory = categories.find(cat => 
+        cat.name.toLowerCase() === newCategoryName.trim().toLowerCase()
+      );
+      
+      if (existingCategory) {
+        alert("A category with this name already exists");
+        return;
+      }
 
       const payload = {
         serviceId: user.uid,
@@ -101,9 +116,8 @@ const Services = () => {
 
       const docRef = await addDoc(collection(db, "service_categories"), payload);
       
-      // Add to local categories list
-      const newCategory = { id: docRef.id, ...payload };
-      setCategories(prev => [...prev, newCategory]);
+      // Refresh categories from database
+      await fetchCategories();
       
       // Select the newly created category
       setSelectedCategory(docRef.id);
@@ -123,6 +137,20 @@ const Services = () => {
     setShowCreateCategoryModal(false);
     setNewCategoryName("");
     setNewCategoryDescription("");
+  };
+
+  const handleDeleteService = async (serviceId) => {
+    console.log("Delete service clicked for ID:", serviceId); // Debug log
+    if (window.confirm("Are you sure you want to delete this service? This action cannot be undone.")) {
+      try {
+        await deleteDoc(doc(db, "service_services", serviceId));
+        console.log("Service deleted successfully"); // Debug log
+        fetchServices(); // Refresh the list
+      } catch (error) {
+        console.error("Error deleting service:", error);
+        alert("Error deleting service. Please try again.");
+      }
+    }
   };
 
   useEffect(() => {
@@ -170,14 +198,13 @@ const Services = () => {
         <p>No services found{selectedCategory ? " in this category" : ""}.</p>
       ) : (
         <div className="sd-table">
-          {filteredServices.map(service => (
+          {filteredServices.map(service => {
+            console.log("Rendering service:", service.name, "with ID:", service.id); // Debug log
+            return (
             <div key={service.id} className="sd-service-card">
               <div className="sd-service-info">
                 <div>
                   <h3>{service.name}</h3>
-                  <span className={`sd-badge ${service.type}`}>
-                    {service.type.toUpperCase()}
-                  </span>
                   {service.categoryId && getCategoryName(service.categoryId) && (
                     <span className="sd-badge category">
                       {getCategoryName(service.categoryId)}
@@ -185,11 +212,7 @@ const Services = () => {
                   )}
                 </div>
 
-                {service.type === "normal" && (
-                  <p>₹{service.price} ({service.priceUnit})</p>
-                )}
-
-                {service.type === "package" && service.packages && (
+                {service.packages && (
                   <div className="sd-package-details">
                     {service.packages.map((pkg, index) => (
                       <p key={index}>
@@ -207,16 +230,38 @@ const Services = () => {
                 >
                   Edit
                 </button>
+                <button 
+                  className="sd-delete-btn"
+                  onClick={() => handleDeleteService(service.id)}
+                  title="Delete Service"
+                  style={{
+                    background: '#ef4444',
+                    color: 'white',
+                    border: 'none',
+                    padding: '8px 16px',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    marginLeft: '8px'
+                  }}
+                >
+                  Delete
+                </button>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
       {openModal && (
         <AddServiceModal
           onClose={handleCloseModal}
-          onSaved={fetchServices}
+          onSaved={() => {
+            fetchServices();
+            fetchCategories(); // Refresh categories too
+          }}
           editService={editService}
         />
       )}
