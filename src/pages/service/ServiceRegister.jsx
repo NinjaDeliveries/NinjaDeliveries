@@ -143,7 +143,7 @@ const handleRegister = async (e) => {
             <input
               required
               name="companyName"
-              placeholder="Company Name"
+              placeholder="Company Name / Restaurant Name"
               className="form-input"
               onChange={handleChange}
             />
