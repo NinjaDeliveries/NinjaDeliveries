@@ -2144,6 +2144,7 @@
 
 .sd-capacity-input[type=number] {
   -moz-appearance: textfield;
+  appearance: textfield;
 }
 
 /* ========== FORM VALIDATION STYLING ========== */
@@ -2554,4 +2555,344 @@
 
 .sd-slot-help strong {
   color: #0369a1;
+}
+/* ========== OVERVIEW PAGE STYLES ========== */
+.sd-company-info-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.sd-company-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.sd-company-details h2 {
+  margin: 0 0 12px 0;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.sd-company-owner {
+  font-size: 16px;
+  margin: 8px 0;
+  opacity: 0.9;
+}
+
+.sd-company-contact {
+  font-size: 14px;
+  margin: 6px 0;
+  opacity: 0.8;
+}
+
+.sd-company-address {
+  font-size: 14px;
+  margin: 8px 0 0 0;
+  opacity: 0.8;
+  max-width: 300px;
+}
+
+.sd-company-status {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.sd-status-badge {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  display: inline-block;
+  margin-bottom: 8px;
+}
+
+.sd-status-badge.active {
+  background: rgba(34, 197, 94, 0.2);
+  color: #dcfce7;
+}
+
+.sd-registration-date {
+  font-size: 12px;
+  opacity: 0.7;
+  margin: 0;
+}
+
+/* ========== DELIVERY ZONES CARD ========== */
+.sd-delivery-zones-card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e5e7eb;
+}
+
+.sd-zones-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.sd-zone-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+  transition: all 0.2s ease;
+}
+
+.sd-zone-card:hover {
+  border-color: #4f46e5;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.1);
+}
+
+.sd-zone-card h4 {
+  margin: 0 0 8px 0;
+  color: #1f2937;
+  font-size: 16px;
+}
+
+.sd-zone-card p {
+  margin: 4px 0;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.sd-no-zones {
+  text-align: center;
+  padding: 40px 20px;
+  color: #9ca3af;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 2px dashed #d1d5db;
+}
+
+.sd-no-zones p:first-child {
+  font-size: 16px;
+  font-weight: 600;
+  color: #6b7280;
+  margin-bottom: 8px;
+}
+
+.sd-no-zones p:last-child {
+  font-size: 14px;
+  margin: 0;
+}
+
+/* ========== QUICK ACTIONS CARD ========== */
+.sd-quick-actions-card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e5e7eb;
+}
+
+.sd-quick-actions-card h3 {
+  margin: 0 0 16px 0;
+  color: #1f2937;
+  font-size: 20px;
+}
+
+.sd-quick-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.sd-quick-action {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.sd-quick-action:hover {
+  background: #4f46e5;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
+}
+
+.sd-action-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.sd-action-text {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* ========== RESPONSIVE DESIGN ========== */
+@media (max-width: 768px) {
+  .sd-company-header {
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .sd-company-status {
+    text-align: left;
+  }
+  
+  .sd-zones-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .sd-quick-actions-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .sd-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .sd-company-info-card {
+    padding: 16px;
+  }
+  
+  .sd-company-details h2 {
+    font-size: 24px;
+  }
+  
+  .sd-cards {
+    grid-template-columns: 1fr;
+  }
+}
+/* ========== ZONE STATUS STYLING ========== */
+.sd-zone-status {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 8px;
+}
+
+.sd-zone-status.active {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.sd-zone-status.inactive {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+/* ========== OVERVIEW LOADING STATE ========== */
+.sd-overview-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  color: #6b7280;
+}
+
+/* ========== ENHANCED COMPANY INFO ========== */
+.sd-company-info-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.sd-company-info-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 100px;
+  height: 100px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  transform: translate(30px, -30px);
+}
+
+.sd-company-info-card::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 150px;
+  height: 150px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 50%;
+  transform: translate(-50px, 50px);
+}
+/* Overview Company & Zone Info Styles */
+.sd-simple-info-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  color: white;
+  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.25);
+}
+
+.sd-company-basic h2 {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0 0 6px 0;
+  color: white;
+}
+
+.sd-owner-name {
+  font-size: 14px;
+  opacity: 0.9;
+  margin: 0 0 12px 0;
+  font-weight: 500;
+}
+
+.sd-zone-connection {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 8px 12px;
+  border-radius: 8px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.sd-zone-label {
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+.sd-zone-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.sd-zone-status {
+  font-size: 12px;
+  font-weight: 600;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.2);
+  padding: 3px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(16, 185, 129, 0.3);
 }

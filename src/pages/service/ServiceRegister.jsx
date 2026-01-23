@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import styled from "styled-components";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
@@ -15,6 +15,7 @@ const ServiceRegister = () => {
     phone: "",
     email: "",
     companyName: "",
+    address: "",
     password: "",
     confirmPassword: "",
     type: "service",
@@ -72,17 +73,19 @@ const handleRegister = async (e) => {
     );
 
     await setDoc(doc(db, "service_company", userCred.user.uid), {
-      name: form.name,
+      ownerName: form.name,
       phone: form.phone,
       email: form.email,
       companyName: form.companyName,
-      type: form.type, // service / restaurant
-
-      // location
-      deliveryZoneId: "0oS7Zig2gxj2MJesvIC2",
+      address: form.address || "",
+      businessType: form.type,
+      
+      // Default delivery zone connection
+      deliveryZoneId: "dharamshala_zone_001",
       deliveryZoneName: "Dharamshala",
       
       isActive: true,
+      registrationDate: new Date(),
       createdAt: new Date(),
     });
 
@@ -149,6 +152,16 @@ const handleRegister = async (e) => {
               required
               name="companyName"
               placeholder="Company Name / Restaurant Name"
+              className="form-input"
+              onChange={handleChange}
+            />
+          </Input>
+
+          {/* Address */}
+          <Input icon="location">
+            <input
+              name="address"
+              placeholder="Business Address (Optional)"
               className="form-input"
               onChange={handleChange}
             />
