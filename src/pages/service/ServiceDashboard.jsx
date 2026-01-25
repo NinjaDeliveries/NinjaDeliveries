@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useLocation, Outlet } from "react-router-dom";
 import { auth, db } from "../../context/Firebase";
 import { doc, getDoc } from "firebase/firestore";
@@ -63,8 +63,17 @@ const ServiceDashboard = () => {
       {/* SIDEBAR */}
       <aside className="sd-sidebar">
         <div className="sd-sidebar-header">
-          <h2>{serviceData?.companyName || "Service Dashboard"}</h2>
-          <p>{serviceData?.email}</p>
+          <div className="sd-header-content">
+            <h2>{serviceData?.companyName || "Service Dashboard"}</h2>
+            <p>{serviceData?.email}</p>
+          </div>
+          <button 
+            className="sd-packages-btn"
+            onClick={() => navigate('/admin/packages')}
+            title="Global Packages (Admin)"
+          >
+            📦
+          </button>
         </div>
 
         <nav className="sd-menu">

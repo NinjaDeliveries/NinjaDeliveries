@@ -7,8 +7,10 @@ import {
   updateDoc,
   doc,
   serverTimestamp,
+  deleteDoc,
 } from "firebase/firestore";
 import "../../style/ServiceDashboard.css";
+import Navbar from "../../components/Navbar";
 
 
 const GlobalPackages = () => {
@@ -98,101 +100,191 @@ const GlobalPackages = () => {
 
   // 🔹 Toggle active
   const toggleStatus = async (pkg) => {
-    await updateDoc(doc(db, "global_packages", pkg.id), {
-      nameLower: editPkg.name.toLowerCase(),
-      isActive: !pkg.isActive,
-      updatedAt: serverTimestamp(),
-    });
-    fetchPackages();
+    try {
+      await updateDoc(doc(db, "global_packages", pkg.id), {
+        isActive: !pkg.isActive,
+        updatedAt: serverTimestamp(),
+      });
+      fetchPackages();
+    } catch (e) {
+      console.error("Toggle status error", e);
+    }
+  };
+
+  // 🔹 Delete package
+  const deletePackage = async (pkg) => {
+    if (!window.confirm(`Are you sure you want to delete "${pkg.name}"?`)) {
+      return;
+    }
+
+    try {
+      await deleteDoc(doc(db, "global_packages", pkg.id));
+      fetchPackages();
+    } catch (e) {
+      console.error("Delete package error", e);
+      alert("Failed to delete package");
+    }
   };
 
   return (
-    <div className="sd-main">
-      <div className="sd-header">
-        <h1>Global Packages</h1>
-        <button className="sd-primary-btn" onClick={openAdd}>
-          + Add Package
-        </button>
-      </div>
-
-      {loading ? (
-        <p>Loading...</p>
-      ) : packages.length === 0 ? (
-        <p>No packages created</p>
-      ) : (
-        <div className="sd-table">
-          {packages.map(pkg => (
-            <div key={pkg.id} className="sd-service-card">
-              <div>
-                <h3>{pkg.name}</h3>
-                <p>₹{pkg.price}</p>
-                <span className={`sd-badge ${pkg.isActive ? "active" : "inactive"}`}>
-                  {pkg.isActive ? "ACTIVE" : "INACTIVE"}
-                </span>
-              </div>
-
-              <div className="sd-service-actions">
-                <button
-                  className="sd-edit-btn"
-                  onClick={() => openEdit(pkg)}
-                >
-                  Edit
-                </button>
-                <button
-                  className="sd-secondary-btn"
-                  onClick={() => toggleStatus(pkg)}
-                >
-                  {pkg.isActive ? "Disable" : "Enable"}
-                </button>
-              </div>
-            </div>
-          ))}
+    <>
+      <Navbar />
+      <div className="global-packages-container">
+        {/* Header Section */}
+        <div className="gp-header">
+          <div className="gp-header-content">
+            <h1 className="gp-title">Global Packages</h1>
+            <p className="gp-subtitle">Manage service packages available across all locations</p>
+          </div>
+          <button className="gp-add-btn" onClick={openAdd}>
+            <span className="gp-add-icon">+</span>
+            Add Package
+          </button>
         </div>
-      )}
 
-      {/* Modal */}
-      {showModal && (
-        <div className="sd-modal-backdrop">
-          <div className="sd-modal">
-            <h2>{editPkg ? "Edit Package" : "Add Package"}</h2>
-
-            <div className="sd-form-group">
-              <label>Service Name</label>
-              <input
-                type="text"
-                disabled={!!editPkg}
-                value={name}
-                onChange={e => setName(e.target.value)}
-              />
-            </div>
-
-            <div className="sd-form-group">
-              <label>Price</label>
-              <input
-                type="number"
-                value={price}
-                onChange={e => setPrice(e.target.value)}
-              />
-            </div>
-
-            <div className="sd-modal-actions">
-              <button
-                className="sd-cancel-btn"
-                onClick={() => setShowModal(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className="sd-save-btn"
-                onClick={handleSave}
-              >
-                Save
-              </button>
-            </div>
+        {/* Stats Cards */}
+        <div className="gp-stats">
+          <div className="gp-stat-card">
+            <div className="gp-stat-number">{packages.length}</div>
+            <div className="gp-stat-label">Total Packages</div>
+          </div>
+          <div className="gp-stat-card">
+            <div className="gp-stat-number">{packages.filter(p => p.isActive).length}</div>
+            <div className="gp-stat-label">Active Packages</div>
+          </div>
+          <div className="gp-stat-card">
+            <div className="gp-stat-number">{packages.filter(p => !p.isActive).length}</div>
+            <div className="gp-stat-label">Inactive Packages</div>
           </div>
         </div>
-      )}
-    </div>
+
+        {/* Content Section */}
+        <div className="gp-content">
+          {loading ? (
+            <div className="gp-loading">
+              <div className="gp-spinner"></div>
+              <p>Loading packages...</p>
+            </div>
+          ) : packages.length === 0 ? (
+            <div className="gp-empty">
+              <div className="gp-empty-icon">📦</div>
+              <h3>No packages created yet</h3>
+              <p>Create your first global package to get started</p>
+              <button className="gp-empty-btn" onClick={openAdd}>
+                Create Package
+              </button>
+            </div>
+          ) : (
+            <div className="gp-grid">
+              {packages.map(pkg => (
+                <div key={pkg.id} className={`gp-card ${!pkg.isActive ? 'gp-card-inactive' : ''}`}>
+                  <div className="gp-card-header">
+                    <h3 className="gp-card-title">{pkg.name}</h3>
+                    <span className={`gp-status ${pkg.isActive ? 'gp-status-active' : 'gp-status-inactive'}`}>
+                      {pkg.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                  </div>
+                  
+                  <div className="gp-card-body">
+                    <div className="gp-price">₹{pkg.price}</div>
+                    <div className="gp-created">
+                      Created: {pkg.createdAt ? new Date(pkg.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}
+                    </div>
+                  </div>
+
+                  <div className="gp-card-actions">
+                    <button
+                      className="gp-btn gp-btn-edit"
+                      onClick={() => openEdit(pkg)}
+                      title="Edit package"
+                    >
+                      ✏️ Edit
+                    </button>
+                    <button
+                      className={`gp-btn ${pkg.isActive ? 'gp-btn-disable' : 'gp-btn-enable'}`}
+                      onClick={() => toggleStatus(pkg)}
+                      title={pkg.isActive ? 'Disable package' : 'Enable package'}
+                    >
+                      {pkg.isActive ? '⏸️ Disable' : '▶️ Enable'}
+                    </button>
+                    <button
+                      className="gp-btn gp-btn-delete"
+                      onClick={() => deletePackage(pkg)}
+                      title="Delete package"
+                    >
+                      🗑️ Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      
+
+        {/* Modal */}
+        {showModal && (
+          <div className="gp-modal-backdrop">
+            <div className="gp-modal">
+              <div className="gp-modal-header">
+                <h2>{editPkg ? "Edit Package" : "Add New Package"}</h2>
+                <button 
+                  className="gp-modal-close"
+                  onClick={() => setShowModal(false)}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="gp-modal-body">
+                <div className="gp-form-group">
+                  <label>Package Name</label>
+                  <input
+                    type="text"
+                    disabled={!!editPkg}
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                    placeholder="Enter package name"
+                    className={editPkg ? 'gp-input-disabled' : ''}
+                  />
+                  {editPkg && (
+                    <small className="gp-help-text">Package name cannot be changed after creation</small>
+                  )}
+                </div>
+
+                <div className="gp-form-group">
+                  <label>Price (₹)</label>
+                  <input
+                    type="number"
+                    value={price}
+                    onChange={e => setPrice(e.target.value)}
+                    placeholder="Enter price"
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+              </div>
+
+              <div className="gp-modal-actions">
+                <button
+                  className="gp-btn gp-btn-cancel"
+                  onClick={() => setShowModal(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="gp-btn gp-btn-save"
+                  onClick={handleSave}
+                  disabled={!name.trim() || !price}
+                >
+                  {editPkg ? "Update Package" : "Create Package"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </>
   );
 };
 
