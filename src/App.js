@@ -54,7 +54,7 @@ import Settings from "./pages/service/Settings";
 import Services from "./pages/service/Services";
 import Technicians from "./pages/service/Technicians";
 import Categories from "./pages/service/Categories";
-
+import GlobalPackages from "./pages/Admin/GlobalPackages";
 function App() {
 const { user, loadingUser } = useUser();
 const isAdmin =
@@ -386,7 +386,10 @@ if (loadingUser) {
   <Route path="settings" element={<Settings />} />
 </Route>
 
-
+<Route
+  path="/admin/packages"
+  element={<GlobalPackages />}
+/>
 
 <Route
   path="/service-dashboard/services"
@@ -411,6 +414,7 @@ if (loadingUser) {
         
     </div>
   );
+  
 }
 
 export default App;

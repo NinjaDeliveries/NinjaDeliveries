@@ -1,8 +1,19 @@
 import React, { useEffect, useState } from "react";
 import { auth, db } from "../../context/Firebase";
-import { collection, query, where, getDocs, addDoc, deleteDoc, doc } from "firebase/firestore";
+import { 
+  collection, 
+  query, 
+  where, 
+  getDocs, 
+  addDoc, 
+  deleteDoc, 
+  doc, 
+  updateDoc 
+} from "firebase/firestore";
+// import { collection, query, where, getDocs, addDoc, deleteDoc, doc } from "firebase/firestore";
 import AddServiceModal from "./AddServiceModal";
 import "../../style/ServiceDashboard.css";
+import AddGlobalServiceModal from "./AddGlobalServiceModal";
 
 const Services = () => {
   const [services, setServices] = useState([]);
@@ -14,30 +25,77 @@ const Services = () => {
   const [showCreateCategoryModal, setShowCreateCategoryModal] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryDescription, setNewCategoryDescription] = useState("");
+  const [openGlobalServiceModal, setOpenGlobalServiceModal] = useState(false);
 
-  const fetchServices = async () => {
-    try {
-      const user = auth.currentUser;
-      if (!user) return;
 
-      const q = query(
-        collection(db, "service_services"),
-        where("companyId", "==", user.uid)
-      );
+  // const fetchServices = async () => {
+  //   try {
+  //     const user = auth.currentUser;
+  //     if (!user) return;
 
-      const snap = await getDocs(q);
-      const list = snap.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+  //     const q = query(
+  //       collection(db, "service_services"),
+  //       where("companyId", "==", user.uid)
+  //     );
 
-      setServices(list);
-    } catch (err) {
-      console.error("Fetch services error:", err);
-    } finally {
-      setLoading(false);
+  //     const snap = await getDocs(q);
+  //     const list = snap.docs.map(doc => ({
+  //       id: doc.id,
+  //       ...doc.data(),
+  //     }));
+
+  //     setServices(list);
+  //   } catch (err) {
+  //     console.error("Fetch services error:", err);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
+const fetchServices = async () => {
+  try {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const serviceSnap = await getDocs(
+      query(collection(db, "service_services"), where("companyId", "==", user.uid))
+    );
+
+    const globalSnap = await getDocs(collection(db, "global_packages"));
+
+    const globalMap = {};
+    globalSnap.docs.forEach(doc => {
+      globalMap[doc.data().nameLower] = doc.data();
+    });
+
+    const list = [];
+
+    for (const d of serviceSnap.docs) {
+      const service = { id: d.id, ...d.data() };
+      const key = service.name.toLowerCase();
+
+      if (!service.isActive && globalMap[key]) {
+        // 🔥 AUTO ACTIVATE
+        await updateDoc(doc(db, "service_services", service.id), {
+          globalPackageId: globalMap[key].id,
+          globalPrice: globalMap[key].price,
+          isActive: true,
+        });
+
+        service.isActive = true;
+        service.globalPrice = globalMap[key].price;
+      }
+
+      list.push(service);
     }
-  };
+
+    setServices(list);
+  } catch (err) {
+    console.error("Fetch services error:", err);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const fetchCategories = async () => {
     try {
@@ -64,6 +122,10 @@ const Services = () => {
   const handleAddService = () => {
     setEditService(null);
     setOpenModal(true);
+  };
+
+  const handleAddGlobalService = () => {
+    setOpenGlobalServiceModal(true);
   };
 
   const handleEditService = (service) => {
@@ -186,9 +248,22 @@ const Services = () => {
               </option>
             ))}
           </select>
-          <button className="sd-primary-btn" onClick={handleAddService}>
-            + Add Service
-          </button>
+          {/* <button className="sd-primary-btn" onClick={handleAddService}>
+            + Add Package
+          </button> */}
+
+            <button className="sd-primary-btn" onClick={handleAddService}>
+  + Add Package
+</button>
+
+<button
+  className="sd-primary-btn"
+  style={{ marginLeft: "10px", background: "#6366f1" }}
+  onClick={handleAddGlobalService}
+>
+  + Add Service
+</button>
+
         </div>
       </div>
 
@@ -217,7 +292,7 @@ const Services = () => {
                   )}
                 </div>
 
-                {service.packages && (
+                {/* {service.packages && (
                   <div className="sd-package-details">
                     {service.packages.map((pkg, index) => (
                       <p key={index}>
@@ -225,16 +300,68 @@ const Services = () => {
                       </p>
                     ))}
                   </div>
-                )}
+                )} */}
+
+                {service.globalPrice && service.isActive && (
+                  <div className="sd-package-details">
+                  <p>₹{service.globalPrice}</p>
+                </div>
+              )}
+              {/* {service.packages && service.packages.length > 0 && (
+                  <div className="sd-package-details">
+                  {service.packages.map((pkg, index) => (
+                  <p key={index}>
+                  {pkg.duration} {pkg.unit}(s) - ₹{pkg.price}
+                </p>
+              ))}
+            </div>
+          )} */}
+
+          {!service.globalPackageId &&
+ service.packages &&
+ service.packages.length > 0 && (
+   <div className="sd-package-details">
+     {service.packages.map((pkg, index) => (
+       <p key={index}>
+         {pkg.duration} {pkg.unit}(s) - ₹{pkg.price}
+       </p>
+     ))}
+   </div>
+)}
+
+{service.isActive === false && (
+  <p style={{ color: "#f97316", marginTop: "6px" }}>
+    ⚠ Service inactive (global package not added)
+  </p>
+)}
               </div>
 
               <div className="sd-service-actions">
-                <button 
+                {/* <button 
                   className="sd-edit-btn"
                   onClick={() => handleEditService(service)}
                 >
                   Edit
-                </button>
+                </button> */}
+
+                {service.globalPackageId ? (
+  <button
+    className="sd-edit-btn"
+    onClick={() => {
+      setEditService(service);
+      setOpenGlobalServiceModal(true);
+    }}
+  >
+    Edit
+  </button>
+) : (
+  <button
+    className="sd-edit-btn"
+    onClick={() => handleEditService(service)}
+  >
+    Edit
+  </button>
+)}
                 <button 
                   className="sd-delete-btn"
                   onClick={() => handleDeleteService(service.id)}
@@ -270,6 +397,16 @@ const Services = () => {
           editService={editService}
         />
       )}
+
+      {openGlobalServiceModal && (
+  <AddGlobalServiceModal
+    onClose={() => setOpenGlobalServiceModal(false)}
+    onSaved={() => {
+      fetchServices();
+      fetchCategories();
+    }}
+  />
+)}
 
       {/* Create Category Modal */}
       {showCreateCategoryModal && (
