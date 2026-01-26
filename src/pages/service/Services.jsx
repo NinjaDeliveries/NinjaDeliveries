@@ -215,6 +215,20 @@ const fetchServices = async () => {
     }
   };
 
+  const handleToggleServiceStatus = async (serviceId, currentStatus) => {
+    try {
+      const newStatus = !currentStatus;
+      await updateDoc(doc(db, "service_services", serviceId), {
+        isActive: newStatus,
+        updatedAt: new Date(),
+      });
+      fetchServices(); // Refresh the list
+    } catch (error) {
+      console.error("Error updating service status:", error);
+      alert("Error updating service status. Please try again.");
+    }
+  };
+
   useEffect(() => {
     fetchServices();
     fetchCategories();
@@ -285,11 +299,16 @@ const fetchServices = async () => {
               <div className="sd-service-info">
                 <div>
                   <h3>{service.name}</h3>
-                  {service.categoryId && getCategoryName(service.categoryId) && (
-                    <span className="sd-badge category">
-                      {getCategoryName(service.categoryId)}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                    {service.categoryId && getCategoryName(service.categoryId) && (
+                      <span className="sd-badge category">
+                        {getCategoryName(service.categoryId)}
+                      </span>
+                    )}
+                    <span className={`sd-status-badge ${service.isActive !== false ? 'active' : 'inactive'}`}>
+                      {service.isActive !== false ? 'Active' : 'Inactive'}
                     </span>
-                  )}
+                  </div>
                 </div>
 
                 {/* {service.packages && (
@@ -337,46 +356,37 @@ const fetchServices = async () => {
               </div>
 
               <div className="sd-service-actions">
-                {/* <button 
-                  className="sd-edit-btn"
-                  onClick={() => handleEditService(service)}
-                >
-                  Edit
-                </button> */}
-
                 {service.globalPackageId ? (
-  <button
-    className="sd-edit-btn"
-    onClick={() => {
-      setEditService(service);
-      setOpenGlobalServiceModal(true);
-    }}
-  >
-    Edit
-  </button>
-) : (
-  <button
-    className="sd-edit-btn"
-    onClick={() => handleEditService(service)}
-  >
-    Edit
-  </button>
-)}
+                  <button
+                    className="sd-edit-btn"
+                    onClick={() => {
+                      setEditService(service);
+                      setOpenGlobalServiceModal(true);
+                    }}
+                  >
+                    Edit
+                  </button>
+                ) : (
+                  <button
+                    className="sd-edit-btn"
+                    onClick={() => handleEditService(service)}
+                  >
+                    Edit
+                  </button>
+                )}
+                
+                <button 
+                  className={`sd-toggle-btn ${service.isActive !== false ? 'active' : 'inactive'}`}
+                  onClick={() => handleToggleServiceStatus(service.id, service.isActive !== false)}
+                  title={service.isActive !== false ? 'Deactivate Service' : 'Activate Service'}
+                >
+                  {service.isActive !== false ? 'Disable' : 'Enable'}
+                </button>
+                
                 <button 
                   className="sd-delete-btn"
                   onClick={() => handleDeleteService(service.id)}
                   title="Delete Service"
-                  style={{
-                    background: '#ef4444',
-                    color: 'white',
-                    border: 'none',
-                    padding: '8px 16px',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    marginLeft: '8px'
-                  }}
                 >
                   Delete
                 </button>

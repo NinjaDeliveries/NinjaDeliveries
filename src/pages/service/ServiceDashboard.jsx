@@ -63,17 +63,8 @@ const ServiceDashboard = () => {
       {/* SIDEBAR */}
       <aside className="sd-sidebar">
         <div className="sd-sidebar-header">
-          <div className="sd-header-content">
-            <h2>{serviceData?.companyName || "Service Dashboard"}</h2>
-            <p>{serviceData?.email}</p>
-          </div>
-          <button 
-            className="sd-packages-btn"
-            onClick={() => navigate('/admin/packages')}
-            title="Global Packages (Admin)"
-          >
-            📦
-          </button>
+          <h2>{serviceData?.companyName || "Service Dashboard"}</h2>
+          <p>{serviceData?.email}</p>
         </div>
 
         <nav className="sd-menu">

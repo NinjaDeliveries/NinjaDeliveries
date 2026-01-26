@@ -18,13 +18,6 @@
 .sd-sidebar-header {
   padding: 20px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-}
-
-.sd-header-content {
-  flex: 1;
 }
 
 .sd-sidebar-header h2 {
@@ -36,28 +29,6 @@
   font-size: 12px;
   opacity: 0.8;
   margin-top: 4px;
-}
-
-.sd-packages-btn {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: white;
-  padding: 8px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 16px;
-  transition: all 0.2s ease;
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.sd-packages-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
-  transform: scale(1.05);
 }
 
 /* ========== MENU ========== */
@@ -3496,4 +3467,268 @@
   .gp-price {
     font-size: 24px;
   }
+}
+/* ========== STATUS BADGES AND TOGGLE BUTTONS ========== */
+.sd-status-badge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: inline-block;
+}
+
+.sd-status-badge.active {
+  background: #dcfce7;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
+}
+
+.sd-status-badge.inactive {
+  background: #fee2e2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.sd-toggle-btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 2px;
+}
+
+.sd-toggle-btn.active {
+  background: #fef3c7;
+  color: #d97706;
+  border: 1px solid #fed7aa;
+}
+
+.sd-toggle-btn.active:hover {
+  background: #d97706;
+  color: white;
+  transform: translateY(-1px);
+}
+
+.sd-toggle-btn.inactive {
+  background: #dcfce7;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
+}
+
+.sd-toggle-btn.inactive:hover {
+  background: #16a34a;
+  color: white;
+  transform: translateY(-1px);
+}
+
+/* ========== IMPROVED SERVICE ACTIONS LAYOUT ========== */
+.sd-service-actions {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.sd-edit-btn {
+  background: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.sd-edit-btn:hover {
+  background: #0369a1;
+  color: white;
+  transform: translateY(-1px);
+}
+
+.sd-toggle-btn {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.sd-toggle-btn.active {
+  background: #fef3c7;
+  color: #d97706;
+  border: 1px solid #fed7aa;
+}
+
+.sd-toggle-btn.active:hover {
+  background: #d97706;
+  color: white;
+  transform: translateY(-1px);
+}
+
+.sd-toggle-btn.inactive {
+  background: #dcfce7;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
+}
+
+.sd-toggle-btn.inactive:hover {
+  background: #16a34a;
+  color: white;
+  transform: translateY(-1px);
+}
+
+.sd-delete-btn {
+  background: #fee2e2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.sd-delete-btn:hover {
+  background: #dc2626;
+  color: white;
+  transform: translateY(-1px);
+}
+
+/* ========== IMPROVED SERVICE CARDS ========== */
+.sd-service-card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  transition: all 0.2s ease;
+  gap: 16px;
+}
+
+.sd-service-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  border-color: #4f46e5;
+}
+
+.sd-service-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.sd-service-info h3 {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+/* ========== RESPONSIVE DESIGN ========== */
+@media (max-width: 768px) {
+  .sd-service-card {
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .sd-service-actions {
+    flex-direction: row;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+  
+  .sd-service-actions button {
+    flex: 0 0 auto;
+    min-width: 80px;
+  }
+}
+
+@media (max-width: 480px) {
+  .sd-service-actions {
+    flex-direction: column;
+    width: 100%;
+    gap: 6px;
+  }
+  
+  .sd-service-actions button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* ========== ENHANCED PACKAGE DETAILS ========== */
+.sd-package-details {
+  margin-top: 8px;
+}
+
+.sd-package-details p {
+  margin: 2px 0;
+  font-size: 14px;
+  color: #059669;
+  background: #f0fdf4;
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: inline-block;
+  margin-right: 8px;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+/* ========== ASSIGNED SERVICES STYLING ========== */
+.sd-assigned-services {
+  margin-top: 12px;
+}
+
+.sd-service-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.sd-badge.normal {
+  background: #dbeafe;
+  color: #1e40af;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.sd-badge.category {
+  background: #f3e8ff;
+  color: #7c3aed;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
 }

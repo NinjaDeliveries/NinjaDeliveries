@@ -161,6 +161,20 @@ const Technicians = () => {
     }
   };
 
+  const handleToggleTechnicianStatus = async (technicianId, currentStatus) => {
+    try {
+      const newStatus = !currentStatus;
+      await updateDoc(doc(db, "service_workers", technicianId), {
+        isActive: newStatus,
+        updatedAt: new Date(),
+      });
+      fetchTechnicians(); // Refresh the list
+    } catch (error) {
+      console.error("Error updating technician status:", error);
+      alert("Error updating technician status. Please try again.");
+    }
+  };
+
   const resetForm = () => {
     setName("");
     setPhone("");
@@ -220,7 +234,14 @@ const Technicians = () => {
           {technicians.map(technician => (
             <div key={technician.id} className="sd-service-card">
               <div className="sd-service-info">
-                <h3>{technician.name}</h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <h3>{technician.name}</h3>
+                    <span className={`sd-status-badge ${technician.isActive !== false ? 'active' : 'inactive'}`}>
+                      {technician.isActive !== false ? 'Active' : 'Inactive'}
+                    </span>
+                  </div>
+                </div>
                 <p><strong>Phone:</strong> {technician.phone}</p>
                 {technician.aadharNumber && (
                   <p><strong>Aadhar:</strong> {technician.aadharNumber}</p>
@@ -249,6 +270,15 @@ const Technicians = () => {
                 >
                   Edit
                 </button>
+                
+                <button 
+                  className={`sd-toggle-btn ${technician.isActive !== false ? 'active' : 'inactive'}`}
+                  onClick={() => handleToggleTechnicianStatus(technician.id, technician.isActive !== false)}
+                  title={technician.isActive !== false ? 'Deactivate Worker' : 'Activate Worker'}
+                >
+                  {technician.isActive !== false ? 'Disable' : 'Enable'}
+                </button>
+                
                 <button 
                   className="sd-delete-btn"
                   onClick={() => handleDeleteTechnician(technician.id)}
