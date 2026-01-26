@@ -3,14 +3,31 @@ import { auth, db } from "../../context/Firebase";
 import { collection, query, where, getDocs, addDoc, doc, updateDoc, deleteDoc } from "firebase/firestore";
 import "../../style/ServiceDashboard.css";
 import { create } from "@mui/material/styles/createTransitions";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { storage } from "../../context/Firebase";
 
 const Categories = () => {
+  const [categoryImage, setCategoryImage] = useState(null);
+const [imagePreview, setImagePreview] = useState("");
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editCategory, setEditCategory] = useState(null);
   const [categoryName, setCategoryName] = useState("");
   const [categoryDescription, setCategoryDescription] = useState("");
+const handleToggleCategoryStatus = async (categoryId, currentStatus) => {
+  try {
+    await updateDoc(doc(db, "service_categories", categoryId), {
+      isActive: !currentStatus,
+      updatedAt: new Date(),
+    });
+
+    fetchCategories(); // refresh list
+  } catch (error) {
+    console.error("Error updating category status:", error);
+    alert("Error updating category status");
+  }
+};
 
   const fetchCategories = async () => {
     try {
@@ -34,7 +51,27 @@ const Categories = () => {
     } finally {
       setLoading(false);
     }
-  };
+  };const handleImageChange = (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  if (!file.type.startsWith("image/")) {
+    alert("Please select an image file");
+    return;
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    alert("Image size should be less than 5MB");
+    return;
+  }
+
+  setCategoryImage(file);
+
+  const reader = new FileReader();
+  reader.onload = (e) => setImagePreview(e.target.result);
+  reader.readAsDataURL(file);
+};
+
 
   const handleAddCategory = () => {
     setEditCategory(null);
@@ -44,11 +81,14 @@ const Categories = () => {
   };
 
   const handleEditCategory = (category) => {
-    setEditCategory(category);
-    setCategoryName(category.name);
-    setCategoryDescription(category.description || "");
-    setShowModal(true);
-  };
+  setEditCategory(category);
+  setCategoryName(category.name);
+  setCategoryDescription(category.description || "");
+  setImagePreview(category.imageUrl || "");
+  setCategoryImage(null);
+  setShowModal(true);
+};
+
   
 
   const handleSaveCategory = async () => {
@@ -63,15 +103,20 @@ const Categories = () => {
         alert("Category already exists");
         return;
       }
+let imageUrl = imagePreview;
 
-      const payload = {
-        companyId: user.uid,
-        name: categoryName.trim(),
-        description: categoryDescription.trim(),
-        isActive: true,
-        updatedAt: new Date(),
-      };
+if (categoryImage) {
+  imageUrl = await uploadCategoryImage();
+}
 
+const payload = {
+  companyId: user.uid,
+  name: categoryName.trim(),
+  description: categoryDescription.trim(),
+  imageUrl: imageUrl || null,
+  isActive: true,
+  updatedAt: new Date(),
+};
       if (editCategory) {
         // Update existing category
         await updateDoc(doc(db, "service_categories", editCategory.id), payload);
@@ -93,6 +138,17 @@ const Categories = () => {
       alert("Error saving category. Please try again.");
     }
   };
+  const uploadCategoryImage = async () => {
+  if (!categoryImage) return null;
+
+  const user = auth.currentUser;
+  const fileName = `category-images/${user.uid}/${Date.now()}_${categoryImage.name}`;
+  const storageRef = ref(storage, fileName);
+
+  const snapshot = await uploadBytes(storageRef, categoryImage);
+  return await getDownloadURL(snapshot.ref);
+};
+
 
   const handleDeleteCategory = async (categoryId) => {
     if (window.confirm("Are you sure you want to delete this category?")) {
@@ -138,29 +194,56 @@ const Categories = () => {
           {categories.map(category => (
             <div key={category.id} className="sd-service-card">
               <div className="sd-service-info">
+                 {/* CATEGORY IMAGE */}
+  {category.imageUrl && (
+    <img
+      src={category.imageUrl}
+      alt={category.name}
+      className="sd-category-image"
+    />
+  )}
+
                 <h3>{category.name}</h3>
                 {category.description && (
                   <p>{category.description}</p>
                 )}
-                <span className="sd-badge normal">
-                  {category.isActive ? "ACTIVE" : "INACTIVE"}
-                </span>
+               <span
+  className={`sd-status-badge ${
+    category.isActive ? "active" : "inactive"
+  }`}
+>
+  {category.isActive ? "ACTIVE" : "INACTIVE"}
+</span>
+
               </div>
 
-              <div className="sd-service-actions">
-                <button 
-                  className="sd-edit-btn"
-                  onClick={() => handleEditCategory(category)}
-                >
-                  Edit
-                </button>
-                <button 
-                  className="sd-delete-btn"
-                  onClick={() => handleDeleteCategory(category.id)}
-                >
-                  Delete
-                </button>
-              </div>
+             <div className="sd-service-actions">
+
+  <button 
+    className="sd-edit-btn"
+    onClick={() => handleEditCategory(category)}
+  >
+    Edit
+  </button>
+
+  <button
+    className={`sd-toggle-btn ${category.isActive ? "active" : "inactive"}`}
+    onClick={() =>
+      handleToggleCategoryStatus(category.id, category.isActive)
+    }
+  >
+    {category.isActive ? "Disable" : "Enable"}
+  </button>
+
+  <button 
+    className="sd-delete-btn"
+    onClick={() => handleDeleteCategory(category.id)}
+  >
+    Delete
+  </button>
+
+</div>
+
             </div>
           ))}
         </div>
@@ -181,6 +264,47 @@ const Categories = () => {
                 onChange={e => setCategoryName(e.target.value)}
               />
             </div>
+            <div className="sd-form-group">
+  <label>Category Image</label>
+
+  <div className="sd-image-upload">
+    {imagePreview ? (
+      <div className="sd-image-preview">
+        <img src={imagePreview} alt="Category preview" />
+        <button
+          type="button"
+          className="sd-remove-image-btn"
+          onClick={() => {
+            setImagePreview("");
+            setCategoryImage(null);
+          }}
+        >
+          ×
+        </button>
+      </div>
+    ) : (
+      <div className="sd-image-placeholder">
+        <span>No image selected</span>
+      </div>
+    )}
+
+    <input
+      type="file"
+      accept="image/*"
+      onChange={handleImageChange}
+      className="sd-file-input"
+      id="category-image"
+    />
+    <label htmlFor="category-image" className="sd-file-label">
+      {imagePreview ? "Change Image" : "Upload Image"}
+    </label>
+  </div>
+
+  <small className="sd-image-help">
+    Supported formats: JPG, PNG. Max size: 5MB
+  </small>
+</div>
+
 
             <div className="sd-form-group">
               <label>Description (Optional)</label>

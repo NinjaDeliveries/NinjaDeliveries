@@ -3732,3 +3732,11 @@
   font-size: 11px;
   font-weight: 500;
 }
+.sd-category-image {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 10px;
+  margin-bottom: 8px;
+  border: 1px solid #e5e7eb;
+}
