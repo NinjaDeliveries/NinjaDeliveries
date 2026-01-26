@@ -10,7 +10,7 @@ import {
   deleteDoc,
 } from "firebase/firestore";
 import "../../style/ServiceDashboard.css";
-import Navbar from "../../components/Navbar";
+// import Navbar from "../../components/Navbar";
 
 
 const GlobalPackages = () => {
@@ -128,7 +128,7 @@ const GlobalPackages = () => {
 
   return (
     <>
-      <Navbar />
+      {/* <Navbar /> */}
       <div className="global-packages-container">
         {/* Header Section */}
         <div className="gp-header">

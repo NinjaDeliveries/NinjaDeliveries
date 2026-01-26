@@ -16,6 +16,7 @@ import {
   setDoc,
 } from "firebase/firestore";
 import { deleteDoc } from "firebase/firestore";
+import { useNavigate } from "react-router-dom";
 
 
 /* =======================================================
@@ -120,6 +121,8 @@ export default function Admin() {
   const [roles, setRoles] = useState(ROLE_PRESETS);
   const [roleName, setRoleName] = useState("");
   const [selectedFeatures, setSelectedFeatures] = useState([]);
+  const navigate = useNavigate();
+
 
 useEffect(() => {
   const loadRoles = async () => {
@@ -424,6 +427,21 @@ const AVAILABLE_FEATURES = [
     <div style={styles.container}>
       <div style={styles.header}>
         <h1 style={styles.title}>Admin Dashboard</h1>
+
+        <button
+  style={{
+    padding: "10px 16px",
+    borderRadius: "10px",
+    border: "none",
+    background: "linear-gradient(135deg, #6366f1, #4f46e5)",
+    color: "#fff",
+    fontWeight: 600,
+    cursor: "pointer",
+  }}
+  onClick={() => navigate("/Admin/Packages")}
+>
+  Global Packages
+</button>
       </div>
 
       {/* Invite + Pending */}
