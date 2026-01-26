@@ -3740,3 +3740,9 @@
   margin-bottom: 8px;
   border: 1px solid #e5e7eb;
 }
+
+.sd-badge.pending { background: #fde68a; color: #92400e; }
+.sd-badge.assigned { background: #bfdbfe; color: #1e40af; }
+.sd-badge.started { background: #bbf7d0; color: #065f46; }
+.sd-badge.completed { background: #ddd6fe; color: #4c1d95; }
+.sd-badge.rejected { background: #fecaca; color: #7f1d1d; }
