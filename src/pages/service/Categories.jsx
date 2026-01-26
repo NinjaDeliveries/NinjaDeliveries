@@ -209,10 +209,10 @@ const payload = {
                 )}
                <span
   className={`sd-status-badge ${
-    category.isActive ? "active" : "inactive"
+    (category.isActive ?? true) ? "active" : "inactive"
   }`}
 >
-  {category.isActive ? "ACTIVE" : "INACTIVE"}
+  {(category.isActive ?? true) ? "Active" : "Inactive"}
 </span>
 
               </div>
@@ -227,12 +227,12 @@ const payload = {
   </button>
 
   <button
-    className={`sd-toggle-btn ${category.isActive ? "active" : "inactive"}`}
+    className={`sd-toggle-btn ${(category.isActive ?? true) ? "active" : "inactive"}`}
     onClick={() =>
-      handleToggleCategoryStatus(category.id, category.isActive)
+      handleToggleCategoryStatus(category.id, (category.isActive ?? true))
     }
   >
-    {category.isActive ? "Disable" : "Enable"}
+    {(category.isActive ?? true) ? "Disable" : "Enable"}
   </button>
 
   <button 

@@ -237,8 +237,8 @@ const Technicians = () => {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div>
                     <h3>{technician.name}</h3>
-                    <span className={`sd-status-badge ${technician.isActive !== false ? 'active' : 'inactive'}`}>
-                      {technician.isActive !== false ? 'Active' : 'Inactive'}
+                    <span className={`sd-status-badge ${(technician.isActive ?? true) ? 'active' : 'inactive'}`}>
+                      {(technician.isActive ?? true) ? 'Active' : 'Inactive'}
                     </span>
                   </div>
                 </div>
@@ -272,11 +272,11 @@ const Technicians = () => {
                 </button>
                 
                 <button 
-                  className={`sd-toggle-btn ${technician.isActive !== false ? 'active' : 'inactive'}`}
-                  onClick={() => handleToggleTechnicianStatus(technician.id, technician.isActive !== false)}
-                  title={technician.isActive !== false ? 'Deactivate Worker' : 'Activate Worker'}
+                  className={`sd-toggle-btn ${(technician.isActive ?? true) ? 'active' : 'inactive'}`}
+                  onClick={() => handleToggleTechnicianStatus(technician.id, (technician.isActive ?? true))}
+                  title={(technician.isActive ?? true) ? 'Deactivate Worker' : 'Activate Worker'}
                 >
-                  {technician.isActive !== false ? 'Disable' : 'Enable'}
+                  {(technician.isActive ?? true) ? 'Disable' : 'Enable'}
                 </button>
                 
                 <button 

@@ -57,37 +57,27 @@ const fetchServices = async () => {
     const user = auth.currentUser;
     if (!user) return;
 
-    const serviceSnap = await getDocs(
-      query(collection(db, "service_services"), where("companyId", "==", user.uid))
+    // Try both possible field names
+    let q = query(
+      collection(db, "service_services"),
+      where("companyId", "==", user.uid)
     );
 
-    const globalSnap = await getDocs(collection(db, "global_packages"));
+    let snap = await getDocs(q);
 
-    const globalMap = {};
-    globalSnap.docs.forEach(doc => {
-      globalMap[doc.data().nameLower] = doc.data();
-    });
-
-    const list = [];
-
-    for (const d of serviceSnap.docs) {
-      const service = { id: d.id, ...d.data() };
-      const key = service.name.toLowerCase();
-
-      if (!service.isActive && globalMap[key]) {
-        // 🔥 AUTO ACTIVATE
-        await updateDoc(doc(db, "service_services", service.id), {
-          globalPackageId: globalMap[key].id,
-          globalPrice: globalMap[key].price,
-          isActive: true,
-        });
-
-        service.isActive = true;
-        service.globalPrice = globalMap[key].price;
-      }
-
-      list.push(service);
+    // If no results, try with serviceId field
+    if (snap.docs.length === 0) {
+      q = query(
+        collection(db, "service_services"),
+        where("serviceId", "==", user.uid)
+      );
+      snap = await getDocs(q);
     }
+
+    const list = snap.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
 
     setServices(list);
   } catch (err) {
@@ -282,9 +272,18 @@ const fetchServices = async () => {
       </div>
 
       {loading ? (
-        <p>Loading services...</p>
+        <div className="sd-loading">
+          <p>Loading services...</p>
+        </div>
       ) : filteredServices.length === 0 ? (
-        <p>No services found{selectedCategory ? " in this category" : ""}.</p>
+        <div className="sd-empty-state">
+          <p><strong>No services found{selectedCategory ? " in this category" : ""}.</strong></p>
+          <p>Total services in database: {services.length}</p>
+          <p>Selected category: {selectedCategory || "All Categories"}</p>
+          <button className="sd-primary-btn" onClick={handleAddService}>
+            + Add Your First Service
+          </button>
+        </div>
       ) : (
         <div className="sd-table">
           {filteredServices.map(service => {
@@ -305,8 +304,8 @@ const fetchServices = async () => {
                         {getCategoryName(service.categoryId)}
                       </span>
                     )}
-                    <span className={`sd-status-badge ${service.isActive !== false ? 'active' : 'inactive'}`}>
-                      {service.isActive !== false ? 'Active' : 'Inactive'}
+                    <span className={`sd-status-badge ${(service.isActive ?? true) ? 'active' : 'inactive'}`}>
+                      {(service.isActive ?? true) ? 'Active' : 'Inactive'}
                     </span>
                   </div>
                 </div>
@@ -376,11 +375,11 @@ const fetchServices = async () => {
                 )}
                 
                 <button 
-                  className={`sd-toggle-btn ${service.isActive !== false ? 'active' : 'inactive'}`}
-                  onClick={() => handleToggleServiceStatus(service.id, service.isActive !== false)}
-                  title={service.isActive !== false ? 'Deactivate Service' : 'Activate Service'}
+                  className={`sd-toggle-btn ${(service.isActive ?? true) ? 'active' : 'inactive'}`}
+                  onClick={() => handleToggleServiceStatus(service.id, (service.isActive ?? true))}
+                  title={(service.isActive ?? true) ? 'Deactivate Service' : 'Activate Service'}
                 >
-                  {service.isActive !== false ? 'Disable' : 'Enable'}
+                  {(service.isActive ?? true) ? 'Disable' : 'Enable'}
                 </button>
                 
                 <button 
