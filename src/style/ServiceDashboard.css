@@ -9,6 +9,8 @@
 /* ========== SIDEBAR ========== */
 .sd-sidebar {
   width: 260px;
+  height: 100vh;
+  overflow: hidden; 
   background: linear-gradient(180deg, #4b3cc4, #3b2fa3);
   color: #fff;
   display: flex;
@@ -68,8 +70,13 @@
 /* ========== MAIN CONTENT ========== */
 .sd-main {
   flex: 1;
-  padding: 30px;
+  height: 100%;
+  overflow-y: auto;     
+  overflow-x: hidden;
+  padding: 24px;
+  background: #f8fafc;
 }
+
 
 /* ========== HEADER ========== */
 .sd-header h1 {
@@ -163,7 +170,7 @@
 .sd-page {
   padding: 24px;
   background: #f5f6fa;
-  min-height: calc(100vh - 80px);
+   min-height: auto;
 }
 
 .sd-page-title {
@@ -2898,7 +2905,7 @@
 }
 /* ========== GLOBAL PACKAGES STYLES WITH NAVBAR ========== */
 .global-packages-container {
-  min-height: calc(100vh - 80px);
+  min-height: auto;
   background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
   padding: 24px;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -3740,7 +3747,12 @@
   margin-bottom: 8px;
   border: 1px solid #e5e7eb;
 }
-
+/* ROOT WRAPPER */
+.sd-wrapper {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;   
+}
 .sd-badge.pending { background: #fde68a; color: #92400e; }
 .sd-badge.assigned { background: #bfdbfe; color: #1e40af; }
 .sd-badge.started { background: #bbf7d0; color: #065f46; }
