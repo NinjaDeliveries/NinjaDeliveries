@@ -22,10 +22,10 @@ const Services = () => {
   const [openModal, setOpenModal] = useState(false);
   const [editService, setEditService] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState("");
-  const [showCreateCategoryModal, setShowCreateCategoryModal] = useState(false);
-  const [newCategoryName, setNewCategoryName] = useState("");
-  const [newCategoryDescription, setNewCategoryDescription] = useState("");
   const [openGlobalServiceModal, setOpenGlobalServiceModal] = useState(false);
+
+  const [categoryMasters, setCategoryMasters] = useState([]);
+  const [serviceMasters, setServiceMasters] = useState([]);
 
 
   // const fetchServices = async () => {
@@ -87,27 +87,44 @@ const fetchServices = async () => {
   }
 };
 
+  // const fetchCategories = async () => {
+  //   try {
+  //     const user = auth.currentUser;
+  //     if (!user) return;
+
+  //     // const q = query(
+  //     //   collection(db, "service_categories"),
+  //     //   where("companyId", "==", user.uid)
+  //     // );
+
+  //     const q = query(collection(db, "service_categories"));
+
+  //     const snap = await getDocs(q);
+  //     const list = snap.docs.map(doc => ({
+  //       id: doc.id,
+  //       ...doc.data(),
+  //     }));
+
+  //     setCategories(list);
+  //   } catch (err) {
+  //     console.error("Fetch categories error:", err);
+  //   }
+  // };
+
   const fetchCategories = async () => {
-    try {
-      const user = auth.currentUser;
-      if (!user) return;
+  try {
+    const snap = await getDocs(collection(db, "service_categories"));
 
-      const q = query(
-        collection(db, "service_categories"),
-        where("companyId", "==", user.uid)
-      );
+    const list = snap.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
 
-      const snap = await getDocs(q);
-      const list = snap.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-
-      setCategories(list);
-    } catch (err) {
-      console.error("Fetch categories error:", err);
-    }
-  };
+    setCategories(list);
+  } catch (err) {
+    console.error("Fetch categories error:", err);
+  }
+};
 
   const handleAddService = () => {
     setEditService(null);
@@ -131,64 +148,7 @@ const fetchServices = async () => {
   };
 
   const handleCategoryChange = (e) => {
-    const value = e.target.value;
-    if (value === "create-new") {
-      setShowCreateCategoryModal(true);
-    } else {
-      setSelectedCategory(value);
-    }
-  };
-
-  const handleCreateCategory = async () => {
-    try {
-      const user = auth.currentUser;
-      if (!user || !newCategoryName.trim()) {
-        alert("Please enter a category name");
-        return;
-      }
-
-      // Check if category already exists
-      const existingCategory = categories.find(cat => 
-        cat.name.toLowerCase() === newCategoryName.trim().toLowerCase()
-      );
-      
-      if (existingCategory) {
-        alert("A category with this name already exists");
-        return;
-      }
-
-      const payload = {
-        companyId: user.uid,
-        name: newCategoryName.trim(),
-        description: newCategoryDescription.trim(),
-        isActive: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      const docRef = await addDoc(collection(db, "service_categories"), payload);
-      
-      // Refresh categories from database
-      await fetchCategories();
-      
-      // Select the newly created category
-      setSelectedCategory(docRef.id);
-      
-      // Reset form and close
-      setNewCategoryName("");
-      setNewCategoryDescription("");
-      setShowCreateCategoryModal(false);
-      
-    } catch (error) {
-      console.error("Error creating category:", error);
-      alert("Error creating category. Please try again.");
-    }
-  };
-
-  const handleCloseCategoryModal = () => {
-    setShowCreateCategoryModal(false);
-    setNewCategoryName("");
-    setNewCategoryDescription("");
+    setSelectedCategory(e.target.value);
   };
 
   const handleDeleteService = async (serviceId) => {
@@ -219,54 +179,103 @@ const fetchServices = async () => {
     }
   };
 
+const fetchCategoryMasters = async () => {
+  const snap = await getDocs(collection(db, "service_categories_master"));
+  setCategoryMasters(
+    snap.docs.map(d => ({ id: d.id, ...d.data() }))
+  );
+};
+
+const fetchServiceMasters = async () => {
+  const snap = await getDocs(collection(db, "service_services_master"));
+  setServiceMasters(
+    snap.docs.map(d => ({ id: d.id, ...d.data() }))
+  );
+};
+
   useEffect(() => {
-    fetchServices();
-    fetchCategories();
-  }, []);
+  fetchServices();
+  fetchCategories();        // company categories
+  fetchCategoryMasters();   // MASTER
+  fetchServiceMasters();    // MASTER
+}, []);
 
-  const getCategoryName = (categoryId) => {
-    if (!categoryId) return null; // Return null instead of "Uncategorized"
-    const category = categories.find(cat => cat.id === categoryId);
-    return category ? category.name : null;
-  };
+  const getCategoryName = (categoryMasterId) => {
+  const cat = categoryMasters.find(c => c.id === categoryMasterId);
+  return cat ? cat.name : null;
+};
 
-  const filteredServices = selectedCategory 
-    ? services.filter(service => service.categoryId === selectedCategory)
-    : services;
+const getServiceName = (service) => {
+  if (service.serviceType === "custom") return service.name;
+
+  const master = serviceMasters.find(
+    s => s.id === service.adminServiceId
+  );
+
+  return master ? master.name : service.name;
+};
+  // const filteredServices = selectedCategory 
+  //   ? services.filter(service => service.categoryId === selectedCategory)
+  //   : services;
+  const filteredServices = selectedCategory
+  ? services.filter(s => s.categoryMasterId === selectedCategory)
+  : services;
+  
+  <select value={selectedCategory} onChange={handleCategoryChange}>
+  <option value="">All Categories</option>
+  {categoryMasters.map(cat => (
+    <option key={cat.id} value={cat.id}>
+      {cat.name}
+    </option>
+  ))}
+</select>
 
   return (
     <div className="sd-main">
       <div className="sd-header">
         <h1>Services</h1>
         <div className="sd-header-actions">
-          <select 
+          {/* <select 
             className="sd-filter-select"
             value={selectedCategory} 
             onChange={handleCategoryChange}
           >
             <option value="">All Categories</option>
-            <option value="create-new">+ Create Category</option>
             {categories.map(category => (
               <option key={category.id} value={category.id}>
                 {category.name}
               </option>
             ))}
-          </select>
+          </select> */}
+
+          <select 
+  className="sd-filter-select"
+  value={selectedCategory} 
+  onChange={handleCategoryChange}
+>
+  <option value="">All Categories</option>
+  {categoryMasters.map(cat => (
+  <option key={cat.id} value={cat.id}>
+    {cat.name}
+  </option>
+))}
+</select>
           {/* <button className="sd-primary-btn" onClick={handleAddService}>
             + Add Package
           </button> */}
 
             <button className="sd-primary-btn" onClick={handleAddService}>
-  + Add Package
+  {/* + Add Package */}
+  + Add Service
 </button>
 
-<button
+{/* <button
   className="sd-primary-btn"
   style={{ marginLeft: "10px", background: "#6366f1" }}
   onClick={handleAddGlobalService}
 >
   + Add Service
-</button>
+</button> */}
 
         </div>
       </div>
@@ -297,13 +306,21 @@ const fetchServices = async () => {
               )}
               <div className="sd-service-info">
                 <div>
-                  <h3>{service.name}</h3>
+                  {/* <h3>{service.name}</h3> */}
+                  <h3>{getServiceName(service)}</h3>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
-                    {service.categoryId && getCategoryName(service.categoryId) && (
+                    {/* {service.categoryId && getCategoryName(service.categoryId) && (
+                      
                       <span className="sd-badge category">
                         {getCategoryName(service.categoryId)}
                       </span>
-                    )}
+                    )} */}
+                    {/* {service.categoryMasterId && getCategoryName(service.categoryMasterId)} */}
+                    {service.masterCategoryId && (
+  <span className="sd-badge category">
+    {getCategoryName(service.masterCategoryId)}
+  </span>
+)}
                     <span className={`sd-status-badge ${(service.isActive ?? true) ? 'active' : 'inactive'}`}>
                       {(service.isActive ?? true) ? 'Active' : 'Inactive'}
                     </span>
@@ -416,44 +433,7 @@ const fetchServices = async () => {
     }}
   />
 )}
-
-      {/* Create Category Modal */}
-      {showCreateCategoryModal && (
-        <div className="sd-modal-backdrop">
-          <div className="sd-modal">
-            <h2>Create New Category</h2>
-
-            <div className="sd-form-group">
-              <label>Category Name</label>
-              <input
-                type="text"
-                placeholder="Enter category name"
-                value={newCategoryName}
-                onChange={e => setNewCategoryName(e.target.value)}
-              />
-            </div>
-
-            <div className="sd-form-group">
-              <label>Description (Optional)</label>
-              <textarea
-                placeholder="Enter category description"
-                value={newCategoryDescription}
-                onChange={e => setNewCategoryDescription(e.target.value)}
-                rows="3"
-              />
-            </div>
-
-            <div className="sd-modal-actions">
-              <button className="sd-cancel-btn" onClick={handleCloseCategoryModal}>
-                Cancel
-              </button>
-              <button className="sd-save-btn" onClick={handleCreateCategory}>
-                Create Category
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+{/*  */}
     </div>
   );
 };

@@ -438,7 +438,7 @@ const AVAILABLE_FEATURES = [
     fontWeight: 600,
     cursor: "pointer",
   }}
-  onClick={() => navigate("/Admin/Packages")}
+  onClick={() => navigate("/Admin/categories-services")}
 >
   Global Packages
 </button>

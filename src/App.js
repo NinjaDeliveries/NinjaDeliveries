@@ -54,7 +54,7 @@ import Settings from "./pages/service/Settings";
 import Services from "./pages/service/Services";
 import Technicians from "./pages/service/Technicians";
 import Categories from "./pages/service/Categories";
-import GlobalPackages from "./pages/Admin/GlobalPackages";
+import AdminCategoriesServices from "./pages/Admin/AdminCategoriesServices";
 function App() {
 const { user, loadingUser } = useUser();
 const isAdmin =
@@ -387,8 +387,8 @@ if (loadingUser) {
 </Route>
 
 <Route
-  path="/admin/packages"
-  element={<GlobalPackages />}
+  path="/admin/categories-services"
+  element={<AdminCategoriesServices />}
 />
 
 <Route

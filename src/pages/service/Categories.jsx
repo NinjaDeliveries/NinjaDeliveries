@@ -15,6 +15,23 @@ const [imagePreview, setImagePreview] = useState("");
   const [editCategory, setEditCategory] = useState(null);
   const [categoryName, setCategoryName] = useState("");
   const [categoryDescription, setCategoryDescription] = useState("");
+
+  const [adminCategories, setAdminCategories] = useState([]);
+const [selectedCategoryId, setSelectedCategoryId] = useState("");
+
+const fetchAdminCategories = async () => {
+  const snap = await getDocs(collection(db, "service_categories_master"));
+  const list = snap.docs.map(d => ({
+    id: d.id,
+    ...d.data(),
+  }));
+  setAdminCategories(list.filter(c => c.isActive));
+};
+
+useEffect(() => {
+  fetchCategories();       // company categories
+  fetchAdminCategories();  // admin categories
+}, []);
 const handleToggleCategoryStatus = async (categoryId, currentStatus) => {
   try {
     await updateDoc(doc(db, "service_categories", categoryId), {
@@ -89,55 +106,104 @@ const handleToggleCategoryStatus = async (categoryId, currentStatus) => {
   setShowModal(true);
 };
 
-  
-
   const handleSaveCategory = async () => {
-    try {
-      const user = auth.currentUser;
-      if (!user || !categoryName.trim()) return;
-      
-      const exists = categories.find(
-        c => c.name.trim().toLowerCase() === categoryName.trim().toLowerCase()
-      );
-      if (exists && (!editCategory || exists.id !== editCategory.id)) {
-        alert("Category already exists");
-        return;
-      }
-let imageUrl = imagePreview;
+  const user = auth.currentUser;
+  if (!user || !selectedCategoryId) {
+    alert("Select a category");
+    return;
+  }
 
-if (categoryImage) {
-  imageUrl = await uploadCategoryImage();
-}
+  const adminCat = adminCategories.find(
+    c => c.id === selectedCategoryId
+  );
 
-const payload = {
+  if (!adminCat) return;
+
+  const exists = categories.find(
+    c => c.categoryId === selectedCategoryId
+  );
+
+  if (exists && !editCategory) {
+    alert("Category already added");
+    return;
+  }
+
+  const payload = {
   companyId: user.uid,
-  name: categoryName.trim(),
-  description: categoryDescription.trim(),
-  imageUrl: imageUrl || null,
+
+  // 🔥 FIXED NAMING
+  masterCategoryId: adminCat.id,
+  name: adminCat.name,
+
   isActive: true,
   updatedAt: new Date(),
 };
-      if (editCategory) {
-        // Update existing category
-        await updateDoc(doc(db, "service_categories", editCategory.id), payload);
-      } else {
-        // Create new category
-        await addDoc(collection(db, "service_categories"), {
-        ...payload,
-        createdAt: new Date(),
-      });
-      }
 
-      setShowModal(false);
-      setCategoryName("");
-      setCategoryDescription("");
-      setEditCategory(null);
-      fetchCategories();
-    } catch (error) {
-      console.error("Error saving category:", error);
-      alert("Error saving category. Please try again.");
-    }
-  };
+  if (editCategory) {
+    await updateDoc(
+      doc(db, "service_categories", editCategory.id),
+      payload
+    );
+  } else {
+    await addDoc(collection(db, "service_categories"), {
+      ...payload,
+      createdAt: new Date(),
+    });
+  }
+
+  setShowModal(false);
+  setSelectedCategoryId("");
+  setEditCategory(null);
+  fetchCategories();
+};
+
+//   const handleSaveCategory = async () => {
+//     try {
+//       const user = auth.currentUser;
+//       if (!user || !categoryName.trim()) return;
+      
+//       const exists = categories.find(
+//         c => c.name.trim().toLowerCase() === categoryName.trim().toLowerCase()
+//       );
+//       if (exists && (!editCategory || exists.id !== editCategory.id)) {
+//         alert("Category already exists");
+//         return;
+//       }
+// let imageUrl = imagePreview;
+
+// if (categoryImage) {
+//   imageUrl = await uploadCategoryImage();
+// }
+
+// const payload = {
+//   companyId: user.uid,
+//   name: categoryName.trim(),
+//   description: categoryDescription.trim(),
+//   imageUrl: imageUrl || null,
+//   isActive: true,
+//   updatedAt: new Date(),
+// };
+//       if (editCategory) {
+//         // Update existing category
+//         await updateDoc(doc(db, "service_categories", editCategory.id), payload);
+//       } else {
+//         // Create new category
+//         await addDoc(collection(db, "service_categories"), {
+//         ...payload,
+//         createdAt: new Date(),
+//       });
+//       }
+
+//       setShowModal(false);
+//       setCategoryName("");
+//       setCategoryDescription("");
+//       setEditCategory(null);
+//       fetchCategories();
+//     } catch (error) {
+//       console.error("Error saving category:", error);
+//       alert("Error saving category. Please try again.");
+//     }
+//   };
   const uploadCategoryImage = async () => {
   if (!categoryImage) return null;
 
@@ -256,18 +322,35 @@ const payload = {
             <h2>{editCategory ? "Edit Category" : "Add Category"}</h2>
 
             <div className="sd-form-group">
-              <label>Category Name</label>
-              <input
+              {/* <input
                 type="text"
                 placeholder="Enter category name"
                 value={categoryName}
                 onChange={e => setCategoryName(e.target.value)}
-              />
+              /> */}
+
+              <div className="sd-form-group">
+  <label>Select Category</label>
+
+  <select
+    value={selectedCategoryId}
+    onChange={(e) => setSelectedCategoryId(e.target.value)}
+  >
+    <option value="">Select category</option>
+
+    {adminCategories.map(cat => (
+      <option key={cat.id} value={cat.id}>
+        {cat.name}
+      </option>
+    ))}
+  </select>
+</div>
+
             </div>
             <div className="sd-form-group">
-  <label>Category Image</label>
+  {/* <label>Category Image</label> */}
 
-  <div className="sd-image-upload">
+  {/* <div className="sd-image-upload">
     {imagePreview ? (
       <div className="sd-image-preview">
         <img src={imagePreview} alt="Category preview" />
@@ -279,7 +362,6 @@ const payload = {
             setCategoryImage(null);
           }}
         >
-          ×
         </button>
       </div>
     ) : (
@@ -298,15 +380,15 @@ const payload = {
     <label htmlFor="category-image" className="sd-file-label">
       {imagePreview ? "Change Image" : "Upload Image"}
     </label>
-  </div>
+  </div> */}
 
-  <small className="sd-image-help">
+  {/* <small className="sd-image-help">
     Supported formats: JPG, PNG. Max size: 5MB
-  </small>
+  </small> */}
 </div>
 
 
-            <div className="sd-form-group">
+            {/* <div className="sd-form-group">
               <label>Description (Optional)</label>
               <textarea
                 placeholder="Enter category description"
@@ -314,7 +396,7 @@ const payload = {
                 onChange={e => setCategoryDescription(e.target.value)}
                 rows="3"
               />
-            </div>
+            </div> */}
 
             <div className="sd-modal-actions">
               <button className="sd-cancel-btn" onClick={handleCloseModal}>

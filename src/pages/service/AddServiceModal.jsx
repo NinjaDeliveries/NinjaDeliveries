@@ -11,14 +11,45 @@ const AddServiceModal = ({ onClose, onSaved, editService }) => {
   const [packages, setPackages] = useState([
     { duration: 1, unit: "month", price: "" },
   ]);
-  const [showCreateCategory, setShowCreateCategory] = useState(false);
-  const [newCategoryName, setNewCategoryName] = useState("");
-  const [newCategoryDescription, setNewCategoryDescription] = useState("");
+
   const [serviceImage, setServiceImage] = useState(null);
   const [imagePreview, setImagePreview] = useState("");
   const [uploading, setUploading] = useState(false);
 
   const isEditMode = !!editService;
+
+  // admin predefined services
+const [adminServices, setAdminServices] = useState([]);
+
+// service selection
+const [selectedServiceId, setSelectedServiceId] = useState("");
+const [isCustomService, setIsCustomService] = useState(false);
+
+// pricing
+const [priceType, setPriceType] = useState("");
+const [fixedPrice, setFixedPrice] = useState("");
+
+const fetchAdminServices = async (catId) => {
+  if (!catId) {
+    setAdminServices([]);
+    return;
+  }
+
+  const q = query(
+    collection(db, "service_services_master"),
+    where("categoryId", "==", catId),
+    where("isActive", "==", true)
+  );
+
+  const snap = await getDocs(q);
+
+  const list = snap.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data(),
+  }));
+
+  setAdminServices(list);
+};
 
   // Load existing service data when in edit mode
   useEffect(() => {
@@ -90,75 +121,37 @@ const AddServiceModal = ({ onClose, onSaved, editService }) => {
     setImagePreview("");
   };
 
-  // Create new category
-  const handleCreateCategory = async () => {
-    try {
-      const user = auth.currentUser;
-      if (!user || !newCategoryName.trim()) {
-        alert("Please enter a category name");
-        return;
-      }
-
-      // Check if category already exists
-      const existingCategory = categories.find(cat => 
-        cat.name.toLowerCase() === newCategoryName.trim().toLowerCase()
-      );
-      
-      if (existingCategory) {
-        alert("A category with this name already exists");
-        return;
-      }
-
-      const payload = {
-        companyId: user.uid,
-        name: newCategoryName.trim(),
-        description: newCategoryDescription.trim(),
-        isActive: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      const docRef = await addDoc(collection(db, "service_categories"), payload);
-      
-      // Refresh categories from database to avoid duplicates
-      await fetchCategories();
-      
-      // Select the newly created category
-      setCategoryId(docRef.id);
-      
-      // Reset form and close
-      setNewCategoryName("");
-      setNewCategoryDescription("");
-      setShowCreateCategory(false);
-      
-    } catch (error) {
-      console.error("Error creating category:", error);
-      alert("Error creating category. Please try again.");
-    }
-  };
 
   // Fetch categories function
+  // const fetchCategories = async () => {
+  //   try {
+  //     const user = auth.currentUser;
+  //     if (!user) return;
+
+  //     const q = query(
+  //       collection(db, "service_categories"),
+  //       // where("companyId", "==", user.uid)
+  //       getDocs(collection(db, "service_categories"))
+  //     );
+
+  //     const snap = await getDocs(q);
+  //     const list = snap.docs.map(doc => ({
+  //       id: doc.id,
+  //       ...doc.data(),
+  //     }));
+
+  //     setCategories(list);
+  //   } catch (err) {
+  //     console.error("Fetch categories error:", err);
+  //   }
+  // };
+
   const fetchCategories = async () => {
-    try {
-      const user = auth.currentUser;
-      if (!user) return;
-
-      const q = query(
-        collection(db, "service_categories"),
-        where("companyId", "==", user.uid)
-      );
-
-      const snap = await getDocs(q);
-      const list = snap.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-
-      setCategories(list);
-    } catch (err) {
-      console.error("Fetch categories error:", err);
-    }
-  };
+  const snap = await getDocs(collection(db, "service_categories_master"));
+  setCategories(
+    snap.docs.map(d => ({ id: d.id, ...d.data() }))
+  );
+};
 
   const addPackageRow = () => {
     setPackages([...packages, { duration: 1, unit: "month", price: "" }]);
@@ -182,7 +175,13 @@ const AddServiceModal = ({ onClose, onSaved, editService }) => {
     fetchCategories();
   }, []);
 
+ 
+
   const handleSave = async () => {
+     if (!priceType) {
+  alert("Please select pricing type");
+  return;
+}
     try {
       const user = auth.currentUser;
       if (!user) return;
@@ -190,12 +189,19 @@ const AddServiceModal = ({ onClose, onSaved, editService }) => {
         alert("Service name is required");
         return;
       }
-      for (let p of packages) {
-        if (!p.price || Number(p.price) <= 0) {
-          alert("Each package must have a valid price");
-          return;
-        }
-      }
+      if (priceType === "package") {
+  for (let p of packages) {
+    if (!p.price || Number(p.price) <= 0) {
+      alert("Each package must have a valid price");
+      return;
+    }
+  }
+}
+
+if (priceType === "price" && (!fixedPrice || Number(fixedPrice) <= 0)) {
+  alert("Please enter a valid price");
+  return;
+}
 
       setUploading(true);
 
@@ -206,20 +212,58 @@ const AddServiceModal = ({ onClose, onSaved, editService }) => {
         imageUrl = await uploadImage();
       }
 
+      // const payload = {
+      //   companyId: user.uid,
+      //   name,
+      //   type: "package", // Always package type
+      //   categoryId: categoryId || null,
+      //   packages: packages.map(p => ({
+      //     duration: Number(p.duration),
+      //     unit: p.unit,
+      //     price: Number(p.price),
+      //   })),
+      //   imageUrl: imageUrl || null,
+      //   isActive: true,
+      //   updatedAt: new Date(),
+      // };
+
+      let finalServiceName = name;
+
+if (!isCustomService) {
+  const svc = adminServices.find(s => s.id === selectedServiceId);
+  if (svc) {
+    finalServiceName = svc.name;
+  }
+}
       const payload = {
-        companyId: user.uid,
-        name,
-        type: "package", // Always package type
-        categoryId: categoryId || null,
-        packages: packages.map(p => ({
-          duration: Number(p.duration),
-          unit: p.unit,
-          price: Number(p.price),
-        })),
-        imageUrl: imageUrl || null,
-        isActive: true,
-        updatedAt: new Date(),
-      };
+  companyId: user.uid,
+  categoryMasterId: categoryId,
+  name: finalServiceName,
+  categoryId,
+  imageUrl: imageUrl || null,
+  isActive: true,
+  updatedAt: new Date(),
+};
+
+// service source
+if (isCustomService) {
+  payload.serviceType = "custom";
+} else {
+  payload.serviceType = "admin";
+  payload.adminServiceId = selectedServiceId;
+}
+
+// pricing
+if (priceType === "price") {
+  payload.price = Number(fixedPrice);
+  payload.packages = [];
+} else {
+  payload.packages = packages.map(p => ({
+    duration: Number(p.duration),
+    unit: p.unit,
+    price: Number(p.price),
+  }));
+}
 
       if (isEditMode) {
         // Update existing service
@@ -245,14 +289,151 @@ const AddServiceModal = ({ onClose, onSaved, editService }) => {
       <div className="sd-modal">
         <h2>{isEditMode ? "Edit Service" : "Create Service"}</h2>
 
-        <div className="sd-form-group">
+        {/* <div className="sd-form-group">
           <label>Service Name</label>
           <input
             placeholder="Service Name"
             value={name}
             onChange={e => setName(e.target.value)}
           />
+        </div> */}
+        {/* <div className="sd-form-group">
+  <label>Service</label>
+
+  {!isCustomService ? (
+    <select
+      value={selectedServiceId}
+      onChange={(e) => {
+        const val = e.target.value;
+
+        if (val === "custom") {
+          setIsCustomService(true);
+          setSelectedServiceId("");
+          setName("");
+        } else {
+          setSelectedServiceId(val);
+          const svc = adminServices.find(s => s.id === val);
+          if (svc) setName(svc.name);
+        }
+      }}
+    >
+      <option value="">Select Service</option>
+
+      {adminServices.map(svc => (
+        <option key={svc.id} value={svc.id}>
+          {svc.name}
+        </option>
+      ))}
+
+      <option value="custom">➕ Add Custom Service</option>
+    </select>
+  ) : (
+    <>
+      <input
+        placeholder="Enter service name"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+      />
+      <button
+        type="button"
+        className="sd-link-btn"
+        onClick={() => {
+          setIsCustomService(false);
+          setName("");
+        }}
+      >
+        ← Back to predefined services
+      </button>
+    </>
+  )}
+</div> */}
+<div className="sd-form-group">
+          <label>Category</label>
+          <div className="sd-category-section">
+    
+            {/* <select value={categoryId} onChange={e => setCategoryId(e.target.value)}>
+              <option value="">Select Category</option>
+              {categories.map(category => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select> */}
+
+            <select
+  value={categoryId}
+  onChange={(e) => {
+    const val = e.target.value;
+    setCategoryId(val);             // MASTER ID
+    setSelectedServiceId("");
+    setIsCustomService(false);
+    setName("");
+    fetchAdminServices(val);        // uses categoryMasterId
+  }}
+>
+  <option value="">Select Category</option>
+  {categories.map(cat => (
+    <option key={cat.id} value={cat.id}>
+      {cat.name}
+    </option>
+  ))}
+</select>
+            
+          </div>
         </div>
+
+              {categoryId && (
+  <div className="sd-form-group">
+    <label>Service</label>
+
+    {!isCustomService ? (
+      <select
+        value={selectedServiceId}
+        onChange={(e) => {
+          const val = e.target.value;
+
+          if (val === "custom") {
+            setIsCustomService(true);
+            setSelectedServiceId("");
+            setName("");
+          } else {
+            setSelectedServiceId(val);
+            const svc = adminServices.find(s => s.id === val);
+            if (svc) setName(svc.name);
+          }
+        }}
+      >
+        <option value="">Select Service</option>
+
+        {adminServices.map(svc => (
+          <option key={svc.id} value={svc.id}>
+            {svc.name}
+          </option>
+        ))}
+
+        <option value="custom">➕ Add Custom Service</option>
+      </select>
+    ) : (
+      <>
+        <input
+          placeholder="Enter service name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+        <button
+          type="button"
+          className="sd-link-btn"
+          onClick={() => {
+            setIsCustomService(false);
+            setName("");
+          }}
+        >
+          ← Back to predefined services
+        </button>
+      </>
+    )}
+  </div>
+)}
 
         <div className="sd-form-group">
           <label>Service Image</label>
@@ -289,73 +470,11 @@ const AddServiceModal = ({ onClose, onSaved, editService }) => {
           </small>
         </div>
 
-        <div className="sd-form-group">
-          <label>Category</label>
-          <div className="sd-category-section">
-            <select value={categoryId} onChange={e => setCategoryId(e.target.value)}>
-              <option value="">Select Category (Optional)</option>
-              {categories.map(category => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
-            <button 
-              type="button" 
-              className="sd-create-category-btn"
-              onClick={() => setShowCreateCategory(true)}
-            >
-              + Create Category
-            </button>
-          </div>
-        </div>
+        
 
-        {/* Create Category Modal */}
-        {showCreateCategory && (
-          <div className="sd-create-category-form">
-            <h4>Create New Category</h4>
-            <div className="sd-form-group">
-              <label>Category Name</label>
-              <input
-                type="text"
-                placeholder="Enter category name"
-                value={newCategoryName}
-                onChange={e => setNewCategoryName(e.target.value)}
-              />
-            </div>
-            <div className="sd-form-group">
-              <label>Description (Optional)</label>
-              <input
-                type="text"
-                placeholder="Enter description"
-                value={newCategoryDescription}
-                onChange={e => setNewCategoryDescription(e.target.value)}
-              />
-            </div>
-            <div className="sd-create-category-actions">
-              <button 
-                type="button" 
-                className="sd-cancel-btn"
-                onClick={() => {
-                  setShowCreateCategory(false);
-                  setNewCategoryName("");
-                  setNewCategoryDescription("");
-                }}
-              >
-                Cancel
-              </button>
-              <button 
-                type="button" 
-                className="sd-save-btn"
-                onClick={handleCreateCategory}
-              >
-                Create
-              </button>
-            </div>
-          </div>
-        )}
+  
 
-        <div className="sd-form-group">
+        {/* <div className="sd-form-group">
           <label>Service Packages</label>
           {packages.map((p, i) => (
             <div key={i} className="sd-package-row">
@@ -393,8 +512,96 @@ const AddServiceModal = ({ onClose, onSaved, editService }) => {
           <button type="button" className="sd-add-package-btn" onClick={addPackageRow}>
             + Add Package
           </button>
-        </div>
+        </div> */}
 
+        <div className="sd-form-group">
+  <label>Pricing Type</label>
+
+  <div style={{ display: "flex", gap: "20px" }}>
+    <label>
+      <input
+        type="radio"
+        value="price"
+        checked={priceType === "price"}
+        onChange={() => setPriceType("price")}
+      />
+      Fixed Price
+    </label>
+
+    <label>
+      <input
+        type="radio"
+        value="package"
+        checked={priceType === "package"}
+        onChange={() => setPriceType("package")}
+      />
+      Package
+    </label>
+  </div>
+</div>
+
+{priceType === "price" && (
+  <div className="sd-form-group">
+    <label>Price</label>
+    <input
+      type="number"
+      placeholder="Enter price"
+      value={fixedPrice}
+      onChange={(e) => setFixedPrice(e.target.value)}
+    />
+  </div>
+)}
+
+{priceType === "package" && (
+  <div className="sd-form-group">
+    <label>Service Packages</label>
+
+    {packages.map((p, i) => (
+      <div key={i} className="sd-package-row">
+        <input
+          type="number"
+          placeholder="Duration"
+          value={p.duration}
+          onChange={e => updatePackage(i, "duration", e.target.value)}
+        />
+
+        <select
+          value={p.unit}
+          onChange={e => updatePackage(i, "unit", e.target.value)}
+        >
+          <option value="month">month(s)</option>
+          <option value="week">week(s)</option>
+          <option value="day">day(s)</option>
+        </select>
+
+        <input
+          type="number"
+          placeholder="Price"
+          value={p.price}
+          onChange={e => updatePackage(i, "price", e.target.value)}
+        />
+
+        {packages.length > 1 && (
+          <button
+            type="button"
+            className="sd-remove-btn"
+            onClick={() => removePackageRow(i)}
+          >
+            Remove
+          </button>
+        )}
+      </div>
+    ))}
+
+    <button
+      type="button"
+      className="sd-add-package-btn"
+      onClick={addPackageRow}
+    >
+      + Add Package
+    </button>
+  </div>
+)}
         <div className="sd-modal-actions">
           <button className="sd-cancel-btn" onClick={onClose} disabled={uploading}>
             Cancel
