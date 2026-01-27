@@ -120,10 +120,8 @@ useEffect(() => {
 
   checkStatus(); // 👈 run immediately
   const interval = setInterval(checkStatus, 15000); // every 15 sec
-
   return () => clearInterval(interval);
 }, [offlineWindows, isOnline, user]);
-
 
 
   // 🔹 Load availability
