@@ -25,10 +25,20 @@ const Bookings = () => {
   const user = auth.currentUser;
 console.log("BOOKINGS PAGE UID:", user?.uid);
 
+const groupedByDate = bookings.reduce((acc, b) => {
+  const date = b.date;
+  if (!acc[date]) acc[date] = [];
+  acc[date].push(b);
+  return acc;
+}, {});
+const sortedDates = Object.keys(groupedByDate).sort(
+  (a, b) => new Date(a) - new Date(b)
+);
 
   const fetchBookings = async () => {
   try {
     const user = auth.currentUser;
+
     if (!user) return;
 
     console.log("BOOKINGS PAGE UID:", user.uid);
@@ -196,94 +206,72 @@ const handleCompleteWork = async (booking) => {
         <p>No bookings yet.</p>
       ) : (
         <div className="sd-table">
-          {bookings.map((b) => (
-            <div key={b.id} className="sd-service-card">
-              <div>
-                <h3>{b.customerName}</h3>
-                <p>{b.serviceName}</p>
-                <p>{b.workName}</p>
-                <p>{b.date} • {b.time}</p>
-              </div>
-              
-              {/* <div className="sd-actions">
-                {b.status !== "assigned" ? (
-                  <button
+          {sortedDates.map((date) => (
+  <div key={date} style={{ marginBottom: "24px" }}>
+    <h2 style={{ marginBottom: "10px" }}>
+      📅 {date}
+    </h2>
+
+    {groupedByDate[date]
+      .sort((a, b) => a.time.localeCompare(b.time))
+      .map((b) => (
+        <div key={b.id} className="sd-service-card">
+          <div>
+            <h3>{b.customerName}</h3>
+            <p>{b.serviceName}</p>
+            <p>⏰ {b.time}</p>
+          </div>
+
+          <div className="sd-actions">
+            {getStatusBadge(b.status || "pending")}
+
+            {(b.status === "pending" || !b.status) && (
+              <>
+                <button
                   className="sd-primary-btn"
                   onClick={() => {
                     setSelectedBooking(b);
                     setOpenAssign(true);
-                }}
-            >
-                Assign Worker
-              </button>
-            ) : (
-              <span className="sd-badge assigned">ASSIGNED</span>
+                  }}
+                >
+                  Assign Worker
+                </button>
+
+                <button
+                  className="sd-secondary-btn"
+                  style={{ marginLeft: "8px", background: "#ef4444", color: "#fff" }}
+                  onClick={() => handleRejectBooking(b)}
+                >
+                  Reject
+                </button>
+              </>
             )}
-            </div> */}
 
-<div className="sd-actions">
-  {/* STATUS BADGE */}
-  {getStatusBadge(b.status || "pending")}
+            {b.status === "assigned" && (
+              <button
+                className="sd-primary-btn"
+                onClick={() => handleStartWork(b)}
+              >
+                Start Work
+              </button>
+            )}
 
-  {/* PENDING */}
-  {(b.status === "pending" || !b.status) && (
-    <>
-      <button
-        className="sd-primary-btn"
-        onClick={() => {
-          setSelectedBooking(b);
-          setOpenAssign(true);
-        }}
-      >
-        Assign Worker
-      </button>
-
-      <button
-        className="sd-secondary-btn"
-        style={{ marginLeft: "8px", background: "#ef4444", color: "#fff" }}
-        onClick={() => handleRejectBooking(b)}
-      >
-        Reject
-      </button>
-    </>
-  )}
-
-  {/* ASSIGNED */}
-  {b.status === "assigned" && (
-    <button
-      className="sd-primary-btn"
-      onClick={() => handleStartWork(b)}
-    >
-      Start Work
-    </button>
-  )}
-
-  {/* STARTED */}
-  {/* {b.status === "started" && (
-    <button
-      className="sd-primary-btn"
-      onClick={() => handleCompleteWork(b)}
-    >
-      Complete Work
-    </button>
-  )} */}
-
-  {b.status === "started" && (
-  <button
-    className="sd-primary-btn"
-    onClick={() => {
-      setSelectedBooking(b);
-      setShowOtpModal(true);
-    }}
-  >
-    Complete Work
-  </button>
-)}
-
-</div>
-
-            </div>
-          ))}
+            {b.status === "started" && (
+              <button
+                className="sd-primary-btn"
+                onClick={() => {
+                  setSelectedBooking(b);
+                  setShowOtpModal(true);
+                }}
+              >
+                Complete Work
+              </button>
+            )}
+          </div>
+        </div>
+      ))}
+  </div>
+))}
         </div>
       )}
 
