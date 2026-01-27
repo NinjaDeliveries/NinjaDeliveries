@@ -10,6 +10,9 @@ import {
 } from "firebase/firestore";
 import AssignWorkerModal from "./AssignWorkerModal";
 import "../../style/ServiceDashboard.css";
+import { createDummyBookings } from "../../scripts/createDummyBookings";
+
+
 
 const Bookings = () => {
   const [bookings, setBookings] = useState([]);
@@ -163,6 +166,7 @@ const handleCompleteWork = async (booking) => {
 };
 
   return (
+
     <div className="sd-main">
       <div className="sd-header">
         <h1>Bookings</h1>
@@ -170,6 +174,21 @@ const handleCompleteWork = async (booking) => {
           Bookings are created from the app only
         </p>
       </div>
+     <button
+  onClick={() => createDummyBookings(30)}
+  style={{
+    marginBottom: "20px",
+    background: "#4f46e5",
+    color: "#fff",
+    padding: "8px 14px",
+    borderRadius: "6px",
+    border: "none",
+  }}
+>
+  Create Dummy Bookings (DEV)
+</button>
+
+
 
       {loading ? (
         <p>Loading bookings...</p>
