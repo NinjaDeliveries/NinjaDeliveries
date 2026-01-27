@@ -4,13 +4,12 @@ import { collection, addDoc, query, where, getDocs } from "firebase/firestore";
 
 const AddGlobalServiceModal = ({ onClose, onSaved }) => {
   const [name, setName] = useState("");
-  // const [categoryId, setCategoryId] = useState("");
-  const [masterCategoryId, setMasterCategoryId] = useState("");
+  const [categoryId, setCategoryId] = useState("");
   const [categories, setCategories] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [globalMatch, setGlobalMatch] = useState(null);
   const [globalError, setGlobalError] = useState("");
- 
+
   // fetch categories
   useEffect(() => {
     const fetchCategories = async () => {
@@ -21,8 +20,6 @@ const AddGlobalServiceModal = ({ onClose, onSaved }) => {
         collection(db, "service_categories"),
         where("companyId", "==", user.uid)
       );
-
-      
 
       const snap = await getDocs(q);
       setCategories(
@@ -60,15 +57,13 @@ const AddGlobalServiceModal = ({ onClose, onSaved }) => {
       const snap = await getDocs(q);
 
       const payload = {
-  companyId: user.uid,
-
-  masterCategoryId,
-  name: name.trim(),
-
-  // imageUrl: imageUrl || null,
-  isActive: true,
-  updatedAt: new Date(),
-};
+        companyId: user.uid,
+        name: name.trim(),
+        categoryId: categoryId || null,
+        source: "global",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
 
       if (!snap.empty) {
         const pkg = snap.docs[0];
@@ -130,8 +125,8 @@ const AddGlobalServiceModal = ({ onClose, onSaved }) => {
         <div className="sd-form-group">
           <label>Category</label>
           <select
-            value={masterCategoryId}
-            onChange={e => setMasterCategoryId(e.target.value)}
+            value={categoryId}
+            onChange={e => setCategoryId(e.target.value)}
           >
             <option value="">Select category (optional)</option>
             {categories.map(c => (

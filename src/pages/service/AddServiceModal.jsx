@@ -4,9 +4,11 @@ import { collection, addDoc, doc, updateDoc, query, where, getDocs } from "fireb
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "../../context/Firebase";
 
+
 const AddServiceModal = ({ onClose, onSaved, editService }) => {
   const [name, setName] = useState("");
-  const [categoryId, setCategoryId] = useState("");
+  // const [categoryId, setCategoryId] = useState("");
+  const [categoryMasterId, setCategoryMasterId] = useState("");
   const [categories, setCategories] = useState([]);
   const [packages, setPackages] = useState([
     { duration: 1, unit: "month", price: "" },
@@ -17,6 +19,8 @@ const AddServiceModal = ({ onClose, onSaved, editService }) => {
   const [uploading, setUploading] = useState(false);
 
   const isEditMode = !!editService;
+
+  
 
   // admin predefined services
 const [adminServices, setAdminServices] = useState([]);
@@ -29,6 +33,28 @@ const [isCustomService, setIsCustomService] = useState(false);
 const [priceType, setPriceType] = useState("");
 const [fixedPrice, setFixedPrice] = useState("");
 
+// const fetchAdminServices = async (catId) => {
+//   if (!catId) {
+//     setAdminServices([]);
+//     return;
+//   }
+
+//   const q = query(
+//   collection(db, "service_services_master"),
+//   where("categoryMasterId", "==", catId), // 🔥 FIX
+//   where("isActive", "==", true)
+// );
+
+//   const snap = await getDocs(q);
+
+//   const list = snap.docs.map(doc => ({
+//     id: doc.id,
+//     ...doc.data(),
+//   }));
+
+//   setAdminServices(list);
+// };
+
 const fetchAdminServices = async (catId) => {
   if (!catId) {
     setAdminServices([]);
@@ -37,25 +63,24 @@ const fetchAdminServices = async (catId) => {
 
   const q = query(
     collection(db, "service_services_master"),
-    where("categoryId", "==", catId),
+    where("categoryMasterId", "==", catId),
     where("isActive", "==", true)
   );
 
   const snap = await getDocs(q);
 
-  const list = snap.docs.map(doc => ({
-    id: doc.id,
-    ...doc.data(),
-  }));
-
-  setAdminServices(list);
+  setAdminServices(
+    snap.docs.map(d => ({ id: d.id, ...d.data() }))
+  );
 };
 
   // Load existing service data when in edit mode
   useEffect(() => {
     if (editService) {
       setName(editService.name || "");
-      setCategoryId(editService.categoryId || "");
+      // setCategoryId(editService.categoryId || "");
+      setCategoryMasterId(editService.categoryMasterId || "");
+      fetchAdminServices(editService.categoryMasterId);
       setImagePreview(editService.imageUrl || "");
       
       if (editService.packages) {
@@ -235,11 +260,15 @@ if (!isCustomService) {
     finalServiceName = svc.name;
   }
 }
-      const payload = {
+  const payload = {
   companyId: user.uid,
-  categoryMasterId: categoryId,
+
+  categoryMasterId , // ✅ MASTER CATEGORY ID
   name: finalServiceName,
-  categoryId,
+
+  serviceType: isCustomService ? "custom" : "admin",
+  adminServiceId: isCustomService ? null : selectedServiceId,
+
   imageUrl: imageUrl || null,
   isActive: true,
   updatedAt: new Date(),
@@ -360,15 +389,15 @@ if (priceType === "price") {
               ))}
             </select> */}
 
-            <select
-  value={categoryId}
+           <select
+  value={categoryMasterId}
   onChange={(e) => {
     const val = e.target.value;
-    setCategoryId(val);             // MASTER ID
+    setCategoryMasterId(val);     // ✅ MASTER ID
     setSelectedServiceId("");
     setIsCustomService(false);
     setName("");
-    fetchAdminServices(val);        // uses categoryMasterId
+    fetchAdminServices(val);      // ✅ MASTER ID
   }}
 >
   <option value="">Select Category</option>
@@ -382,7 +411,7 @@ if (priceType === "price") {
           </div>
         </div>
 
-              {categoryId && (
+              {categoryMasterId && (
   <div className="sd-form-group">
     <label>Service</label>
 
