@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { db } from "../../context/Firebase";
+import { db, storage } from "../../context/Firebase";
 import {
   collection,
   getDocs,
@@ -9,6 +9,7 @@ import {
   doc,
   serverTimestamp,
 } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import "../../style/ServiceDashboard.css";
 
 const AdminCategoriesServices = () => {
@@ -20,10 +21,16 @@ const AdminCategoriesServices = () => {
 
   // modal
   const [showModal, setShowModal] = useState(false);
-  const [mode, setMode] = useState(""); // "category" | "service"
+  const [mode, setMode] = useState(""); // "category" | "service" | "edit"
   const [name, setName] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
+  const [editingCategory, setEditingCategory] = useState(null);
+  
+  // Image upload states
+  const [categoryImage, setCategoryImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState("");
+  const [uploading, setUploading] = useState(false);
 
   // ================= FETCH =================
   const fetchCategories = async () => {
@@ -79,6 +86,18 @@ const AdminCategoriesServices = () => {
   const openAddCategory = () => {
     setMode("category");
     setName("");
+    setCategoryImage(null);
+    setImagePreview("");
+    setEditingCategory(null);
+    setShowModal(true);
+  };
+
+  const openEditCategory = (category) => {
+    setMode("edit");
+    setName(category.name);
+    setEditingCategory(category);
+    setCategoryImage(null);
+    setImagePreview(category.imageUrl || "");
     setShowModal(true);
   };
 
@@ -90,6 +109,38 @@ const AdminCategoriesServices = () => {
     setShowModal(true);
   };
 
+  // ================= IMAGE UPLOAD =================
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      alert("Please select an image file");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Image size should be less than 5MB");
+      return;
+    }
+
+    setCategoryImage(file);
+
+    const reader = new FileReader();
+    reader.onload = (e) => setImagePreview(e.target.result);
+    reader.readAsDataURL(file);
+  };
+
+  const uploadCategoryImage = async () => {
+    if (!categoryImage) return null;
+
+    const fileName = `category-images/master/${Date.now()}_${categoryImage.name}`;
+    const storageRef = ref(storage, fileName);
+
+    const snapshot = await uploadBytes(storageRef, categoryImage);
+    return await getDownloadURL(snapshot.ref);
+  };
+
   const handleSave = async () => {
     if (!name.trim()) {
       alert("Name is required");
@@ -97,13 +148,33 @@ const AdminCategoriesServices = () => {
     }
 
     try {
-      if (mode === "category") {
-        await addDoc(collection(db, "service_categories_master"), {
+      setUploading(true);
+      
+      if (mode === "category" || mode === "edit") {
+        let imageUrl = imagePreview; // Keep existing image if no new image selected
+        
+        // Upload new image if selected
+        if (categoryImage) {
+          imageUrl = await uploadCategoryImage();
+        }
+        
+        const categoryData = {
           name: name.trim(),
+          imageUrl: imageUrl,
           isActive: true,
-          createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
-        });
+        };
+
+        if (mode === "edit" && editingCategory) {
+          // Update existing category
+          await updateDoc(doc(db, "service_categories_master", editingCategory.id), categoryData);
+        } else {
+          // Create new category
+          await addDoc(collection(db, "service_categories_master"), {
+            ...categoryData,
+            createdAt: serverTimestamp(),
+          });
+        }
       }
 
       if (mode === "service") {
@@ -122,10 +193,44 @@ const AdminCategoriesServices = () => {
       }
 
       setShowModal(false);
+      setCategoryImage(null);
+      setImagePreview("");
+      setEditingCategory(null);
       await Promise.all([fetchCategories(), fetchServices()]);
     } catch (err) {
       console.error("Save error:", err);
       alert("Error saving data. Please try again.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // ================= TOGGLE STATUS =================
+  const toggleCategoryStatus = async (categoryId, currentStatus) => {
+    try {
+      await updateDoc(doc(db, "service_categories_master", categoryId), {
+        isActive: !currentStatus,
+        updatedAt: serverTimestamp(),
+      });
+      
+      await fetchCategories(); // Refresh the list
+    } catch (error) {
+      console.error("Error updating category status:", error);
+      alert("Error updating category status. Please try again.");
+    }
+  };
+
+  const toggleServiceStatus = async (serviceId, currentStatus) => {
+    try {
+      await updateDoc(doc(db, "service_services_master", serviceId), {
+        isActive: !currentStatus,
+        updatedAt: serverTimestamp(),
+      });
+      
+      await fetchServices(); // Refresh the list
+    } catch (error) {
+      console.error("Error updating service status:", error);
+      alert("Error updating service status. Please try again.");
     }
   };
 
@@ -247,7 +352,16 @@ const AdminCategoriesServices = () => {
                 <div key={cat.id} className="admin-category-card">
                   <div className="category-header" onClick={() => toggleCategory(cat.id)}>
                     <div className="category-info">
-                      <h3 className="category-name">{cat.name}</h3>
+                      <div className="category-title-section">
+                        {cat.imageUrl && (
+                          <img 
+                            src={cat.imageUrl} 
+                            alt={cat.name}
+                            className="admin-category-image"
+                          />
+                        )}
+                        <h3 className="category-name">{cat.name}</h3>
+                      </div>
                       <div className="category-meta">
                         <span className="service-count">
                           {categoryServices.length} service{categoryServices.length !== 1 ? 's' : ''}
@@ -281,6 +395,20 @@ const AdminCategoriesServices = () => {
                           Add Service
                         </button>
                         <button
+                          className="edit-category-btn"
+                          onClick={() => openEditCategory(cat)}
+                        >
+                          <span className="btn-icon">✏️</span>
+                          Edit Category
+                        </button>
+                        <button
+                          className={`toggle-category-btn ${cat.isActive !== false ? 'active' : 'inactive'}`}
+                          onClick={() => toggleCategoryStatus(cat.id, cat.isActive !== false)}
+                        >
+                          <span className="btn-icon">{cat.isActive !== false ? '👁️' : '👁️‍🗨️'}</span>
+                          {cat.isActive !== false ? 'Deactivate' : 'Activate'}
+                        </button>
+                        <button
                           className="delete-category-btn"
                           onClick={() => deleteCategory(cat)}
                         >
@@ -310,13 +438,22 @@ const AdminCategoriesServices = () => {
                                     {srv.isActive !== false ? 'Active' : 'Inactive'}
                                   </span>
                                 </div>
-                                <button
-                                  className="delete-service-btn"
-                                  onClick={() => deleteService(srv)}
-                                  title="Delete service"
-                                >
-                                  ✕
-                                </button>
+                                <div className="service-actions">
+                                  <button
+                                    className={`toggle-service-btn ${srv.isActive !== false ? 'active' : 'inactive'}`}
+                                    onClick={() => toggleServiceStatus(srv.id, srv.isActive !== false)}
+                                    title={srv.isActive !== false ? 'Deactivate service' : 'Activate service'}
+                                  >
+                                    {srv.isActive !== false ? '👁️' : '👁️‍🗨️'}
+                                  </button>
+                                  <button
+                                    className="delete-service-btn"
+                                    onClick={() => deleteService(srv)}
+                                    title="Delete service"
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
                               </div>
                             ))}
                           </div>
@@ -336,7 +473,11 @@ const AdminCategoriesServices = () => {
         <div className="admin-modal-backdrop">
           <div className="admin-modal">
             <div className="admin-modal-header">
-              <h2>{mode === "category" ? "Add New Category" : "Add New Service"}</h2>
+              <h2>
+                {mode === "category" ? "Add New Category" : 
+                 mode === "edit" ? "Edit Category" : 
+                 "Add New Service"}
+              </h2>
               <button
                 className="admin-modal-close"
                 onClick={() => setShowModal(false)}
@@ -348,14 +489,14 @@ const AdminCategoriesServices = () => {
             <div className="admin-modal-body">
               <div className="admin-form-group">
                 <label>
-                  {mode === "category" ? "Category Name" : "Service Name"}
+                  {mode === "category" || mode === "edit" ? "Category Name" : "Service Name"}
                 </label>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder={
-                    mode === "category"
+                    mode === "category" || mode === "edit"
                       ? "Enter category name..."
                       : "Enter service name..."
                   }
@@ -363,6 +504,48 @@ const AdminCategoriesServices = () => {
                   autoFocus
                 />
               </div>
+
+              {(mode === "category" || mode === "edit") && (
+                <div className="admin-form-group">
+                  <label>Category Image</label>
+                  <div className="admin-image-upload">
+                    {imagePreview ? (
+                      <div className="admin-image-preview">
+                        <img src={imagePreview} alt="Category preview" />
+                        <button
+                          type="button"
+                          className="admin-remove-image-btn"
+                          onClick={() => {
+                            setImagePreview("");
+                            setCategoryImage(null);
+                          }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="admin-image-placeholder">
+                        <span>📷</span>
+                        <span>No image selected</span>
+                      </div>
+                    )}
+
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="admin-file-input"
+                      id="category-image"
+                    />
+                    <label htmlFor="category-image" className="admin-file-label">
+                      {imagePreview ? "Change Image" : "Upload Image"}
+                    </label>
+                  </div>
+                  <small className="admin-image-help">
+                    Supported formats: JPG, PNG. Max size: 5MB
+                  </small>
+                </div>
+              )}
 
               {mode === "service" && (
                 <div className="admin-form-group">
@@ -378,15 +561,19 @@ const AdminCategoriesServices = () => {
               <button
                 className="admin-btn-cancel"
                 onClick={() => setShowModal(false)}
+                disabled={uploading}
               >
                 Cancel
               </button>
               <button
                 className="admin-btn-save"
                 onClick={handleSave}
-                disabled={!name.trim()}
+                disabled={!name.trim() || uploading}
               >
-                {mode === "category" ? "Create Category" : "Create Service"}
+                {uploading ? "Uploading..." : 
+                 (mode === "category" ? "Create Category" : 
+                  mode === "edit" ? "Update Category" : 
+                  "Create Service")}
               </button>
             </div>
           </div>
