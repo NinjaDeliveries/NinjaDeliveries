@@ -94,6 +94,9 @@ const fetchCategories = async () => {
 const handleRejectBooking = async (booking) => {
   console.log("Reject booking:", booking.id);
 };
+// const handleRejectBooking = async (booking) => {
+//   console.log("Reject booking:", booking.id);
+// };
 
 // const handleStartWork = async (booking) => {
 //   console.log("Start work:", booking.id);
