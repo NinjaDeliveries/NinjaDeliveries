@@ -106,6 +106,25 @@ const handleToggleCategoryStatus = async (categoryId, currentStatus) => {
   setShowModal(true);
 };
 
+const syncAppCategory = async (adminCat) => {
+  const q = query(
+    collection(db, "app_categories"),
+    where("masterCategoryId", "==", adminCat.id)
+  );
+
+  const snap = await getDocs(q);
+
+  // if category not present → add it
+  if (snap.empty) {
+    await addDoc(collection(db, "app_categories"), {
+      masterCategoryId: adminCat.id,
+      name: adminCat.name,
+      isActive: true,
+      createdAt: new Date(),
+    });
+  }
+};
+
   const handleSaveCategory = async () => {
   const user = auth.currentUser;
   if (!user || !selectedCategoryId) {
@@ -120,8 +139,8 @@ const handleToggleCategoryStatus = async (categoryId, currentStatus) => {
   if (!adminCat) return;
 
   const exists = categories.find(
-    c => c.categoryId === selectedCategoryId
-  );
+  c => c.masterCategoryId === selectedCategoryId
+);
 
   if (exists && !editCategory) {
     alert("Category already added");
@@ -150,6 +169,8 @@ const handleToggleCategoryStatus = async (categoryId, currentStatus) => {
       createdAt: new Date(),
     });
   }
+  
+  await syncAppCategory(adminCat);
 
   setShowModal(false);
   setSelectedCategoryId("");
@@ -215,18 +236,44 @@ const handleToggleCategoryStatus = async (categoryId, currentStatus) => {
   return await getDownloadURL(snapshot.ref);
 };
 
-
   const handleDeleteCategory = async (categoryId) => {
-    if (window.confirm("Are you sure you want to delete this category?")) {
-      try {
-        await deleteDoc(doc(db, "service_categories", categoryId));
-        fetchCategories();
-      } catch (error) {
-        console.error("Error deleting category:", error);
-        alert("Error deleting category. Please try again.");
+  if (!window.confirm("Are you sure you want to delete this category?")) return;
+
+  try {
+    // find category being deleted
+    const cat = categories.find(c => c.id === categoryId);
+    if (!cat) return;
+
+    // delete from company collection
+    await deleteDoc(doc(db, "service_categories", categoryId));
+
+    // check if any company still uses this category
+    const q = query(
+      collection(db, "service_categories"),
+      where("masterCategoryId", "==", cat.masterCategoryId)
+    );
+
+    const snap = await getDocs(q);
+
+    // if nobody uses it → remove from app_categories
+    if (snap.empty) {
+      const appQ = query(
+        collection(db, "app_categories"),
+        where("masterCategoryId", "==", cat.masterCategoryId)
+      );
+
+      const appSnap = await getDocs(appQ);
+      for (const d of appSnap.docs) {
+        await deleteDoc(d.ref);
       }
     }
-  };
+
+    fetchCategories();
+  } catch (error) {
+    console.error("Error deleting category:", error);
+    alert("Error deleting category");
+  }
+};
 
   const handleCloseModal = () => {
     setShowModal(false);
