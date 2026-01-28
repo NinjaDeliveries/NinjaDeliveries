@@ -61,29 +61,54 @@ const fetchAdminServices = async (catId) => {
     return;
   }
 
+  // First get the category name from the selected category ID
+  const selectedCategory = categories.find(cat => cat.id === catId);
+  if (!selectedCategory) {
+    console.log("Category not found for ID:", catId);
+    setAdminServices([]);
+    return;
+  }
+
+  console.log("Fetching services for category:", selectedCategory.name);
+
+  // Query services by categoryName instead of categoryMasterId
   const q = query(
     collection(db, "service_services_master"),
-    where("categoryMasterId", "==", catId),
+    where("categoryName", "==", selectedCategory.name),
     where("isActive", "==", true)
   );
 
   const snap = await getDocs(q);
-
-  setAdminServices(
-    snap.docs.map(d => ({ id: d.id, ...d.data() }))
-  );
+  const services = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  
+  console.log("Found services:", services);
+  setAdminServices(services);
 };
 
   // Load existing service data when in edit mode
   useEffect(() => {
     if (editService) {
       setName(editService.name || "");
-      // setCategoryId(editService.categoryId || "");
-      setCategoryMasterId(editService.categoryMasterId || "");
-      fetchAdminServices(editService.categoryMasterId);
+      const categoryId = editService.categoryMasterId || editService.masterCategoryId || "";
+      setCategoryMasterId(categoryId);
+      if (categoryId) {
+        fetchAdminServices(categoryId);
+      }
       setImagePreview(editService.imageUrl || "");
       
-      if (editService.packages) {
+      // Set service selection
+      if (editService.serviceType === "custom") {
+        setIsCustomService(true);
+      } else if (editService.adminServiceId) {
+        setSelectedServiceId(editService.adminServiceId);
+      }
+      
+      // Set pricing
+      if (editService.price) {
+        setPriceType("price");
+        setFixedPrice(editService.price.toString());
+      } else if (editService.packages && editService.packages.length > 0) {
+        setPriceType("package");
         setPackages(editService.packages.map(p => ({
           duration: p.duration || 1,
           unit: p.unit || "month",
@@ -262,13 +287,11 @@ if (!isCustomService) {
 }
   const payload = {
   companyId: user.uid,
-
-  categoryMasterId , // ✅ MASTER CATEGORY ID
+  categoryMasterId,
+  masterCategoryId: categoryMasterId, // Add this for backward compatibility
   name: finalServiceName,
-
   serviceType: isCustomService ? "custom" : "admin",
   adminServiceId: isCustomService ? null : selectedServiceId,
-
   imageUrl: imageUrl || null,
   isActive: true,
   updatedAt: new Date(),
