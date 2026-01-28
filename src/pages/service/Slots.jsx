@@ -12,6 +12,7 @@ export default function Slots() {
   const [loading, setLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(true);
   const [offlineWindows, setOfflineWindows] = useState([]);
+  const [updating, setUpdating] = useState(false); // Add loading state for buttons
 
   const [user, setUser] = useState(null);
 
@@ -127,40 +128,92 @@ useEffect(() => {
   // 🔹 Load availability
   useEffect(() => {
     const loadAvailability = async () => {
-      const user = auth.currentUser;
-      if (!user) return;
+      try {
+        const user = auth.currentUser;
+        if (!user) {
+          console.log("No user logged in");
+          setLoading(false);
+          return;
+        }
 
-      const ref = doc(db, "service_availability", user.uid);
-      const snap = await getDoc(ref);
+        console.log("Loading availability for user:", user.uid);
+        const ref = doc(db, "service_availability", user.uid);
+        const snap = await getDoc(ref);
 
-      if (snap.exists()) {
-        const data = snap.data();
-        setIsOnline(data.isOnline);
-        setOfflineWindows(data.offlineWindows || []);
+        if (snap.exists()) {
+          const data = snap.data();
+          console.log("Loaded data:", data);
+          setIsOnline(data.isOnline ?? true); // Default to true if undefined
+          setOfflineWindows(data.offlineWindows || []);
+        } else {
+          console.log("No availability document found, creating default");
+          // Create default document
+          await setDoc(ref, {
+            companyId: user.uid,
+            isOnline: true,
+            offlineWindows: [],
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          });
+          setIsOnline(true);
+          setOfflineWindows([]);
+        }
+      } catch (error) {
+        console.error("Error loading availability:", error);
+        alert("Failed to load availability data");
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     };
 
-    loadAvailability();
+    // Wait for auth state to be determined
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) {
+        loadAvailability();
+      } else {
+        setLoading(false);
+      }
+    });
+
+    return () => unsubscribe();
   }, []);
 
   // 🔹 Save status
   const updateStatus = async (status) => {
-    const user = auth.currentUser;
-    if (!user) return;
+    try {
+      setUpdating(true); // Show loading state
+      
+      const user = auth.currentUser;
+      if (!user) {
+        alert("Please login first");
+        return;
+      }
 
-    setIsOnline(status);
+      console.log(`Updating status to: ${status ? 'ONLINE' : 'OFFLINE'}`);
+      
+      // Update local state immediately for better UX
+      setIsOnline(status);
 
-    await setDoc(
-      doc(db, "service_availability", user.uid),
-      {
-        companyId: user.uid,
-        isOnline: status,
-        updatedAt: new Date(),
-      },
-      { merge: true }
-    );
+      // Update Firebase
+      await setDoc(
+        doc(db, "service_availability", user.uid),
+        {
+          companyId: user.uid,
+          isOnline: status,
+          updatedAt: new Date(),
+        },
+        { merge: true }
+      );
+
+      console.log("Status updated successfully");
+    } catch (error) {
+      console.error("Error updating status:", error);
+      alert("Failed to update status. Please try again.");
+      // Revert local state if Firebase update failed
+      setIsOnline(!status);
+    } finally {
+      setUpdating(false); // Hide loading state
+    }
   };
 
   // 🔹 Add offline window
@@ -220,27 +273,38 @@ useEffect(() => {
       {/* STATUS */}
       <div className="sd-card">
         <h3>Status</h3>
-        <p>
-          Current status:{" "}
-          <strong style={{ color: isOnline ? "green" : "red" }}>
+        <div style={{ marginBottom: "20px" }}>
+          <span className={`status-indicator ${isOnline ? 'online' : 'offline'}`}>
+            <span className="status-dot"></span>
             {isOnline ? "ONLINE" : "OFFLINE"}
-          </strong>
-        </p>
+          </span>
+        </div>
 
-        <button
-          className="sd-primary-btn"
-          onClick={() => updateStatus(true)}
-        >
-          Go Online
-        </button>
+        <div style={{ display: "flex", gap: "10px", marginTop: "15px", flexWrap: "wrap" }}>
+          <button
+            className="sd-primary-btn"
+            onClick={() => updateStatus(true)}
+            disabled={updating || isOnline}
+            style={{ 
+              opacity: (updating || isOnline) ? 0.6 : 1,
+              cursor: (updating || isOnline) ? 'not-allowed' : 'pointer'
+            }}
+          >
+            {updating && !isOnline ? "Updating..." : "Go Online"}
+          </button>
 
-        <button
-          className="sd-secondary-btn"
-          style={{ marginLeft: 10 }}
-          onClick={() => updateStatus(false)}
-        >
-          Go Offline
-        </button>
+          <button
+            className="sd-secondary-btn"
+            onClick={() => updateStatus(false)}
+            disabled={updating || !isOnline}
+            style={{ 
+              opacity: (updating || !isOnline) ? 0.6 : 1,
+              cursor: (updating || !isOnline) ? 'not-allowed' : 'pointer'
+            }}
+          >
+            {updating && isOnline ? "Updating..." : "Go Offline"}
+          </button>
+        </div>
       </div>
 
       {/* OFFLINE WINDOWS */}
@@ -258,32 +322,25 @@ useEffect(() => {
         </div>
 
         {offlineWindows.length === 0 ? (
-          <p style={{ marginTop: 10 }}>No offline times added</p>
+          <p style={{ marginTop: 10, color: "#6b7280", fontStyle: "italic" }}>No offline times added</p>
         ) : (
-          <ul style={{ marginTop: 15 }}>
-            {/* {offlineWindows.map((w, i) => (
-              <li key={i} style={{ marginBottom: 8 }}>
-                📅 {w.date} ⏰ {w.start} – {w.end}
-                <button
-                  style={{ marginLeft: 10 }}
-                  onClick={() => removeWindow(i)}
-                >
-                  ❌
-                </button>
-              </li>
-            ))} */}
+          <div style={{ marginTop: 15 }}>
             {offlineWindows.map((w, i) => (
-  <li key={i} style={{ marginBottom: 8 }}>
-    📅 {w.date} ⏰ {formatAMPM(w.start)} – {formatAMPM(w.end)}
-    <button
-      style={{ marginLeft: 10 }}
-      onClick={() => removeWindow(i)}
-    >
-      ❌
-    </button>
-  </li>
-))}
-          </ul>
+              <div key={i} className="offline-window-item">
+                <div className="offline-window-info">
+                  <span>📅 {w.date}</span>
+                  <span>⏰ {formatAMPM(w.start)} – {formatAMPM(w.end)}</span>
+                </div>
+                <button
+                  className="remove-window-btn"
+                  onClick={() => removeWindow(i)}
+                  title="Remove offline window"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </div>

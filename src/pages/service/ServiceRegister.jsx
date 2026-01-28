@@ -72,26 +72,20 @@ const handleRegister = async (e) => {
       form.password
     );
 
+    // Create service company document with only necessary fields
     await setDoc(doc(db, "service_company", userCred.user.uid), {
-      ownerName: form.name,
-      phone: form.phone,
-      email: form.email,
       companyName: form.companyName,
-      address: form.address || "",
-      businessType: form.type,
-      
-      // Default delivery zone connection
-      deliveryZoneId: "dharamshala_zone_001",
+      deliveryZoneId: "OoS7Zjg2gxj2MJesvlC2", // Dharamshala zone ID
       deliveryZoneName: "Dharamshala",
-      
+      email: form.email,
       isActive: true,
-      registrationDate: new Date(),
+      name: form.name,
+      phone: form.phone,
+      type: form.type,
       createdAt: new Date(),
     });
 
     alert("Account created successfully. Please login.");
-
-    // 🔥 VERY IMPORTANT
     navigate("/login");
 
   } catch (error) {
