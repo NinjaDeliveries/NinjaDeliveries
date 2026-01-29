@@ -124,38 +124,6 @@ const Overview = () => {
         </div>
       )}
 
-      {/* Statistics Cards */}
-      {/* Tabs */}
-<div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
-  <button
-    onClick={() => setActiveTab("dashboard")}
-    style={{
-      padding: "8px 16px",
-      borderRadius: 6,
-      border: "none",
-      cursor: "pointer",
-      background: activeTab === "dashboard" ? "#4f46e5" : "#e5e7eb",
-      color: activeTab === "dashboard" ? "#fff" : "#000",
-    }}
-  >
-    Dashboard
-  </button>
-
-  <button
-    onClick={() => setActiveTab("banner")}
-    style={{
-      padding: "8px 16px",
-      borderRadius: 6,
-      border: "none",
-      cursor: "pointer",
-      background: activeTab === "banner" ? "#4f46e5" : "#e5e7eb",
-      color: activeTab === "banner" ? "#fff" : "#000",
-    }}
-  >
-    Banner Management
-  </button>
-</div>
-
 {/* Content */}
 {activeTab === "dashboard" ? (
   <div className="sd-cards">
@@ -180,26 +148,13 @@ const Overview = () => {
     </div>
   </div>
 ) : (
-  <BannerManagement />
+  <BannerManagement onBack={() => setActiveTab("dashboard")} />
+
 )}
 
 
 {/* Tabs */}
 <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
-  <button
-    onClick={() => setActiveTab("dashboard")}
-    style={{
-      padding: "8px 16px",
-      borderRadius: 6,
-      border: "none",
-      cursor: "pointer",
-      background: activeTab === "dashboard" ? "#4f46e5" : "#e5e7eb",
-      color: activeTab === "dashboard" ? "#fff" : "#000",
-    }}
-  >
-    Dashboard
-  </button>
-
   <button
     onClick={() => setActiveTab("banner")}
     style={{
