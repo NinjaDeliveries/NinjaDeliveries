@@ -55,6 +55,10 @@ import Services from "./pages/service/Services";
 import Technicians from "./pages/service/Technicians";
 import Categories from "./pages/service/Categories";
 import AdminCategoriesServices from "./pages/Admin/AdminCategoriesServices";
+
+// Notification System
+import { NotificationProvider } from "./context/NotificationContext";
+import NotificationAlert from "./components/NotificationAlert";
 function App() {
 const { user, loadingUser } = useUser();
 const isAdmin =
@@ -120,10 +124,12 @@ if (loadingUser) {
 }
 
   return (
-    <div>
-      {nav && isAdmin && <Navbar />}
-      {/* {nav && <Navbar />} */}
-      <Routes>
+    <NotificationProvider>
+      <div>
+        {nav && isAdmin && <Navbar />}
+        <NotificationAlert />
+        {/* {nav && <Navbar />} */}
+        <Routes>
         {/* MAin ROUTE */}
         {/* <Route
           path="/"
@@ -413,6 +419,7 @@ if (loadingUser) {
   </Routes>
         
     </div>
+    </NotificationProvider>
   );
   
 }

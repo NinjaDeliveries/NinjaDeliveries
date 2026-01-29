@@ -22,8 +22,6 @@ const Bookings = () => {
   const [otpInput, setOtpInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
-  
-  const today = new Date().toISOString().split("T")[0];
 
   const statusConfig = {
     pending: { 

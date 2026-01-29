@@ -4,10 +4,12 @@ import { auth, db } from "../../context/Firebase";
 import { doc, getDoc } from "firebase/firestore";
 import "../../style/ServiceDashboard.css";
 import { signOut } from "firebase/auth";
+import { useNotifications } from "../../context/NotificationContext";
 
 const ServiceDashboard = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { notifications } = useNotifications();
 
   const [serviceData, setServiceData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -16,7 +18,11 @@ const ServiceDashboard = () => {
     { label: "Overview", path: "/service-dashboard" },
     { label: "Categories", path: "/service-dashboard/categories" },
     { label: "Services", path: "/service-dashboard/services" },
-    { label: "Bookings", path: "/service-dashboard/bookings" },
+    { 
+      label: "Bookings", 
+      path: "/service-dashboard/bookings",
+      badge: notifications.filter(n => n.type === 'booking').length
+    },
     { label: "Calendar / Slots", path: "/service-dashboard/slots" },
     { label: "Technicians", path: "/service-dashboard/technicians" },
     { label: "Payments", path: "/service-dashboard/payments" },
@@ -76,7 +82,10 @@ const ServiceDashboard = () => {
               }`}
               onClick={() => navigate(item.path)}
             >
-              {item.label}
+              <span>{item.label}</span>
+              {item.badge > 0 && (
+                <span className="menu-badge">{item.badge}</span>
+              )}
             </div>
           ))}
         </nav>

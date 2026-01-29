@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { auth, db } from "../../context/Firebase";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import "../../style/ServiceDashboard.css";
+import { useNotifications } from "../../context/NotificationContext";
 
 const Overview = () => {
   const [serviceData, setServiceData] = useState(null);
@@ -13,6 +14,7 @@ const Overview = () => {
     activeSlots: 0
   });
   const [loading, setLoading] = useState(true);
+  const { showNotification, notificationSettings } = useNotifications();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -140,6 +142,64 @@ const Overview = () => {
         </div>
       </div>
 
+      {/* Temporary Debug Section - Remove after testing */}
+      <div className="sd-card" style={{ marginTop: '20px', background: '#fff3cd', border: '1px solid #ffeaa7' }}>
+        <h3 style={{ color: '#856404' }}>🔧 Debug Mode</h3>
+        <p style={{ fontSize: '14px', color: '#856404', marginBottom: '15px' }}>
+          Temporary debugging tools - check browser console for detailed logs
+        </p>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <button 
+            className="sd-primary-btn"
+            onClick={() => {
+              console.log('🧪 Manual notification test triggered');
+              showNotification({
+                id: `manual-test-${Date.now()}`,
+                type: 'booking',
+                title: 'Manual Test Booking!',
+                message: 'Test Service - Test Customer',
+                timestamp: new Date()
+              });
+            }}
+          >
+            Test Notification
+          </button>
+          
+          <button 
+            className="sd-secondary-btn"
+            onClick={() => {
+              console.log('🔊 Manual sound test triggered');
+              const audio = new Audio('/servicebeep.mp3');
+              audio.volume = 0.7;
+              audio.play().then(() => {
+                console.log('✅ Manual sound test successful');
+                alert('Sound test successful!');
+              }).catch(error => {
+                console.log('❌ Manual sound test failed:', error);
+                alert('Sound test failed: ' + error.message);
+              });
+            }}
+          >
+            Test Sound
+          </button>
+          
+          <button 
+            className="sd-secondary-btn"
+            onClick={() => {
+              const user = auth.currentUser;
+              console.log('📊 Debug Info:', {
+                user: user?.uid,
+                email: user?.email,
+                notificationSettings,
+                timestamp: new Date().toLocaleString()
+              });
+              alert(`User: ${user?.uid}\nEmail: ${user?.email}\nNotifications: ${notificationSettings.newBookingAlerts}\nCheck console for more details`);
+            }}
+          >
+            Check Settings
+          </button>
+        </div>
+      </div>
 
     </div>
   );

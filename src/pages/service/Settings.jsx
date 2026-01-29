@@ -6,12 +6,14 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import "../../style/ServiceDashboard.css";
+import { useNotifications } from "../../context/NotificationContext";
 
 export default function Settings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [user, setUser] = useState(null);
+  const { showNotification } = useNotifications();
   
   // Business Information
   const [businessInfo, setBusinessInfo] = useState({
@@ -147,6 +149,15 @@ export default function Settings() {
 
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
+
+      // Show success notification
+      showNotification({
+        id: `settings-saved-${Date.now()}`,
+        type: 'default',
+        title: 'Settings Saved!',
+        message: 'Your business settings have been updated successfully.',
+        timestamp: new Date()
+      });
     } catch (error) {
       console.error("Error saving settings:", error);
       alert("Failed to save settings. Please try again.");
@@ -202,7 +213,7 @@ export default function Settings() {
             <p>Manage your business settings</p>
           </div>
           <button 
-            className={`sd-primary-btn ${saving ? 'saving' : ''} ${saved ? 'saved' : ''}`}
+            className={`save-changes-btn ${saving ? 'saving' : ''} ${saved ? 'saved' : ''}`}
             onClick={handleSave}
             disabled={saving}
           >
@@ -213,47 +224,49 @@ export default function Settings() {
 
       <div className="settings-grid">
         {/* Business Information */}
-        <div className="sd-card">
-          <div className="card-header-with-icon">
-            <div className="card-icon business">
+        <div className="settings-card">
+          <div className="settings-card-header">
+            <div className="settings-card-icon business">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                 <path d="M3 21h18"/>
                 <path d="M5 21V7l8-4v18"/>
                 <path d="M19 21V11l-6-4"/>
               </svg>
             </div>
-            <h3>Business Information</h3>
+            <div className="settings-card-title">
+              <h3>Business Information</h3>
+            </div>
           </div>
           
-          <div className="settings-form">
-            <div className="form-group">
-              <label>Business Name</label>
+          <div className="settings-card-content">
+            <div className="settings-field">
+              <label className="settings-label">Business Name</label>
               <input
                 type="text"
                 value={businessInfo.businessName || ""}
                 onChange={(e) => setBusinessInfo(prev => ({ ...prev, businessName: e.target.value }))}
-                className="form-input"
+                className="settings-input"
                 placeholder="Enter business name"
               />
             </div>
             
-            <div className="form-group">
-              <label>Owner Name</label>
+            <div className="settings-field">
+              <label className="settings-label">Owner Name</label>
               <input
                 type="text"
                 value={businessInfo.ownerName || ""}
                 onChange={(e) => setBusinessInfo(prev => ({ ...prev, ownerName: e.target.value }))}
-                className="form-input"
+                className="settings-input"
                 placeholder="Enter owner name"
               />
             </div>
             
-            <div className="form-group">
-              <label>Business Type</label>
+            <div className="settings-field">
+              <label className="settings-label">Business Type</label>
               <select
                 value={businessInfo.businessType || "service"}
                 onChange={(e) => setBusinessInfo(prev => ({ ...prev, businessType: e.target.value }))}
-                className="form-input"
+                className="settings-input"
               >
                 <option value="service">Service</option>
                 <option value="restaurant">Restaurant</option>
@@ -261,12 +274,12 @@ export default function Settings() {
               </select>
             </div>
             
-            <div className="form-group">
-              <label>Description</label>
+            <div className="settings-field">
+              <label className="settings-label">Description</label>
               <textarea
                 value={businessInfo.description || ""}
                 onChange={(e) => setBusinessInfo(prev => ({ ...prev, description: e.target.value }))}
-                className="form-input"
+                className="settings-input settings-textarea"
                 placeholder="Brief description of your business"
                 rows="3"
               />
@@ -275,21 +288,23 @@ export default function Settings() {
         </div>
 
         {/* Contact Information */}
-        <div className="sd-card">
-          <div className="card-header-with-icon">
-            <div className="card-icon contact">
+        <div className="settings-card">
+          <div className="settings-card-header">
+            <div className="settings-card-icon contact">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                 <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
               </svg>
             </div>
-            <h3>Contact Information</h3>
+            <div className="settings-card-title">
+              <h3>Contact Information</h3>
+            </div>
           </div>
           
-          <div className="settings-form">
-            <div className="form-group">
-              <label>Email</label>
-              <div className="input-with-icon">
-                <svg className="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <div className="settings-card-content">
+            <div className="settings-field">
+              <label className="settings-label">Email</label>
+              <div className="settings-input-with-icon">
+                <svg className="settings-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                   <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
                   <polyline points="22,6 12,13 2,6"/>
                 </svg>
@@ -297,32 +312,32 @@ export default function Settings() {
                   type="email"
                   value={contactInfo.email || ""}
                   onChange={(e) => setContactInfo(prev => ({ ...prev, email: e.target.value }))}
-                  className="form-input with-icon"
+                  className="settings-input with-icon"
                   placeholder="Enter email address"
                 />
               </div>
             </div>
             
-            <div className="form-group">
-              <label>Phone Number</label>
-              <div className="input-with-icon">
-                <svg className="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <div className="settings-field">
+              <label className="settings-label">Phone Number</label>
+              <div className="settings-input-with-icon">
+                <svg className="settings-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                   <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
                 </svg>
                 <input
                   type="tel"
                   value={contactInfo.phone || ""}
                   onChange={(e) => setContactInfo(prev => ({ ...prev, phone: e.target.value }))}
-                  className="form-input with-icon"
+                  className="settings-input with-icon"
                   placeholder="Enter phone number"
                 />
               </div>
             </div>
             
-            <div className="form-group">
-              <label>Service Area</label>
-              <div className="input-with-icon">
-                <svg className="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <div className="settings-field">
+              <label className="settings-label">Service Area</label>
+              <div className="settings-input-with-icon">
+                <svg className="settings-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                   <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
                   <circle cx="12" cy="10" r="3"/>
                 </svg>
@@ -330,16 +345,16 @@ export default function Settings() {
                   type="text"
                   value={contactInfo.address || ""}
                   onChange={(e) => setContactInfo(prev => ({ ...prev, address: e.target.value }))}
-                  className="form-input with-icon"
+                  className="settings-input with-icon"
                   placeholder="Enter service area (e.g., Dharamshala)"
                 />
               </div>
             </div>
             
-            <div className="form-group">
-              <label>Website (Optional)</label>
-              <div className="input-with-icon">
-                <svg className="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <div className="settings-field">
+              <label className="settings-label">Website (Optional)</label>
+              <div className="settings-input-with-icon">
+                <svg className="settings-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                   <circle cx="12" cy="12" r="10"/>
                   <line x1="2" x2="22" y1="12" y2="12"/>
                   <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
@@ -348,7 +363,7 @@ export default function Settings() {
                   type="url"
                   value={contactInfo.website || ""}
                   onChange={(e) => setContactInfo(prev => ({ ...prev, website: e.target.value }))}
-                  className="form-input with-icon"
+                  className="settings-input with-icon"
                   placeholder="www.example.com"
                 />
               </div>
@@ -357,36 +372,38 @@ export default function Settings() {
         </div>
 
         {/* Notifications */}
-        <div className="sd-card">
-          <div className="card-header-with-icon">
-            <div className="card-icon notifications">
+        <div className="settings-card">
+          <div className="settings-card-header">
+            <div className="settings-card-icon notifications">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                 <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
                 <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
               </svg>
             </div>
-            <h3>Notifications</h3>
+            <div className="settings-card-title">
+              <h3>Notifications</h3>
+            </div>
           </div>
           
-          <div className="settings-form">
+          <div className="settings-card-content">
             {[
               { key: "newBookingAlerts", title: "New Booking Alerts", desc: "Get notified for new bookings" },
               { key: "paymentNotifications", title: "Payment Notifications", desc: "Receive payment confirmations" },
               { key: "reviewAlerts", title: "Review Alerts", desc: "Get notified for new reviews" },
               { key: "marketingEmails", title: "Marketing Emails", desc: "Promotional updates and tips" },
             ].map((item) => (
-              <div key={item.key} className="notification-item">
-                <div className="notification-info">
-                  <p className="notification-title">{item.title}</p>
-                  <p className="notification-desc">{item.desc}</p>
+              <div key={item.key} className="settings-notification-item">
+                <div className="settings-notification-info">
+                  <p className="settings-notification-title">{item.title}</p>
+                  <p className="settings-notification-desc">{item.desc}</p>
                 </div>
-                <label className="toggle-switch">
+                <label className="settings-toggle">
                   <input
                     type="checkbox"
                     checked={notifications[item.key] || false}
                     onChange={() => handleNotificationToggle(item.key)}
                   />
-                  <span className="toggle-slider"></span>
+                  <span className="settings-toggle-slider"></span>
                 </label>
               </div>
             ))}
@@ -394,52 +411,54 @@ export default function Settings() {
         </div>
 
         {/* Security */}
-        <div className="sd-card">
-          <div className="card-header-with-icon">
-            <div className="card-icon security">
+        <div className="settings-card">
+          <div className="settings-card-header">
+            <div className="settings-card-icon security">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
               </svg>
             </div>
-            <h3>Security</h3>
+            <div className="settings-card-title">
+              <h3>Security</h3>
+            </div>
           </div>
           
-          <div className="settings-form">
-            <div className="form-group">
-              <label>Current Password</label>
+          <div className="settings-card-content">
+            <div className="settings-field">
+              <label className="settings-label">Current Password</label>
               <input
                 type="password"
                 value={passwordData.currentPassword || ""}
                 onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
-                className="form-input"
+                className="settings-input"
                 placeholder="Enter current password"
               />
             </div>
             
-            <div className="form-group">
-              <label>New Password</label>
+            <div className="settings-field">
+              <label className="settings-label">New Password</label>
               <input
                 type="password"
                 value={passwordData.newPassword || ""}
                 onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
-                className="form-input"
+                className="settings-input"
                 placeholder="Enter new password"
               />
             </div>
             
-            <div className="form-group">
-              <label>Confirm New Password</label>
+            <div className="settings-field">
+              <label className="settings-label">Confirm New Password</label>
               <input
                 type="password"
                 value={passwordData.confirmPassword || ""}
                 onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                className="form-input"
+                className="settings-input"
                 placeholder="Confirm new password"
               />
             </div>
             
             <button 
-              className="sd-secondary-btn full-width"
+              className="settings-change-password-btn"
               onClick={handlePasswordChange}
             >
               Change Password
