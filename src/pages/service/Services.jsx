@@ -181,42 +181,42 @@ const fetchServices = async () => {
     const service = services.find(s => s.id === serviceId);
     if (!service) return;
 
-    const serviceKey =
-      service.serviceType === "custom"
-        ? `custom_${service.name.toLowerCase().trim()}`
-        : service.adminServiceId;
+    // const serviceKey =
+    //   service.serviceType === "custom"
+    //     ? `custom_${service.name.toLowerCase().trim()}`
+    //     : service.adminServiceId;
 
     // 1️⃣ delete company service
     await deleteDoc(doc(db, "service_services", serviceId));
 
     // 2️⃣ check if anyone still uses it
-    const q = query(
-      collection(db, "service_services"),
-      where(
-        service.serviceType === "custom"
-          ? "name"
-          : "adminServiceId",
-        "==",
-        service.serviceType === "custom"
-          ? service.name
-          : service.adminServiceId
-      )
-    );
+    // const q = query(
+    //   collection(db, "service_services"),
+    //   where(
+    //     service.serviceType === "custom"
+    //       ? "name"
+    //       : "adminServiceId",
+    //     "==",
+    //     service.serviceType === "custom"
+    //       ? service.name
+    //       : service.adminServiceId
+    //   )
+    // );
 
-    const snap = await getDocs(q);
+    // const snap = await getDocs(q);
 
     // 3️⃣ if nobody uses it → delete from app_services
-    if (snap.empty) {
-      const appQ = query(
-        collection(db, "app_services"),
-        where("serviceKey", "==", serviceKey)
-      );
+    // if (snap.empty) {
+    //   const appQ = query(
+    //     collection(db, "app_services"),
+    //     where("serviceKey", "==", serviceKey)
+    //   );
 
-      const appSnap = await getDocs(appQ);
-      for (const d of appSnap.docs) {
-        await deleteDoc(d.ref);
-      }
-    }
+    //   const appSnap = await getDocs(appQ);
+    //   for (const d of appSnap.docs) {
+    //     await deleteDoc(d.ref);
+    //   }
+    // }
 
     fetchServices();
   } catch (err) {
@@ -224,20 +224,57 @@ const fetchServices = async () => {
     alert("Delete failed");
   }
 };
+const syncAppServiceVisibility = async (adminServiceId) => {
+  // 1️⃣ Check if ANY active company still provides this service
+  const q = query(
+    collection(db, "service_services"),
+    where("adminServiceId", "==", adminServiceId),
+    where("isActive", "==", true)
+  );
 
+  const snap = await getDocs(q);
+
+  const isVisibleInApp = !snap.empty;
+
+  // 2️⃣ Update app_services visibility
+  const appQ = query(
+    collection(db, "app_services"),
+    where("masterServiceId", "==", adminServiceId)
+  );
+
+  const appSnap = await getDocs(appQ);
+
+  for (const d of appSnap.docs) {
+    await updateDoc(d.ref, {
+      isActive: isVisibleInApp,
+      updatedAt: new Date(),
+    });
+  }
+};
   const handleToggleServiceStatus = async (serviceId, currentStatus) => {
-    try {
-      const newStatus = !currentStatus;
-      await updateDoc(doc(db, "service_services", serviceId), {
-        isActive: newStatus,
-        updatedAt: new Date(),
-      });
-      fetchServices(); // Refresh the list
-    } catch (error) {
-      console.error("Error updating service status:", error);
-      alert("Error updating service status. Please try again.");
+  try {
+    const service = services.find(s => s.id === serviceId);
+    if (!service) return;
+
+    const newStatus = !currentStatus;
+
+    // 1️⃣ Update company service
+    await updateDoc(doc(db, "service_services", serviceId), {
+      isActive: newStatus,
+      updatedAt: new Date(),
+    });
+
+    // 2️⃣ Sync app visibility (🔥 THIS IS THE FIX)
+    if (service.serviceType === "admin" && service.adminServiceId) {
+      await syncAppServiceVisibility(service.adminServiceId);
     }
-  };
+
+    fetchServices();
+  } catch (error) {
+    console.error("Error updating service status:", error);
+    alert("Error updating service status");
+  }
+};
 
 const fetchCategoryMasters = async () => {
   const snap = await getDocs(collection(db, "service_categories_master"));
