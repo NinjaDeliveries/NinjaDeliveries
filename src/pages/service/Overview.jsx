@@ -2,10 +2,17 @@ import React, { useEffect, useState } from "react";
 import { auth, db } from "../../context/Firebase";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import "../../style/ServiceDashboard.css";
+import { useLocation } from "react-router-dom";
+import BannerManagement from "./BannerManagement";
+
+
 
 const Overview = () => {
+  const [activeTab, setActiveTab] = useState("dashboard");
+
   const [serviceData, setServiceData] = useState(null);
   const [deliveryZoneInfo, setDeliveryZoneInfo] = useState(null);
+  
   const [stats, setStats] = useState({
     totalServices: 0,
     totalWorkers: 0,
@@ -118,27 +125,95 @@ const Overview = () => {
       )}
 
       {/* Statistics Cards */}
-      <div className="sd-cards">
-        <div className="sd-card">
-          <div className="sd-card-title">Total Services</div>
-          <div className="sd-card-value blue">{stats.totalServices}</div>
-        </div>
+      {/* Tabs */}
+<div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
+  <button
+    onClick={() => setActiveTab("dashboard")}
+    style={{
+      padding: "8px 16px",
+      borderRadius: 6,
+      border: "none",
+      cursor: "pointer",
+      background: activeTab === "dashboard" ? "#4f46e5" : "#e5e7eb",
+      color: activeTab === "dashboard" ? "#fff" : "#000",
+    }}
+  >
+    Dashboard
+  </button>
 
-        <div className="sd-card">
-          <div className="sd-card-title">Active Workers</div>
-          <div className="sd-card-value green">{stats.totalWorkers}</div>
-        </div>
+  <button
+    onClick={() => setActiveTab("banner")}
+    style={{
+      padding: "8px 16px",
+      borderRadius: 6,
+      border: "none",
+      cursor: "pointer",
+      background: activeTab === "banner" ? "#4f46e5" : "#e5e7eb",
+      color: activeTab === "banner" ? "#fff" : "#000",
+    }}
+  >
+    Banner Management
+  </button>
+</div>
 
-        <div className="sd-card">
-          <div className="sd-card-title">Categories</div>
-          <div className="sd-card-value purple">{stats.totalCategories}</div>
-        </div>
+{/* Content */}
+{activeTab === "dashboard" ? (
+  <div className="sd-cards">
+    <div className="sd-card">
+      <div className="sd-card-title">Total Services</div>
+      <div className="sd-card-value blue">{stats.totalServices}</div>
+    </div>
 
-        <div className="sd-card">
-          <div className="sd-card-title">Active Slots</div>
-          <div className="sd-card-value yellow">{stats.activeSlots}</div>
-        </div>
-      </div>
+    <div className="sd-card">
+      <div className="sd-card-title">Active Workers</div>
+      <div className="sd-card-value green">{stats.totalWorkers}</div>
+    </div>
+
+    <div className="sd-card">
+      <div className="sd-card-title">Categories</div>
+      <div className="sd-card-value purple">{stats.totalCategories}</div>
+    </div>
+
+    <div className="sd-card">
+      <div className="sd-card-title">Active Slots</div>
+      <div className="sd-card-value yellow">{stats.activeSlots}</div>
+    </div>
+  </div>
+) : (
+  <BannerManagement />
+)}
+
+
+{/* Tabs */}
+<div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
+  <button
+    onClick={() => setActiveTab("dashboard")}
+    style={{
+      padding: "8px 16px",
+      borderRadius: 6,
+      border: "none",
+      cursor: "pointer",
+      background: activeTab === "dashboard" ? "#4f46e5" : "#e5e7eb",
+      color: activeTab === "dashboard" ? "#fff" : "#000",
+    }}
+  >
+    Dashboard
+  </button>
+
+  <button
+    onClick={() => setActiveTab("banner")}
+    style={{
+      padding: "8px 16px",
+      borderRadius: 6,
+      border: "none",
+      cursor: "pointer",
+      background: activeTab === "banner" ? "#4f46e5" : "#e5e7eb",
+      color: activeTab === "banner" ? "#fff" : "#000",
+    }}
+  >
+    Banner Management
+  </button>
+</div>
 
 
     </div>
