@@ -20,8 +20,31 @@ const AddServiceModal = ({ onClose, onSaved, editService }) => {
 
   const isEditMode = !!editService;
 
-  
+const syncAppService = async (service) => {
+  const serviceKey =
+    service.serviceType === "custom"
+      ? `custom_${service.name.toLowerCase().trim()}`
+      : service.adminServiceId;
 
+  const q = query(
+    collection(db, "app_services"),
+    where("serviceKey", "==", serviceKey)
+  );
+
+  const snap = await getDocs(q);
+
+  // add only once
+  if (snap.empty) {
+    await addDoc(collection(db, "app_services"), {
+      serviceKey,
+      name: service.name,
+      masterCategoryId: service.masterCategoryId,
+      serviceType: service.serviceType,
+      isActive: true,
+      createdAt: new Date(),
+    });
+  }
+};
   // admin predefined services
 const [adminServices, setAdminServices] = useState([]);
 
@@ -227,114 +250,99 @@ const fetchAdminServices = async (catId) => {
 
  
 
-  const handleSave = async () => {
-     if (!priceType) {
-  alert("Please select pricing type");
-  return;
-}
-    try {
-      const user = auth.currentUser;
-      if (!user) return;
-      if (!name.trim()) {
-        alert("Service name is required");
-        return;
-      }
-      if (priceType === "package") {
-  for (let p of packages) {
-    if (!p.price || Number(p.price) <= 0) {
-      alert("Each package must have a valid price");
+ const handleSave = async () => {
+  if (!priceType) {
+    alert("Please select pricing type");
+    return;
+  }
+
+  try {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    if (!name.trim()) {
+      alert("Service name is required");
       return;
     }
-  }
-}
 
-if (priceType === "price" && (!fixedPrice || Number(fixedPrice) <= 0)) {
-  alert("Please enter a valid price");
-  return;
-}
-
-      setUploading(true);
-
-      let imageUrl = imagePreview; // Keep existing image URL if no new image
-
-      // Upload new image if selected
-      if (serviceImage) {
-        imageUrl = await uploadImage();
+    if (priceType === "package") {
+      for (let p of packages) {
+        if (!p.price || Number(p.price) <= 0) {
+          alert("Each package must have a valid price");
+          return;
+        }
       }
-
-      // const payload = {
-      //   companyId: user.uid,
-      //   name,
-      //   type: "package", // Always package type
-      //   categoryId: categoryId || null,
-      //   packages: packages.map(p => ({
-      //     duration: Number(p.duration),
-      //     unit: p.unit,
-      //     price: Number(p.price),
-      //   })),
-      //   imageUrl: imageUrl || null,
-      //   isActive: true,
-      //   updatedAt: new Date(),
-      // };
-
-      let finalServiceName = name;
-
-if (!isCustomService) {
-  const svc = adminServices.find(s => s.id === selectedServiceId);
-  if (svc) {
-    finalServiceName = svc.name;
-  }
-}
-  const payload = {
-  companyId: user.uid,
-  categoryMasterId,
-  masterCategoryId: categoryMasterId, // Add this for backward compatibility
-  name: finalServiceName,
-  serviceType: isCustomService ? "custom" : "admin",
-  adminServiceId: isCustomService ? null : selectedServiceId,
-  imageUrl: imageUrl || null,
-  isActive: true,
-  updatedAt: new Date(),
-};
-
-// service source
-if (isCustomService) {
-  payload.serviceType = "custom";
-} else {
-  payload.serviceType = "admin";
-  payload.adminServiceId = selectedServiceId;
-}
-
-// pricing
-if (priceType === "price") {
-  payload.price = Number(fixedPrice);
-  payload.packages = [];
-} else {
-  payload.packages = packages.map(p => ({
-    duration: Number(p.duration),
-    unit: p.unit,
-    price: Number(p.price),
-  }));
-}
-
-      if (isEditMode) {
-        // Update existing service
-        await updateDoc(doc(db, "service_services", editService.id), payload);
-      } else {
-        // Create new service
-        payload.createdAt = new Date();
-        await addDoc(collection(db, "service_services"), payload);
-      }
-
-      onSaved();
-      onClose();
-    } catch (error) {
-      console.error("Error saving service:", error);
-      alert("Error saving service. Please try again.");
-    } finally {
-      setUploading(false);
     }
-  };
+
+    if (priceType === "price" && (!fixedPrice || Number(fixedPrice) <= 0)) {
+      alert("Please enter a valid price");
+      return;
+    }
+
+    setUploading(true);
+
+    // upload image
+    let imageUrl = imagePreview;
+    if (serviceImage) {
+      imageUrl = await uploadImage();
+    }
+
+    // final service name
+    let finalServiceName = name;
+    if (!isCustomService) {
+      const svc = adminServices.find(s => s.id === selectedServiceId);
+      if (svc) finalServiceName = svc.name;
+    }
+
+    // ✅ BUILD PAYLOAD (ONLY ONCE)
+    const payload = {
+      companyId: user.uid,
+      categoryMasterId,
+      masterCategoryId: categoryMasterId,
+      name: finalServiceName,
+      serviceType: isCustomService ? "custom" : "admin",
+      adminServiceId: isCustomService ? null : selectedServiceId,
+      imageUrl: imageUrl || null,
+      isActive: true,
+      updatedAt: new Date(),
+    };
+
+    // pricing
+    if (priceType === "price") {
+      payload.price = Number(fixedPrice);
+      payload.packages = [];
+    } else {
+      payload.packages = packages.map(p => ({
+        duration: Number(p.duration),
+        unit: p.unit,
+        price: Number(p.price),
+      }));
+    }
+
+    if (isEditMode) {
+      // update service
+      await updateDoc(doc(db, "service_services", editService.id), payload);
+    } else {
+      // create service
+      payload.createdAt = new Date();
+      const docRef = await addDoc(collection(db, "service_services"), payload);
+
+      // ✅ sync with app_services
+      await syncAppService({
+        ...payload,
+        id: docRef.id,
+      });
+    }
+
+    onSaved(payload);
+    onClose();
+  } catch (error) {
+    console.error("Error saving service:", error);
+    alert("Error saving service. Please try again.");
+  } finally {
+    setUploading(false);
+  }
+};
 
   return (
     <div className="sd-modal-backdrop">

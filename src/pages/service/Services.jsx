@@ -111,6 +111,29 @@ const fetchServices = async () => {
   //   }
   // };
 
+  const syncAppService = async (service) => {
+  // only admin services go to app
+  if (service.serviceType !== "admin" || !service.adminServiceId) return;
+
+  const q = query(
+    collection(db, "app_services"),
+    where("masterServiceId", "==", service.adminServiceId)
+  );
+
+  const snap = await getDocs(q);
+
+  // already exists → do nothing
+  if (!snap.empty) return;
+
+  await addDoc(collection(db, "app_services"), {
+    masterServiceId: service.adminServiceId,
+    masterCategoryId: service.categoryMasterId,
+    name: getServiceName(service),
+    isActive: true,
+    createdAt: new Date(),
+  });
+};
+
   const fetchCategories = async () => {
   try {
     const snap = await getDocs(collection(db, "service_categories"));
@@ -152,18 +175,55 @@ const fetchServices = async () => {
   };
 
   const handleDeleteService = async (serviceId) => {
-    console.log("Delete service clicked for ID:", serviceId); // Debug log
-    if (window.confirm("Are you sure you want to delete this service? This action cannot be undone.")) {
-      try {
-        await deleteDoc(doc(db, "service_services", serviceId));
-        console.log("Service deleted successfully"); // Debug log
-        fetchServices(); // Refresh the list
-      } catch (error) {
-        console.error("Error deleting service:", error);
-        alert("Error deleting service. Please try again.");
+  if (!window.confirm("Delete service?")) return;
+
+  try {
+    const service = services.find(s => s.id === serviceId);
+    if (!service) return;
+
+    const serviceKey =
+      service.serviceType === "custom"
+        ? `custom_${service.name.toLowerCase().trim()}`
+        : service.adminServiceId;
+
+    // 1️⃣ delete company service
+    await deleteDoc(doc(db, "service_services", serviceId));
+
+    // 2️⃣ check if anyone still uses it
+    const q = query(
+      collection(db, "service_services"),
+      where(
+        service.serviceType === "custom"
+          ? "name"
+          : "adminServiceId",
+        "==",
+        service.serviceType === "custom"
+          ? service.name
+          : service.adminServiceId
+      )
+    );
+
+    const snap = await getDocs(q);
+
+    // 3️⃣ if nobody uses it → delete from app_services
+    if (snap.empty) {
+      const appQ = query(
+        collection(db, "app_services"),
+        where("serviceKey", "==", serviceKey)
+      );
+
+      const appSnap = await getDocs(appQ);
+      for (const d of appSnap.docs) {
+        await deleteDoc(d.ref);
       }
     }
-  };
+
+    fetchServices();
+  } catch (err) {
+    console.error(err);
+    alert("Delete failed");
+  }
+};
 
   const handleToggleServiceStatus = async (serviceId, currentStatus) => {
     try {
@@ -414,15 +474,16 @@ const getServiceName = (service) => {
       )}
 
       {openModal && (
-        <AddServiceModal
-          onClose={handleCloseModal}
-          onSaved={() => {
-            fetchServices();
-            fetchCategories(); // Refresh categories too
-          }}
-          editService={editService}
-        />
-      )}
+  <AddServiceModal
+    onClose={handleCloseModal}
+    onSaved={async (newService) => {
+      await syncAppService(newService); // 🔥 THIS CREATES app_services
+      fetchServices();
+      fetchCategories();
+    }}
+    editService={editService}
+  />
+)}
 
       {openGlobalServiceModal && (
   <AddGlobalServiceModal

@@ -23,25 +23,29 @@ const Bookings = () => {
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [otpInput, setOtpInput] = useState("");
   const user = auth.currentUser;
+  const today = new Date().toISOString().split("T")[0];
+
+  // const todaysBookings = bookings.filter(b => b.date === today);
+  const [activeTab, setActiveTab] = useState("active"); 
+// active | expired | completed
+
+const [sortOrder, setSortOrder] = useState("asc"); // asc | desc
 console.log("BOOKINGS PAGE UID:", user?.uid);
 
-const groupedByDate = bookings.reduce((acc, b) => {
-  const date = b.date;
-  if (!acc[date]) acc[date] = [];
-  acc[date].push(b);
-  return acc;
-}, {});
-const sortedDates = Object.keys(groupedByDate).sort(
-  (a, b) => new Date(a) - new Date(b)
-);
+// const groupedByDate = bookings.reduce((acc, b) => {
+//   const date = b.date;
+//   if (!acc[date]) acc[date] = [];
+//   acc[date].push(b);
+//   return acc;
+// }, {});
+// const sortedDates = Object.keys(groupedByDate).sort(
+//   (a, b) => new Date(a) - new Date(b)
+// );
 
-  const fetchBookings = async () => {
+const fetchBookings = async () => {
   try {
     const user = auth.currentUser;
-
     if (!user) return;
-
-    console.log("BOOKINGS PAGE UID:", user.uid);
 
     const q = query(
       collection(db, "service_bookings"),
@@ -50,12 +54,28 @@ const sortedDates = Object.keys(groupedByDate).sort(
 
     const snap = await getDocs(q);
 
-    const list = snap.docs.map((d) => ({
-      id: d.id,
-      ...d.data(),
-    }));
+    const today = new Date().toISOString().split("T")[0];
 
-    console.log("BOOKINGS SNAP SIZE:", list.length);
+    const list = snap.docs.map(d => {
+      const data = d.data();
+
+      // 🔥 AUTO-EXPIRE LOGIC
+      if (
+        data.date < today &&
+        !["completed", "rejected"].includes(data.status)
+      ) {
+        return {
+          id: d.id,
+          ...data,
+          status: "expired",
+        };
+      }
+
+      return {
+        id: d.id,
+        ...data,
+      };
+    });
 
     setBookings(list);
   } catch (err) {
@@ -91,9 +111,9 @@ const fetchCategories = async () => {
     fetchCategories();
   }, []);
 
-const handleRejectBooking = async (booking) => {
-  console.log("Reject booking:", booking.id);
-};
+// const handleRejectBooking = async (booking) => {
+//   console.log("Reject booking:", booking.id);
+// };
 
 // const handleStartWork = async (booking) => {
 //   console.log("Start work:", booking.id);
@@ -128,6 +148,39 @@ const handleStartWork = async (booking) => {
 // const handleCompleteWork = async (booking) => {
 //   console.log("Complete work:", booking.id);
 // };
+const activeBookings = bookings.filter(b =>
+  ["pending", "assigned", "started"].includes(b.status)
+);
+
+const expiredBookings = bookings.filter(b =>
+  ["expired", "rejected"].includes(b.status)
+);
+
+const completedBookings = bookings.filter(b =>
+  b.status === "completed"
+);
+
+const sortByDate = (list) => {
+  return [...list].sort((a, b) =>
+    sortOrder === "asc"
+      ? new Date(a.date) - new Date(b.date)
+      : new Date(b.date) - new Date(a.date)
+  );
+};
+
+let visibleBookings = [];
+
+if (activeTab === "active") {
+  visibleBookings = sortByDate(
+    activeBookings.filter(b => b.date >= today)
+  );
+}
+if (activeTab === "expired") {
+  visibleBookings = sortByDate(expiredBookings);
+}
+if (activeTab === "completed") {
+  visibleBookings = sortByDate(completedBookings);
+}
 
 const handleCompleteWork = async (booking) => {
   try {
@@ -170,6 +223,8 @@ const handleCompleteWork = async (booking) => {
       return <span className="sd-badge completed">COMPLETED</span>;
     case "rejected":
       return <span className="sd-badge rejected">REJECTED</span>;
+    case "expired":
+      return <span className="sd-badge rejected">EXPIRED</span>;
     default:
       return <span className="sd-badge pending">PENDING</span>;
   }
@@ -184,6 +239,37 @@ const handleCompleteWork = async (booking) => {
           Bookings are created from the app only
         </p>
       </div>
+      <div style={{ display: "flex", gap: "16px", marginBottom: "20px" }}>
+  <button
+    className={activeTab === "active" ? "sd-tab active" : "sd-tab"}
+    onClick={() => setActiveTab("active")}
+  >
+    📌 Bookings
+  </button>
+
+  <button
+    className={activeTab === "expired" ? "sd-tab active" : "sd-tab"}
+    onClick={() => setActiveTab("expired")}
+  >
+    ⚠ Expired
+  </button>
+
+  <button
+    className={activeTab === "completed" ? "sd-tab active" : "sd-tab"}
+    onClick={() => setActiveTab("completed")}
+  >
+    ✅ Completed
+  </button>
+
+  <select
+    value={sortOrder}
+    onChange={(e) => setSortOrder(e.target.value)}
+    style={{ marginLeft: "auto" }}
+  >
+    <option value="asc">Date ↑</option>
+    <option value="desc">Date ↓</option>
+  </select>
+</div>
      <button
   onClick={() => createDummyBookings(30)}
   style={{
@@ -205,74 +291,57 @@ const handleCompleteWork = async (booking) => {
       ) : bookings.length === 0 ? (
         <p>No bookings yet.</p>
       ) : (
-        <div className="sd-table">
-          {sortedDates.map((date) => (
-  <div key={date} style={{ marginBottom: "24px" }}>
-    <h2 style={{ marginBottom: "10px" }}>
-      📅 {date}
-    </h2>
+<div className="sd-table">
+  {visibleBookings.length === 0 ? (
+    <p>No bookings found.</p>
+  ) : (
+    visibleBookings.map((b) => (
+      <div key={b.id} className="sd-service-card">
+        <div>
+          <h3>{b.customerName}</h3>
+          <p>{b.serviceName}</p>
+          <p>📅 {b.date} ⏰ {b.time}</p>
 
-    {groupedByDate[date]
-      .sort((a, b) => a.time.localeCompare(b.time))
-      .map((b) => (
-        <div key={b.id} className="sd-service-card">
-          <div>
-            <h3>{b.customerName}</h3>
-            <p>{b.serviceName}</p>
-            <p>⏰ {b.time}</p>
-          </div>
+          {b.addOns?.length > 0 && (
+            <div>
+              <strong>Add-ons:</strong>
+              {b.addOns.map((a, i) => (
+                <p key={i}>➕ {a.name} – ₹{a.price}</p>
+              ))}
+            </div>
+          )}
 
-          <div className="sd-actions">
-            {getStatusBadge(b.status || "pending")}
-
-            {(b.status === "pending" || !b.status) && (
-              <>
-                <button
-                  className="sd-primary-btn"
-                  onClick={() => {
-                    setSelectedBooking(b);
-                    setOpenAssign(true);
-                  }}
-                >
-                  Assign Worker
-                </button>
-
-                <button
-                  className="sd-secondary-btn"
-                  style={{ marginLeft: "8px", background: "#ef4444", color: "#fff" }}
-                  onClick={() => handleRejectBooking(b)}
-                >
-                  Reject
-                </button>
-              </>
-            )}
-
-            {b.status === "assigned" && (
-              <button
-                className="sd-primary-btn"
-                onClick={() => handleStartWork(b)}
-              >
-                Start Work
-              </button>
-            )}
-
-            {b.status === "started" && (
-              <button
-                className="sd-primary-btn"
-                onClick={() => {
-                  setSelectedBooking(b);
-                  setShowOtpModal(true);
-                }}
-              >
-                Complete Work
-              </button>
-            )}
-          </div>
+          {typeof b.totalPrice === "number" && (
+            <p><strong>💰 Total: ₹{b.totalPrice}</strong></p>
+          )}
         </div>
-      ))}
-  </div>
-))}
+
+        <div className="sd-actions">
+          {getStatusBadge(b.status)}
+
+          {activeTab === "active" && b.status === "assigned" && (
+            // <button onClick={() => handleStartWork(b)}>
+            <button className="sd-primary-btn" onClick={() => handleStartWork(b)}>
+              Start Work
+            </button>
+          )}
+
+          {activeTab === "active" && b.status === "started" && (
+  <button
+    className="sd-primary-btn"
+    onClick={() => {
+      setSelectedBooking(b);
+      setShowOtpModal(true);
+    }}
+  >
+    Complete Work
+  </button>
+)}
         </div>
+      </div>
+    ))
+  )}
+</div>
       )}
 
       {openAssign && (
