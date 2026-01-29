@@ -86,16 +86,10 @@ const Overview = () => {
     border: "none",
     cursor: "pointer",
     fontWeight: 600,
-    letterSpacing: "0.3px",
-    transition: "all 0.25s ease",
-    background: active
-      ? "linear-gradient(135deg, #6366f1, #4f46e5)"
-      : "#e5e7eb",
+    transition: "0.25s",
+    background: active ? "linear-gradient(135deg,#6366f1,#4f46e5)" : "#e5e7eb",
     color: active ? "#fff" : "#111",
-    boxShadow: active
-      ? "0 8px 18px rgba(79,70,229,0.45)"
-      : "0 2px 6px rgba(0,0,0,0.1)",
-    transform: active ? "scale(1.05)" : "scale(1)"
+    boxShadow: active ? "0 8px 18px rgba(79,70,229,0.45)" : "0 2px 6px rgba(0,0,0,0.1)"
   });
 
   if (loading) {
@@ -124,24 +118,22 @@ const Overview = () => {
             <div className="sd-zone-connection">
               <span className="sd-zone-label">📍 Service Area:</span>
               <span className="sd-zone-name">
-                {deliveryZoneInfo ? deliveryZoneInfo.name : (serviceData.deliveryZoneName || "Not Connected")}
+                {deliveryZoneInfo ? deliveryZoneInfo.name : serviceData.deliveryZoneName}
               </span>
             </div>
 
-            <div style={{ marginTop: '8px', fontSize: '13px', opacity: '0.9' }}>
-              Business Type: <strong>{serviceData.businessType || 'Service'}</strong>
+            <div style={{ marginTop: 8, fontSize: 13 }}>
+              Business Type: <strong>{serviceData.businessType || "Service"}</strong>
             </div>
           </div>
         </div>
       )}
 
-      {/* Tabs */}
-      <div style={{ display: "flex", gap: 12, marginBottom: 25 }}>
+      {/* Banner Button */}
+      <div style={{ marginBottom: 25 }}>
         <button
           style={tabButtonStyle(activeTab === "banner")}
           onClick={() => setActiveTab("banner")}
-          onMouseEnter={(e) => e.target.style.transform = "scale(1.08)"}
-          onMouseLeave={(e) => e.target.style.transform = activeTab === "banner" ? "scale(1.05)" : "scale(1)"}
         >
           🎯 Banner Management
         </button>
@@ -150,29 +142,54 @@ const Overview = () => {
       {/* Content */}
       {activeTab === "dashboard" ? (
         <div className="sd-cards">
-          <div className="sd-card">
-            <div className="sd-card-title">Total Services</div>
-            <div className="sd-card-value blue">{stats.totalServices}</div>
-          </div>
-
-          <div className="sd-card">
-            <div className="sd-card-title">Active Workers</div>
-            <div className="sd-card-value green">{stats.totalWorkers}</div>
-          </div>
-
-          <div className="sd-card">
-            <div className="sd-card-title">Categories</div>
-            <div className="sd-card-value purple">{stats.totalCategories}</div>
-          </div>
-
-          <div className="sd-card">
-            <div className="sd-card-title">Active Slots</div>
-            <div className="sd-card-value yellow">{stats.activeSlots}</div>
-          </div>
+          <div className="sd-card"><div>Total Services</div><div>{stats.totalServices}</div></div>
+          <div className="sd-card"><div>Active Workers</div><div>{stats.totalWorkers}</div></div>
+          <div className="sd-card"><div>Categories</div><div>{stats.totalCategories}</div></div>
+          <div className="sd-card"><div>Active Slots</div><div>{stats.activeSlots}</div></div>
         </div>
       ) : (
         <BannerManagement onBack={() => setActiveTab("dashboard")} />
       )}
+
+      {/* Debug Section */}
+      <div className="sd-card" style={{ marginTop: 20, background: "#fff3cd" }}>
+        <h3>🔧 Debug Mode</h3>
+
+        <button
+          className="sd-primary-btn"
+          onClick={() =>
+            showNotification({
+              id: Date.now(),
+              type: "booking",
+              title: "Test Booking",
+              message: "Testing notification",
+              timestamp: new Date()
+            })
+          }
+        >
+          Test Notification
+        </button>
+
+        <button
+          className="sd-secondary-btn"
+          onClick={() => {
+            const audio = new Audio("/servicebeep.mp3");
+            audio.play();
+          }}
+        >
+          Test Sound
+        </button>
+
+        <button
+          className="sd-secondary-btn"
+          onClick={() => {
+            const user = auth.currentUser;
+            alert(`User: ${user?.email}`);
+          }}
+        >
+          Check Settings
+        </button>
+      </div>
 
     </div>
   );
