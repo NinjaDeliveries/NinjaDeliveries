@@ -3,7 +3,6 @@ import { auth, db } from "../../context/Firebase";
 import {
   doc,
   getDoc,
-  setDoc,
   updateDoc,
 } from "firebase/firestore";
 import "../../style/ServiceDashboard.css";
@@ -69,26 +68,28 @@ export default function Settings() {
         if (snap.exists()) {
           const data = snap.data();
           
-          // Map existing data to our state structure
+          // Ensure we only extract string/primitive values, not Firebase objects
           setBusinessInfo({
-            businessName: data.companyName || "",
-            ownerName: data.name || "",
-            businessType: data.type || "service",
-            description: data.description || "",
+            businessName: String(data.companyName || ""),
+            ownerName: String(data.name || ""),
+            businessType: String(data.type || "service"),
+            description: String(data.description || ""),
           });
           
           setContactInfo({
-            email: data.email || "",
-            phone: data.phone || "",
-            address: data.address || data.deliveryZoneName || "",
-            website: data.website || "",
+            email: String(data.email || ""),
+            phone: String(data.phone || ""),
+            address: String(data.address || data.deliveryZoneName || ""),
+            website: String(data.website || ""),
           });
           
+          // Handle notifications object safely
+          const notificationData = data.notifications || {};
           setNotifications({
-            newBookingAlerts: data.notifications?.newBookingAlerts ?? true,
-            paymentNotifications: data.notifications?.paymentNotifications ?? true,
-            reviewAlerts: data.notifications?.reviewAlerts ?? true,
-            marketingEmails: data.notifications?.marketingEmails ?? false,
+            newBookingAlerts: Boolean(notificationData.newBookingAlerts ?? true),
+            paymentNotifications: Boolean(notificationData.paymentNotifications ?? true),
+            reviewAlerts: Boolean(notificationData.reviewAlerts ?? true),
+            marketingEmails: Boolean(notificationData.marketingEmails ?? false),
           });
         } else {
           console.log("No service company document found");
@@ -229,7 +230,7 @@ export default function Settings() {
               <label>Business Name</label>
               <input
                 type="text"
-                value={businessInfo.businessName}
+                value={businessInfo.businessName || ""}
                 onChange={(e) => setBusinessInfo(prev => ({ ...prev, businessName: e.target.value }))}
                 className="form-input"
                 placeholder="Enter business name"
@@ -240,7 +241,7 @@ export default function Settings() {
               <label>Owner Name</label>
               <input
                 type="text"
-                value={businessInfo.ownerName}
+                value={businessInfo.ownerName || ""}
                 onChange={(e) => setBusinessInfo(prev => ({ ...prev, ownerName: e.target.value }))}
                 className="form-input"
                 placeholder="Enter owner name"
@@ -250,7 +251,7 @@ export default function Settings() {
             <div className="form-group">
               <label>Business Type</label>
               <select
-                value={businessInfo.businessType}
+                value={businessInfo.businessType || "service"}
                 onChange={(e) => setBusinessInfo(prev => ({ ...prev, businessType: e.target.value }))}
                 className="form-input"
               >
@@ -263,7 +264,7 @@ export default function Settings() {
             <div className="form-group">
               <label>Description</label>
               <textarea
-                value={businessInfo.description}
+                value={businessInfo.description || ""}
                 onChange={(e) => setBusinessInfo(prev => ({ ...prev, description: e.target.value }))}
                 className="form-input"
                 placeholder="Brief description of your business"
@@ -294,7 +295,7 @@ export default function Settings() {
                 </svg>
                 <input
                   type="email"
-                  value={contactInfo.email}
+                  value={contactInfo.email || ""}
                   onChange={(e) => setContactInfo(prev => ({ ...prev, email: e.target.value }))}
                   className="form-input with-icon"
                   placeholder="Enter email address"
@@ -310,7 +311,7 @@ export default function Settings() {
                 </svg>
                 <input
                   type="tel"
-                  value={contactInfo.phone}
+                  value={contactInfo.phone || ""}
                   onChange={(e) => setContactInfo(prev => ({ ...prev, phone: e.target.value }))}
                   className="form-input with-icon"
                   placeholder="Enter phone number"
@@ -327,7 +328,7 @@ export default function Settings() {
                 </svg>
                 <input
                   type="text"
-                  value={contactInfo.address}
+                  value={contactInfo.address || ""}
                   onChange={(e) => setContactInfo(prev => ({ ...prev, address: e.target.value }))}
                   className="form-input with-icon"
                   placeholder="Enter service area (e.g., Dharamshala)"
@@ -345,7 +346,7 @@ export default function Settings() {
                 </svg>
                 <input
                   type="url"
-                  value={contactInfo.website}
+                  value={contactInfo.website || ""}
                   onChange={(e) => setContactInfo(prev => ({ ...prev, website: e.target.value }))}
                   className="form-input with-icon"
                   placeholder="www.example.com"
@@ -382,7 +383,7 @@ export default function Settings() {
                 <label className="toggle-switch">
                   <input
                     type="checkbox"
-                    checked={notifications[item.key]}
+                    checked={notifications[item.key] || false}
                     onChange={() => handleNotificationToggle(item.key)}
                   />
                   <span className="toggle-slider"></span>
@@ -408,7 +409,7 @@ export default function Settings() {
               <label>Current Password</label>
               <input
                 type="password"
-                value={passwordData.currentPassword}
+                value={passwordData.currentPassword || ""}
                 onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
                 className="form-input"
                 placeholder="Enter current password"
@@ -419,7 +420,7 @@ export default function Settings() {
               <label>New Password</label>
               <input
                 type="password"
-                value={passwordData.newPassword}
+                value={passwordData.newPassword || ""}
                 onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
                 className="form-input"
                 placeholder="Enter new password"
@@ -430,7 +431,7 @@ export default function Settings() {
               <label>Confirm New Password</label>
               <input
                 type="password"
-                value={passwordData.confirmPassword}
+                value={passwordData.confirmPassword || ""}
                 onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
                 className="form-input"
                 placeholder="Confirm new password"
