@@ -3,23 +3,21 @@ import { auth, db } from "../../context/Firebase";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import "../../style/ServiceDashboard.css";
 import { useNotifications } from "../../context/NotificationContext";
-import { useLocation } from "react-router-dom";
 import BannerManagement from "./BannerManagement";
-
-
 
 const Overview = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
 
   const [serviceData, setServiceData] = useState(null);
   const [deliveryZoneInfo, setDeliveryZoneInfo] = useState(null);
-  
+
   const [stats, setStats] = useState({
     totalServices: 0,
     totalWorkers: 0,
     totalCategories: 0,
     activeSlots: 0
   });
+
   const [loading, setLoading] = useState(true);
   const { showNotification, notificationSettings } = useNotifications();
 
@@ -29,40 +27,35 @@ const Overview = () => {
         const user = auth.currentUser;
         if (!user) return;
 
-        // Fetch company data
         const companyRef = doc(db, "service_company", user.uid);
         const companySnap = await getDoc(companyRef);
-        
+
         if (companySnap.exists()) {
           const data = companySnap.data();
           setServiceData(data);
 
-          // Fetch delivery zone details if deliveryZoneId exists
           if (data.deliveryZoneId) {
             try {
               const zoneRef = doc(db, "deliveryZones", data.deliveryZoneId);
               const zoneSnap = await getDoc(zoneRef);
-              
+
               if (zoneSnap.exists()) {
                 setDeliveryZoneInfo(zoneSnap.data());
               } else {
-                // Fallback to deliveryZoneName if zone document doesn't exist
-                setDeliveryZoneInfo({ 
+                setDeliveryZoneInfo({
                   name: data.deliveryZoneName || "Unknown Zone",
-                  id: data.deliveryZoneId 
+                  id: data.deliveryZoneId
                 });
               }
-            } catch (error) {
-              console.log("Zone fetch error, using fallback:", error);
-              setDeliveryZoneInfo({ 
+            } catch {
+              setDeliveryZoneInfo({
                 name: data.deliveryZoneName || "Unknown Zone",
-                id: data.deliveryZoneId 
+                id: data.deliveryZoneId
               });
             }
           }
         }
 
-        // Fetch statistics
         const [servicesSnap, workersSnap, categoriesSnap, slotsSnap] = await Promise.all([
           getDocs(query(collection(db, "service_services"), where("serviceId", "==", user.uid))),
           getDocs(query(collection(db, "service_technicians"), where("serviceId", "==", user.uid))),
@@ -87,38 +80,54 @@ const Overview = () => {
     fetchData();
   }, []);
 
+  const tabButtonStyle = (active) => ({
+    padding: "10px 22px",
+    borderRadius: "12px",
+    border: "none",
+    cursor: "pointer",
+    fontWeight: 600,
+    letterSpacing: "0.3px",
+    transition: "all 0.25s ease",
+    background: active
+      ? "linear-gradient(135deg, #6366f1, #4f46e5)"
+      : "#e5e7eb",
+    color: active ? "#fff" : "#111",
+    boxShadow: active
+      ? "0 8px 18px rgba(79,70,229,0.45)"
+      : "0 2px 6px rgba(0,0,0,0.1)",
+    transform: active ? "scale(1.05)" : "scale(1)"
+  });
+
   if (loading) {
     return <div className="sd-main"><p>Loading overview...</p></div>;
   }
 
   return (
     <div className="sd-main">
+
       <div className="sd-header">
         <h1>
-          {serviceData ? 
-            `${serviceData.companyName} - ${deliveryZoneInfo?.name || serviceData.deliveryZoneName || 'Dashboard'}` : 
-            'Welcome back!'
+          {serviceData
+            ? `${serviceData.companyName} - ${deliveryZoneInfo?.name || serviceData.deliveryZoneName || 'Dashboard'}`
+            : 'Welcome back!'
           }
         </h1>
         <p>SERVICE ACCOUNT</p>
       </div>
 
-      {/* Company & Zone Info */}
       {serviceData && (
         <div className="sd-simple-info-card">
           <div className="sd-company-basic">
             <h2>{serviceData.companyName}</h2>
             <p className="sd-owner-name">Owner: {serviceData.ownerName || serviceData.name}</p>
-            
-            {/* Delivery Zone Connection - Prominent Display */}
+
             <div className="sd-zone-connection">
               <span className="sd-zone-label">📍 Service Area:</span>
               <span className="sd-zone-name">
                 {deliveryZoneInfo ? deliveryZoneInfo.name : (serviceData.deliveryZoneName || "Not Connected")}
               </span>
             </div>
-            
-            {/* Business Type */}
+
             <div style={{ marginTop: '8px', fontSize: '13px', opacity: '0.9' }}>
               Business Type: <strong>{serviceData.businessType || 'Service'}</strong>
             </div>
@@ -126,110 +135,44 @@ const Overview = () => {
         </div>
       )}
 
-{/* Content */}
-{activeTab === "dashboard" ? (
-  <div className="sd-cards">
-    <div className="sd-card">
-      <div className="sd-card-title">Total Services</div>
-      <div className="sd-card-value blue">{stats.totalServices}</div>
-    </div>
-
-    <div className="sd-card">
-      <div className="sd-card-title">Active Workers</div>
-      <div className="sd-card-value green">{stats.totalWorkers}</div>
-    </div>
-
-    <div className="sd-card">
-      <div className="sd-card-title">Categories</div>
-      <div className="sd-card-value purple">{stats.totalCategories}</div>
-    </div>
-
-    <div className="sd-card">
-      <div className="sd-card-title">Active Slots</div>
-      <div className="sd-card-value yellow">{stats.activeSlots}</div>
-    </div>
-  </div>
-) : (
-  <BannerManagement onBack={() => setActiveTab("dashboard")} />
-
-)}
-
-
-{/* Tabs */}
-<div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
-  <button
-    onClick={() => setActiveTab("banner")}
-    style={{
-      padding: "8px 16px",
-      borderRadius: 6,
-      border: "none",
-      cursor: "pointer",
-      background: activeTab === "banner" ? "#4f46e5" : "#e5e7eb",
-      color: activeTab === "banner" ? "#fff" : "#000",
-    }}
-  >
-    Banner Management
-  </button>
-</div>
-
-      {/* Temporary Debug Section - Remove after testing */}
-      <div className="sd-card" style={{ marginTop: '20px', background: '#fff3cd', border: '1px solid #ffeaa7' }}>
-        <h3 style={{ color: '#856404' }}>🔧 Debug Mode</h3>
-        <p style={{ fontSize: '14px', color: '#856404', marginBottom: '15px' }}>
-          Temporary debugging tools - check browser console for detailed logs
-        </p>
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          <button 
-            className="sd-primary-btn"
-            onClick={() => {
-              console.log('🧪 Manual notification test triggered');
-              showNotification({
-                id: `manual-test-${Date.now()}`,
-                type: 'booking',
-                title: 'Manual Test Booking!',
-                message: 'Test Service - Test Customer',
-                timestamp: new Date()
-              });
-            }}
-          >
-            Test Notification
-          </button>
-          
-          <button 
-            className="sd-secondary-btn"
-            onClick={() => {
-              console.log('🔊 Manual sound test triggered');
-              const audio = new Audio('/servicebeep.mp3');
-              audio.volume = 0.7;
-              audio.play().then(() => {
-                console.log('✅ Manual sound test successful');
-                alert('Sound test successful!');
-              }).catch(error => {
-                console.log('❌ Manual sound test failed:', error);
-                alert('Sound test failed: ' + error.message);
-              });
-            }}
-          >
-            Test Sound
-          </button>
-          
-          <button 
-            className="sd-secondary-btn"
-            onClick={() => {
-              const user = auth.currentUser;
-              console.log('📊 Debug Info:', {
-                user: user?.uid,
-                email: user?.email,
-                notificationSettings,
-                timestamp: new Date().toLocaleString()
-              });
-              alert(`User: ${user?.uid}\nEmail: ${user?.email}\nNotifications: ${notificationSettings.newBookingAlerts}\nCheck console for more details`);
-            }}
-          >
-            Check Settings
-          </button>
-        </div>
+      {/* Tabs */}
+      <div style={{ display: "flex", gap: 12, marginBottom: 25 }}>
+        <button
+          style={tabButtonStyle(activeTab === "banner")}
+          onClick={() => setActiveTab("banner")}
+          onMouseEnter={(e) => e.target.style.transform = "scale(1.08)"}
+          onMouseLeave={(e) => e.target.style.transform = activeTab === "banner" ? "scale(1.05)" : "scale(1)"}
+        >
+          🎯 Banner Management
+        </button>
       </div>
+
+      {/* Content */}
+      {activeTab === "dashboard" ? (
+        <div className="sd-cards">
+          <div className="sd-card">
+            <div className="sd-card-title">Total Services</div>
+            <div className="sd-card-value blue">{stats.totalServices}</div>
+          </div>
+
+          <div className="sd-card">
+            <div className="sd-card-title">Active Workers</div>
+            <div className="sd-card-value green">{stats.totalWorkers}</div>
+          </div>
+
+          <div className="sd-card">
+            <div className="sd-card-title">Categories</div>
+            <div className="sd-card-value purple">{stats.totalCategories}</div>
+          </div>
+
+          <div className="sd-card">
+            <div className="sd-card-title">Active Slots</div>
+            <div className="sd-card-value yellow">{stats.activeSlots}</div>
+          </div>
+        </div>
+      ) : (
+        <BannerManagement onBack={() => setActiveTab("dashboard")} />
+      )}
 
     </div>
   );
