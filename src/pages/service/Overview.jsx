@@ -21,7 +21,7 @@ const Overview = () => {
     activeSlots: 0
   });
   const [loading, setLoading] = useState(true);
-  const { showNotification, notificationSettings } = useNotifications();
+  const { showNotification, notificationSettings, refreshBookingListener } = useNotifications();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -200,7 +200,7 @@ const Overview = () => {
             onClick={() => {
               console.log('🔊 Manual sound test triggered');
               const audio = new Audio('/servicebeep.mp3');
-              audio.volume = 0.7;
+              audio.volume = 0.8;
               audio.play().then(() => {
                 console.log('✅ Manual sound test successful');
                 alert('Sound test successful!');
@@ -216,6 +216,17 @@ const Overview = () => {
           <button 
             className="sd-secondary-btn"
             onClick={() => {
+              console.log('🔄 Refreshing booking listener...');
+              refreshBookingListener();
+              alert('Booking listener refreshed! Check console for logs.');
+            }}
+          >
+            Refresh Listener
+          </button>
+          
+          <button 
+            className="sd-secondary-btn"
+            onClick={() => {
               const user = auth.currentUser;
               console.log('📊 Debug Info:', {
                 user: user?.uid,
@@ -223,7 +234,7 @@ const Overview = () => {
                 notificationSettings,
                 timestamp: new Date().toLocaleString()
               });
-              alert(`User: ${user?.uid}\nEmail: ${user?.email}\nNotifications: ${notificationSettings.newBookingAlerts}\nCheck console for more details`);
+              alert(`User: ${user?.uid}\nEmail: ${user?.email}\nBooking Alerts: ${notificationSettings.newBookingAlerts}\nCheck console for more details`);
             }}
           >
             Check Settings

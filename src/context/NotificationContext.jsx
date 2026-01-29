@@ -24,7 +24,7 @@ export const useNotifications = () => {
 export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const [notificationSettings, setNotificationSettings] = useState({
-    newBookingAlerts: true,
+    newBookingAlerts: true, // Always enabled by default
     paymentNotifications: true,
     reviewAlerts: true,
     marketingEmails: false,
@@ -36,7 +36,12 @@ export const NotificationProvider = ({ children }) => {
     const loadSettings = async () => {
       try {
         const user = auth.currentUser;
-        if (!user) return;
+        if (!user) {
+          console.log('❌ No user for loading notification settings');
+          return;
+        }
+
+        console.log('📋 Loading notification settings for user:', user.uid);
 
         const ref = doc(db, "service_company", user.uid);
         const snap = await getDoc(ref);
@@ -44,21 +49,39 @@ export const NotificationProvider = ({ children }) => {
         if (snap.exists()) {
           const data = snap.data();
           const settings = data.notifications || {};
-          setNotificationSettings({
-            newBookingAlerts: Boolean(settings.newBookingAlerts ?? true),
+          
+          const loadedSettings = {
+            newBookingAlerts: Boolean(settings.newBookingAlerts ?? true), // Default to true
             paymentNotifications: Boolean(settings.paymentNotifications ?? true),
             reviewAlerts: Boolean(settings.reviewAlerts ?? true),
             marketingEmails: Boolean(settings.marketingEmails ?? false),
-          });
+          };
+          
+          console.log('✅ Loaded notification settings:', loadedSettings);
+          setNotificationSettings(loadedSettings);
+        } else {
+          console.log('📋 No settings document found, using defaults');
+          // Use defaults (already set in state)
         }
       } catch (error) {
-        console.error("Error loading notification settings:", error);
+        console.error("❌ Error loading notification settings:", error);
+        // Keep default settings on error
       }
     };
 
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (user) {
+        console.log('🔐 User authenticated, loading settings');
         loadSettings();
+      } else {
+        console.log('🔐 User not authenticated, using default settings');
+        // Reset to defaults when no user
+        setNotificationSettings({
+          newBookingAlerts: true,
+          paymentNotifications: true,
+          reviewAlerts: true,
+          marketingEmails: false,
+        });
       }
     });
 
@@ -69,101 +92,133 @@ export const NotificationProvider = ({ children }) => {
   useEffect(() => {
     let unsubscribe = null;
 
-    const setupBookingListener = () => {
+    const setupBookingListener = async () => {
       const user = auth.currentUser;
-      if (!user || !notificationSettings.newBookingAlerts) {
-        console.log('❌ Booking listener not set up:', { 
-          user: !!user, 
-          userUid: user?.uid,
-          alerts: notificationSettings.newBookingAlerts 
-        });
+      if (!user) {
+        console.log('❌ No authenticated user for booking listener');
         return;
       }
 
-      console.log('✅ Setting up booking listener for user:', user.uid);
+      if (!notificationSettings.newBookingAlerts) {
+        console.log('❌ Booking alerts disabled in settings');
+        return;
+      }
 
-      const q = query(
-        collection(db, "service_bookings"),
-        where("companyId", "==", user.uid),
-        orderBy("createdAt", "desc"),
-        limit(50)
-      );
+      console.log('✅ Setting up real-time booking listener for user:', user.uid);
 
-      unsubscribe = onSnapshot(q, (snapshot) => {
-        console.log('📊 Booking snapshot received:', {
-          docs: snapshot.docs.length,
-          lastBookingCount,
-          currentTime: new Date().toLocaleTimeString()
-        });
-        
-        const currentBookings = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+      try {
+        const q = query(
+          collection(db, "service_bookings"),
+          where("companyId", "==", user.uid),
+          orderBy("createdAt", "desc"),
+          limit(50)
+        );
 
-        // Log first few bookings for debugging
-        if (currentBookings.length > 0) {
-          console.log('📋 Latest bookings:', currentBookings.slice(0, 3).map(b => ({
-            id: b.id,
-            serviceName: b.serviceName,
-            customerName: b.customerName,
-            createdAt: b.createdAt?.toDate?.()?.toLocaleString() || 'No timestamp'
-          })));
-        }
-
-        // Initialize lastBookingCount if it's the first load
-        if (lastBookingCount === 0) {
-          console.log('🔄 Initializing booking count:', currentBookings.length);
-          setLastBookingCount(currentBookings.length);
-          return;
-        }
-
-        // Check for new bookings
-        if (currentBookings.length > lastBookingCount) {
-          const newBookingsCount = currentBookings.length - lastBookingCount;
-          console.log('🔔 NEW BOOKINGS DETECTED:', {
-            newCount: newBookingsCount,
-            previousCount: lastBookingCount,
-            currentCount: currentBookings.length
+        unsubscribe = onSnapshot(q, (snapshot) => {
+          console.log('📊 Real-time booking snapshot received:', {
+            docs: snapshot.docs.length,
+            lastBookingCount,
+            timestamp: new Date().toLocaleTimeString(),
+            hasChanges: !snapshot.metadata.hasPendingWrites
           });
           
-          // Get the newest bookings
-          const newBookings = currentBookings.slice(0, newBookingsCount);
-          
-          // Show notification for each new booking
-          newBookings.forEach((booking, index) => {
-            console.log('📢 Showing notification for booking:', booking.id);
-            setTimeout(() => {
-              showNotification({
-                id: `booking-${booking.id}`,
-                type: 'booking',
-                title: 'New Booking Received!',
-                message: `${booking.serviceName} - ${booking.customerName}`,
-                timestamp: new Date(),
-                data: booking
+          const currentBookings = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+
+          // Log first few bookings for debugging
+          if (currentBookings.length > 0) {
+            console.log('📋 Latest bookings:', currentBookings.slice(0, 2).map(b => ({
+              id: b.id,
+              serviceName: b.serviceName,
+              customerName: b.customerName,
+              createdAt: b.createdAt?.toDate?.()?.toLocaleString() || 'No timestamp',
+              status: b.status
+            })));
+          }
+
+          // Initialize lastBookingCount if it's the first load
+          if (lastBookingCount === 0) {
+            console.log('🔄 Initializing booking count:', currentBookings.length);
+            setLastBookingCount(currentBookings.length);
+            return;
+          }
+
+          // Check for new bookings
+          if (currentBookings.length > lastBookingCount) {
+            const newBookingsCount = currentBookings.length - lastBookingCount;
+            console.log('🔔 NEW BOOKINGS DETECTED!', {
+              newCount: newBookingsCount,
+              previousCount: lastBookingCount,
+              currentCount: currentBookings.length,
+              timestamp: new Date().toLocaleString()
+            });
+            
+            // Get the newest bookings
+            const newBookings = currentBookings.slice(0, newBookingsCount);
+            
+            // Show notification for each new booking immediately
+            newBookings.forEach((booking, index) => {
+              console.log('📢 Processing new booking notification:', {
+                id: booking.id,
+                service: booking.serviceName,
+                customer: booking.customerName
               });
-            }, index * 500); // Stagger notifications by 500ms
-          });
 
-          // Play notification sound once
-          console.log('🔊 Playing notification sound...');
-          playNotificationSound();
-        } else if (currentBookings.length < lastBookingCount) {
-          console.log('📉 Booking count decreased:', {
-            previousCount: lastBookingCount,
-            currentCount: currentBookings.length
-          });
-        } else {
-          console.log('📊 No new bookings, count unchanged:', currentBookings.length);
-        }
+              // Show notification immediately (no delay for first one)
+              const delay = index * 300; // Reduced delay for faster notifications
+              setTimeout(() => {
+                console.log('🔔 Showing notification for booking:', booking.id);
+                showNotification({
+                  id: `booking-${booking.id}-${Date.now()}`, // Unique ID to prevent duplicates
+                  type: 'booking',
+                  title: '🔔 New Booking Received!',
+                  message: `${booking.serviceName} - ${booking.customerName}`,
+                  timestamp: new Date(),
+                  data: booking
+                });
+              }, delay);
+            });
 
-        setLastBookingCount(currentBookings.length);
-      }, (error) => {
-        console.error("❌ Error listening to bookings:", error);
-      });
+            // Play notification sound immediately
+            console.log('🔊 Playing notification sound for new bookings...');
+            playNotificationSound();
+            
+            // Update count
+            setLastBookingCount(currentBookings.length);
+            
+          } else if (currentBookings.length < lastBookingCount) {
+            console.log('📉 Booking count decreased (booking deleted/cancelled):', {
+              previousCount: lastBookingCount,
+              currentCount: currentBookings.length
+            });
+            setLastBookingCount(currentBookings.length);
+          } else {
+            console.log('📊 No new bookings, count unchanged:', currentBookings.length);
+          }
+
+        }, (error) => {
+          console.error("❌ Error in booking listener:", error);
+          // Try to reconnect after error
+          setTimeout(() => {
+            console.log('🔄 Attempting to reconnect booking listener...');
+            setupBookingListener();
+          }, 5000);
+        });
+
+      } catch (error) {
+        console.error("❌ Error setting up booking listener:", error);
+      }
     };
 
-    // Set up listener when auth state changes
+    // Set up listener immediately if user is authenticated
+    if (auth.currentUser && notificationSettings.newBookingAlerts) {
+      console.log('🚀 Setting up immediate booking listener');
+      setupBookingListener();
+    }
+
+    // Also listen for auth state changes
     const authUnsubscribe = auth.onAuthStateChanged((user) => {
       console.log('🔐 Auth state changed:', { 
         user: !!user, 
@@ -174,17 +229,11 @@ export const NotificationProvider = ({ children }) => {
       if (user && notificationSettings.newBookingAlerts) {
         setupBookingListener();
       } else if (unsubscribe) {
-        console.log('🔇 Removing booking listener');
+        console.log('🔇 Removing booking listener (no user or alerts disabled)');
         unsubscribe();
         unsubscribe = null;
       }
     });
-
-    // Also set up immediately if user is already authenticated
-    if (auth.currentUser && notificationSettings.newBookingAlerts) {
-      console.log('🚀 Setting up immediate booking listener');
-      setupBookingListener();
-    }
 
     return () => {
       if (unsubscribe) {
@@ -215,50 +264,66 @@ export const NotificationProvider = ({ children }) => {
     setNotifications([]);
   };
 
-  // Play notification sound with file check
+  // Play notification sound with improved reliability
   const playNotificationSound = async () => {
     try {
-      console.log('🔊 Attempting to play notification sound...');
+      console.log('🔊 Attempting to play notification sound immediately...');
       
-      // Check if sound file exists
-      const response = await fetch('/servicebeep.mp3', { method: 'HEAD' });
-      
-      if (!response.ok) {
-        console.log('❌ Notification sound file not found in public folder');
-        return;
-      }
-      
-      console.log('✅ Sound file found, creating audio...');
-      
-      // File exists, play it
+      // Create audio element
       const audio = new Audio('/servicebeep.mp3');
-      audio.volume = 0.7;
+      audio.volume = 0.8; // Slightly higher volume
+      audio.preload = 'auto'; // Preload the audio
       
       // Add event listeners for debugging
       audio.addEventListener('loadstart', () => console.log('🎵 Audio loading started'));
-      audio.addEventListener('canplay', () => console.log('🎵 Audio can play'));
+      audio.addEventListener('canplay', () => console.log('🎵 Audio ready to play'));
       audio.addEventListener('play', () => console.log('🎵 Audio started playing'));
       audio.addEventListener('ended', () => console.log('🎵 Audio finished playing'));
-      audio.addEventListener('error', (e) => console.log('❌ Audio error:', e));
+      audio.addEventListener('error', (e) => console.log('❌ Audio error:', e.error));
       
-      const playPromise = audio.play();
-      
-      if (playPromise !== undefined) {
-        playPromise.then(() => {
-          console.log('✅ Notification sound played successfully');
-        }).catch(error => {
-          console.log('❌ Could not play notification sound:', error);
+      // Try to play immediately
+      try {
+        await audio.play();
+        console.log('✅ Notification sound played successfully');
+      } catch (playError) {
+        console.log('❌ Could not play notification sound:', playError.message);
+        
+        // Handle different types of errors
+        if (playError.name === 'NotAllowedError') {
+          console.log('🔇 Browser blocked autoplay - storing for later play');
+          sessionStorage.setItem('pendingSound', 'true');
           
-          // Try alternative approach for browsers that block autoplay
-          if (error.name === 'NotAllowedError') {
-            console.log('🔇 Browser blocked autoplay - user interaction required');
-            // Store that we need to play sound when user interacts
-            sessionStorage.setItem('pendingSound', 'true');
-          }
-        });
+          // Try to play on next user interaction
+          const playOnInteraction = () => {
+            audio.play().then(() => {
+              console.log('✅ Sound played after user interaction');
+              sessionStorage.removeItem('pendingSound');
+              document.removeEventListener('click', playOnInteraction);
+              document.removeEventListener('keydown', playOnInteraction);
+            }).catch(e => console.log('❌ Still failed after interaction:', e));
+          };
+          
+          document.addEventListener('click', playOnInteraction, { once: true });
+          document.addEventListener('keydown', playOnInteraction, { once: true });
+          
+        } else if (playError.name === 'AbortError') {
+          console.log('🔄 Audio play was aborted, retrying...');
+          setTimeout(() => playNotificationSound(), 1000);
+        }
       }
+      
     } catch (error) {
-      console.log('❌ Notification sound error:', error);
+      console.log('❌ Notification sound setup error:', error);
+      
+      // Fallback: try with a simple approach
+      try {
+        const fallbackAudio = new Audio('/servicebeep.mp3');
+        fallbackAudio.volume = 0.8;
+        fallbackAudio.play();
+        console.log('✅ Fallback sound attempt made');
+      } catch (fallbackError) {
+        console.log('❌ Fallback sound also failed:', fallbackError);
+      }
     }
   };
 
@@ -310,6 +375,12 @@ export const NotificationProvider = ({ children }) => {
     });
   };
 
+  // Force refresh booking listener (for testing)
+  const refreshBookingListener = () => {
+    console.log('🔄 Force refreshing booking listener...');
+    setLastBookingCount(0); // Reset count to trigger re-initialization
+  };
+
   const value = {
     notifications,
     notificationSettings,
@@ -318,6 +389,7 @@ export const NotificationProvider = ({ children }) => {
     clearAllNotifications,
     showPaymentNotification,
     showReviewNotification,
+    refreshBookingListener, // Add this for testing
   };
 
   return (

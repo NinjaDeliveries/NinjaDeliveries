@@ -10,6 +10,7 @@ import {
 } from "firebase/firestore";
 import AssignWorkerModal from "./AssignWorkerModal";
 import "../../style/ServiceDashboard.css";
+import { useNotifications } from "../../context/NotificationContext";
 
 const Bookings = () => {
   const [bookings, setBookings] = useState([]);
@@ -22,6 +23,9 @@ const Bookings = () => {
   const [otpInput, setOtpInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
+  
+  // Connect to notification system for real-time updates
+  const { notifications } = useNotifications();
 
   const statusConfig = {
     pending: { 
@@ -149,6 +153,15 @@ const Bookings = () => {
     fetchBookings();
     fetchCategories();
   }, []);
+
+  // Refresh bookings when new notifications arrive
+  useEffect(() => {
+    const bookingNotifications = notifications.filter(n => n.type === 'booking');
+    if (bookingNotifications.length > 0) {
+      console.log('🔄 New booking notification detected, refreshing bookings list');
+      fetchBookings();
+    }
+  }, [notifications]);
 
   const generateOtp = () => {
     return Math.floor(100000 + Math.random() * 900000).toString();
