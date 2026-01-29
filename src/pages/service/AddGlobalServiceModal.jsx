@@ -1,6 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { auth, db } from "../../context/Firebase";
-import { collection, addDoc, query, where, getDocs } from "firebase/firestore";
+// import { collection, addDoc, query, where, getDocs } from "firebase/firestore";
+import {
+  collection,
+  addDoc,
+  query,
+  where,
+  getDocs,
+  updateDoc,
+  doc
+} from "firebase/firestore";
 
 const AddGlobalServiceModal = ({ onClose, onSaved }) => {
   const [name, setName] = useState("");
@@ -35,6 +44,56 @@ const AddGlobalServiceModal = ({ onClose, onSaved }) => {
     setGlobalMatch(null);
     setGlobalError("");
   }, [name]);
+const syncAppServiceVisibility = async (adminServiceId) => {
+  const q = query(
+    collection(db, "service_services"),
+    where("adminServiceId", "==", adminServiceId),
+    where("isActive", "==", true)
+  );
+
+  const snap = await getDocs(q);
+
+  const isVisible = !snap.empty;
+
+  const appQ = query(
+    collection(db, "app_services"),
+    where("masterServiceId", "==", adminServiceId)
+  );
+
+  const appSnap = await getDocs(appQ);
+
+  for (const d of appSnap.docs) {
+    await updateDoc(d.ref, {
+      isActive: isVisible,
+      updatedAt: new Date(),
+    });
+  }
+};
+const syncAppCategoryVisibility = async (masterCategoryId) => {
+  const q = query(
+    collection(db, "app_services"),
+    where("masterCategoryId", "==", masterCategoryId),
+    where("isActive", "==", true)
+  );
+
+  const snap = await getDocs(q);
+
+  const isVisible = !snap.empty;
+
+  const appQ = query(
+    collection(db, "app_categories"),
+    where("masterCategoryId", "==", masterCategoryId)
+  );
+
+  const appSnap = await getDocs(appQ);
+
+  for (const d of appSnap.docs) {
+    await updateDoc(d.ref, {
+      isActive: isVisible,
+      updatedAt: new Date(),
+    });
+  }
+};
 
   const handleSave = async () => {
     try {
@@ -54,16 +113,27 @@ const AddGlobalServiceModal = ({ onClose, onSaved }) => {
         where("nameLower", "==", name.trim().toLowerCase())
       );
 
+      
       const snap = await getDocs(q);
+      const selectedCategory = categories.find(c => c.id === categoryId);
 
-      const payload = {
-        companyId: user.uid,
-        name: name.trim(),
-        categoryId: categoryId || null,
-        source: "global",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+const payload = {
+  companyId: user.uid,
+  name: name.trim(),
+  categoryId: categoryId || null,
+  masterCategoryId: selectedCategory?.masterCategoryId || null,
+  source: "global",
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
+      // const payload = {
+      //   companyId: user.uid,
+      //   name: name.trim(),
+      //   categoryId: categoryId || null,
+      //   source: "global",
+      //   createdAt: new Date(),
+      //   updatedAt: new Date(),
+      // };
 
       if (!snap.empty) {
         const pkg = snap.docs[0];
@@ -85,6 +155,14 @@ const AddGlobalServiceModal = ({ onClose, onSaved }) => {
       }
 
       await addDoc(collection(db, "service_services"), payload);
+      // 🔥 SYNC APP VISIBILITY
+// if (payload.adminServiceId) {
+//   await syncAppServiceVisibility(payload.adminServiceId);
+// }
+
+if (payload.masterCategoryId) {
+  await syncAppCategoryVisibility(payload.masterCategoryId);
+}
 
       onSaved();
       onClose();

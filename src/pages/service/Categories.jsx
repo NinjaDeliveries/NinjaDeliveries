@@ -32,17 +32,80 @@ useEffect(() => {
   fetchCategories();       // company categories
   fetchAdminCategories();  // admin categories
 }, []);
+const syncAppCategoryVisibility = async (masterCategoryId) => {
+  // 1️⃣ Check if ANY active company still uses this category
+  const q = query(
+    collection(db, "service_categories"),
+    where("masterCategoryId", "==", masterCategoryId),
+    where("isActive", "==", true)
+  );
+
+  const snap = await getDocs(q);
+
+  const isVisibleInApp = !snap.empty;
+
+  // 2️⃣ Update app_categories
+  const appQ = query(
+    collection(db, "app_categories"),
+    where("masterCategoryId", "==", masterCategoryId)
+  );
+
+  const appSnap = await getDocs(appQ);
+
+  for (const d of appSnap.docs) {
+    await updateDoc(d.ref, {
+      isActive: isVisibleInApp,
+      updatedAt: new Date(),
+    });
+  }
+};
+
 const handleToggleCategoryStatus = async (categoryId, currentStatus) => {
   try {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const newStatus = !currentStatus;
+
+    const category = categories.find(c => c.id === categoryId);
+    if (!category) return;
+
+    // 1️⃣ Update company category
     await updateDoc(doc(db, "service_categories", categoryId), {
-      isActive: !currentStatus,
+      isActive: newStatus,
       updatedAt: new Date(),
     });
 
-    fetchCategories(); // refresh list
+    // 2️⃣ Update ALL company services under this category
+    const serviceQ = query(
+      collection(db, "service_services"),
+      where("companyId", "==", user.uid),
+      where("masterCategoryId", "==", category.masterCategoryId)
+    );
+
+    const serviceSnap = await getDocs(serviceQ);
+
+    for (const d of serviceSnap.docs) {
+      await updateDoc(d.ref, {
+        isActive: newStatus,
+        updatedAt: new Date(),
+      });
+
+      const svc = d.data();
+
+      // 🔥 Sync app_services visibility
+      if (svc.serviceType === "admin" && svc.adminServiceId) {
+        // await syncAppServiceVisibility(svc.adminServiceId);
+      }
+    }
+
+    // 🔥 3️⃣ Sync APP CATEGORY visibility (THIS WAS MISSING)
+    await syncAppCategoryVisibility(category.masterCategoryId);
+
+    fetchCategories();
   } catch (error) {
-    console.error("Error updating category status:", error);
-    alert("Error updating category status");
+    console.error("Error toggling category:", error);
+    alert("Error updating category");
   }
 };
 
