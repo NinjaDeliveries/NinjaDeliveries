@@ -72,26 +72,50 @@ const Bookings = () => {
       const snap = await getDocs(q);
       const today = new Date().toISOString().split("T")[0];
 
-      const list = snap.docs.map(d => {
-        const data = d.data();
+      const list = [];
+      const expiredUpdates = [];
 
-        // Auto-expire logic
+      for (const docSnap of snap.docs) {
+        const data = docSnap.data();
+
+        // Auto-expire logic - check if booking should be expired
         if (
           data.date < today &&
-          !["completed", "rejected"].includes(data.status)
+          !["completed", "rejected", "expired"].includes(data.status)
         ) {
-          return {
-            id: d.id,
+          // Add to expired updates batch
+          expiredUpdates.push({
+            id: docSnap.id,
+            ref: doc(db, "service_bookings", docSnap.id)
+          });
+
+          list.push({
+            id: docSnap.id,
             ...data,
             status: "expired",
-          };
+          });
+        } else {
+          list.push({
+            id: docSnap.id,
+            ...data,
+          });
         }
+      }
 
-        return {
-          id: d.id,
-          ...data,
-        };
-      });
+      // Update expired bookings in database
+      if (expiredUpdates.length > 0) {
+        console.log(`Auto-expiring ${expiredUpdates.length} bookings`);
+        for (const update of expiredUpdates) {
+          try {
+            await updateDoc(update.ref, {
+              status: "expired",
+              expiredAt: new Date(),
+            });
+          } catch (error) {
+            console.error(`Failed to expire booking ${update.id}:`, error);
+          }
+        }
+      }
 
       setBookings(list);
     } catch (err) {
@@ -184,49 +208,37 @@ const Bookings = () => {
 
   // Filter bookings based on active filter and search
   const filteredBookings = bookings.filter((booking) => {
-    const matchesSearch =
+    // Search filter
+    const matchesSearch = !searchQuery || 
       booking.serviceName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       booking.customerName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      booking.id.toLowerCase().includes(searchQuery.toLowerCase());
+      booking.id?.toLowerCase().includes(searchQuery.toLowerCase());
 
-    if (activeFilter === "all") {
-      return matchesSearch;
+    if (!matchesSearch) return false;
+
+    // Status filters
+    switch (activeFilter) {
+      case "all":
+        return true;
+        
+      case "pending":
+        return booking.status === "pending";
+        
+      case "assigned":
+        return booking.status === "assigned";
+        
+      case "started":
+        return booking.status === "started";
+        
+      case "completed":
+        return booking.status === "completed";
+        
+      case "expired":
+        return booking.status === "expired" || booking.status === "rejected";
+        
+      default:
+        return true;
     }
-    
-    if (activeFilter === "active") {
-      // Active includes: pending, assigned, started (and not expired by date)
-      return matchesSearch && 
-             ["pending", "assigned", "started"].includes(booking.status) && 
-             booking.date >= today;
-    }
-    
-    if (activeFilter === "expired") {
-      // Expired includes: expired status OR rejected status OR past date with incomplete status
-      return matchesSearch && 
-             (booking.status === "expired" || 
-              booking.status === "rejected" || 
-              (booking.date < today && !["completed"].includes(booking.status)));
-    }
-    
-    if (activeFilter === "completed") {
-      // Only completed bookings
-      return matchesSearch && booking.status === "completed";
-    }
-    
-    // For specific status filters
-    if (activeFilter === "pending") {
-      return matchesSearch && booking.status === "pending";
-    }
-    
-    if (activeFilter === "assigned") {
-      return matchesSearch && booking.status === "assigned";
-    }
-    
-    if (activeFilter === "started") {
-      return matchesSearch && booking.status === "started";
-    }
-    
-    return matchesSearch;
   });
 
   if (loading) {
@@ -257,37 +269,37 @@ const Bookings = () => {
             className={`filter-tab ${activeFilter === "all" ? "active" : ""}`}
             onClick={() => setActiveFilter("all")}
           >
-            All
+            All ({bookings.length})
           </button>
           <button
             className={`filter-tab ${activeFilter === "pending" ? "active" : ""}`}
             onClick={() => setActiveFilter("pending")}
           >
-            ⏱️ Pending
+            ⏱️ Pending ({bookings.filter(b => b.status === "pending").length})
           </button>
           <button
             className={`filter-tab ${activeFilter === "assigned" ? "active" : ""}`}
             onClick={() => setActiveFilter("assigned")}
           >
-            👤 Assigned
+            👤 Assigned ({bookings.filter(b => b.status === "assigned").length})
           </button>
           <button
             className={`filter-tab ${activeFilter === "started" ? "active" : ""}`}
             onClick={() => setActiveFilter("started")}
           >
-            🔧 Started
+            🔧 Started ({bookings.filter(b => b.status === "started").length})
           </button>
           <button
             className={`filter-tab ${activeFilter === "completed" ? "active" : ""}`}
             onClick={() => setActiveFilter("completed")}
           >
-            ✅ Completed
+            ✅ Completed ({bookings.filter(b => b.status === "completed").length})
           </button>
           <button
             className={`filter-tab ${activeFilter === "expired" ? "active" : ""}`}
             onClick={() => setActiveFilter("expired")}
           >
-            ⚠️ Expired
+            ⚠️ Expired ({bookings.filter(b => b.status === "expired" || b.status === "rejected").length})
           </button>
         </div>
 
@@ -304,6 +316,15 @@ const Bookings = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="search-input"
             />
+            {searchQuery && (
+              <button
+                className="clear-search"
+                onClick={() => setSearchQuery("")}
+                title="Clear search"
+              >
+                ✕
+              </button>
+            )}
           </div>
         </div>
       </div>
