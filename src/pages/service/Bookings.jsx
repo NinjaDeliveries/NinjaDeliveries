@@ -57,6 +57,7 @@ const Bookings = () => {
       icon: "⏰" 
     },
   };
+  //fetch booking
 
   const fetchBookings = async () => {
     try {
