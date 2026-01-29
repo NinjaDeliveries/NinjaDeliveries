@@ -17,7 +17,6 @@ const AddServiceModal = ({ onClose, onSaved, editService }) => {
   const [serviceImage, setServiceImage] = useState(null);
   const [imagePreview, setImagePreview] = useState("");
   const [uploading, setUploading] = useState(false);
-
   const isEditMode = !!editService;
 
 const syncAppService = async (service) => {
@@ -51,10 +50,14 @@ const [adminServices, setAdminServices] = useState([]);
 // service selection
 const [selectedServiceId, setSelectedServiceId] = useState("");
 const [isCustomService, setIsCustomService] = useState(false);
+const isAdminService = !isCustomService;
+// pricing (ADMIN service only)
+const [fixedPrice, setFixedPrice] = useState("");
+
 
 // pricing
-const [priceType, setPriceType] = useState("");
-const [fixedPrice, setFixedPrice] = useState("");
+// const [priceType, setPriceType] = useState("");
+// const [fixedPrice, setFixedPrice] = useState("");
 
 // const fetchAdminServices = async (catId) => {
 //   if (!catId) {
@@ -110,36 +113,19 @@ const fetchAdminServices = async (catId) => {
 
   // Load existing service data when in edit mode
   useEffect(() => {
-    if (editService) {
-      setName(editService.name || "");
-      const categoryId = editService.categoryMasterId || editService.masterCategoryId || "";
-      setCategoryMasterId(categoryId);
-      if (categoryId) {
-        fetchAdminServices(categoryId);
-      }
-      setImagePreview(editService.imageUrl || "");
-      
-      // Set service selection
-      if (editService.serviceType === "custom") {
-        setIsCustomService(true);
-      } else if (editService.adminServiceId) {
-        setSelectedServiceId(editService.adminServiceId);
-      }
-      
-      // Set pricing
-      if (editService.price) {
-        setPriceType("price");
-        setFixedPrice(editService.price.toString());
-      } else if (editService.packages && editService.packages.length > 0) {
-        setPriceType("package");
-        setPackages(editService.packages.map(p => ({
-          duration: p.duration || 1,
-          unit: p.unit || "month",
-          price: p.price?.toString() || "",
-        })));
-      }
-    }
-  }, [editService]);
+  if (!editService) return;
+
+  setName(editService.name || "");
+  setCategoryMasterId(editService.categoryMasterId || "");
+
+  if (editService.serviceType === "custom") {
+    setIsCustomService(true);
+    setPackages(editService.packages || []);
+  } else {
+    setIsCustomService(false);
+    setFixedPrice(editService.price?.toString() || "");
+  }
+}, [editService]);
 
   // Handle image upload
   const handleImageChange = (e) => {
@@ -251,10 +237,10 @@ const fetchAdminServices = async (catId) => {
  
 
  const handleSave = async () => {
-  if (!priceType) {
-    alert("Please select pricing type");
-    return;
-  }
+  // if (!priceType) {
+  //   alert("Please select pricing type");
+  //   return;
+  // }
 
   try {
     const user = auth.currentUser;
@@ -265,19 +251,19 @@ const fetchAdminServices = async (catId) => {
       return;
     }
 
-    if (priceType === "package") {
-      for (let p of packages) {
-        if (!p.price || Number(p.price) <= 0) {
-          alert("Each package must have a valid price");
-          return;
-        }
-      }
-    }
+    // if (priceType === "package") {
+    //   for (let p of packages) {
+    //     if (!p.price || Number(p.price) <= 0) {
+    //       alert("Each package must have a valid price");
+    //       return;
+    //     }
+    //   }
+    // }
 
-    if (priceType === "price" && (!fixedPrice || Number(fixedPrice) <= 0)) {
-      alert("Please enter a valid price");
-      return;
-    }
+    // if (priceType === "price" && (!fixedPrice || Number(fixedPrice) <= 0)) {
+    //   alert("Please enter a valid price");
+    //   return;
+    // }
 
     setUploading(true);
 
@@ -307,17 +293,42 @@ const fetchAdminServices = async (catId) => {
       updatedAt: new Date(),
     };
 
-    // pricing
-    if (priceType === "price") {
-      payload.price = Number(fixedPrice);
-      payload.packages = [];
-    } else {
-      payload.packages = packages.map(p => ({
-        duration: Number(p.duration),
-        unit: p.unit,
-        price: Number(p.price),
-      }));
+    // // pricing
+    // if (priceType === "price") {
+    //   payload.price = Number(fixedPrice);
+    //   payload.packages = [];
+    // } else {
+    //   payload.packages = packages.map(p => ({
+    //     duration: Number(p.duration),
+    //     unit: p.unit,
+    //     price: Number(p.price),
+    //   }));
+    // }
+    // ✅ ADMIN SERVICE → FIXED PRICE ONLY
+if (isAdminService) {
+  if (!fixedPrice || Number(fixedPrice) <= 0) {
+    alert("Please enter a valid price");
+    return;
+  }
+  payload.price = Number(fixedPrice);
+  payload.packages = [];
+}
+
+// ✅ CUSTOM SERVICE → PACKAGES ONLY
+if (isCustomService) {
+  for (let p of packages) {
+    if (!p.price || Number(p.price) <= 0) {
+      alert("Each package must have a valid price");
+      return;
     }
+  }
+
+  payload.packages = packages.map(p => ({
+    duration: Number(p.duration),
+    unit: p.unit,
+    price: Number(p.price),
+  }));
+}
 
     if (isEditMode) {
       // update service
@@ -335,7 +346,7 @@ const fetchAdminServices = async (catId) => {
     }
 
     onSaved(payload);
-    onClose();
+    onClose(); 
   } catch (error) {
     console.error("Error saving service:", error);
     alert("Error saving service. Please try again.");
@@ -495,44 +506,51 @@ const fetchAdminServices = async (catId) => {
   </div>
 )}
 
-        <div className="sd-form-group">
-          <label>Service Image</label>
-          <div className="sd-image-upload">
-            {imagePreview ? (
-              <div className="sd-image-preview">
-                <img src={imagePreview} alt="Service preview" />
-                <button 
-                  type="button" 
-                  className="sd-remove-image-btn"
-                  onClick={removeImage}
-                >
-                  ×
-                </button>
-              </div>
-            ) : (
-              <div className="sd-image-placeholder">
-                <span>No image selected</span>
-              </div>
-            )}
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleImageChange}
-              className="sd-file-input"
-              id="service-image"
-            />
-            <label htmlFor="service-image" className="sd-file-label">
-              {imagePreview ? "Change Image" : "Upload Image"}
-            </label>
-          </div>
-          <small className="sd-image-help">
-            Supported formats: JPG, PNG, GIF. Max size: 5MB
-          </small>
+        {isCustomService && (
+  <div className="sd-form-group">
+    <label>Service Image</label>
+    <div className="sd-image-upload">
+      {imagePreview ? (
+        <div className="sd-image-preview">
+          <img src={imagePreview} alt="Service preview" />
+          <button
+            type="button"
+            className="sd-remove-image-btn"
+            onClick={removeImage}
+          >
+            ×
+          </button>
         </div>
+      ) : (
+        <div className="sd-image-placeholder">
+          <span>No image selected</span>
+        </div>
+      )}
 
-        
-
-  
+      <input
+        type="file"
+        accept="image/*"
+        onChange={handleImageChange}
+        className="sd-file-input"
+        id="service-image"
+      />
+      <label htmlFor="service-image" className="sd-file-label">
+        {imagePreview ? "Change Image" : "Upload Image"}
+      </label>
+    </div>
+  </div>
+)}
+{isAdminService && (
+  <div className="sd-form-group">
+    <label>Price</label>
+    <input
+      type="number"
+      placeholder="Enter fixed price"
+      value={fixedPrice}
+      onChange={(e) => setFixedPrice(e.target.value)}
+    />
+  </div>
+)}  
 
         {/* <div className="sd-form-group">
           <label>Service Packages</label>
@@ -574,7 +592,7 @@ const fetchAdminServices = async (catId) => {
           </button>
         </div> */}
 
-        <div className="sd-form-group">
+        {/* <div className="sd-form-group">
   <label>Pricing Type</label>
 
   <div style={{ display: "flex", gap: "20px" }}>
@@ -598,9 +616,9 @@ const fetchAdminServices = async (catId) => {
       Package
     </label>
   </div>
-</div>
+</div> */}
 
-{priceType === "price" && (
+{/* {priceType === "price" && (
   <div className="sd-form-group">
     <label>Price</label>
     <input
@@ -610,9 +628,8 @@ const fetchAdminServices = async (catId) => {
       onChange={(e) => setFixedPrice(e.target.value)}
     />
   </div>
-)}
-
-{priceType === "package" && (
+)} */}
+{isCustomService && (
   <div className="sd-form-group">
     <label>Service Packages</label>
 
