@@ -66,22 +66,14 @@ const Overview = () => {
 
   useEffect(() => {
     const user = auth.currentUser;
-    if (!user) {
-      console.log("Overview - No authenticated user");
-      return;
-    }
-
-    console.log("Overview - Current user:", {
-      uid: user.uid,
-      email: user.email,
-      displayName: user.displayName
-    });
+    if (!user) return;
 
     // Company data (LIVE)
     const companyRef = doc(db, "service_company", user.uid);
     const unsubCompany = onSnapshot(companyRef, (snap) => {
       if (snap.exists()) {
         const data = snap.data();
+        console.log("Service Company Data:", data); // Debug log
         setServiceData(data);
 
         if (data.deliveryZoneId) {
@@ -119,14 +111,14 @@ const Overview = () => {
       where("companyId", "==", user.uid)
     );
 
-    // Bookings (LIVE) - Try multiple approaches
-    let bookingsQ = query(
+    // Bookings (LIVE)
+    const bookingsQ = query(
       collection(db, "service_bookings"),
       where("companyId", "==", user.uid)
     );
 
-    // Recent Bookings (LIVE) - Try multiple approaches  
-    let recentBookingsQ = query(
+    // Recent Bookings (LIVE)
+    const recentBookingsQ = query(
       collection(db, "service_bookings"),
       where("companyId", "==", user.uid),
       orderBy("createdAt", "desc"),
@@ -156,54 +148,6 @@ const Overview = () => {
     const unsubBookings = onSnapshot(bookingsQ, (snap) => {
       const totalBookings = snap.size;
       const completedBookings = snap.docs.filter(d => d.data().status === 'completed').length;
-      
-      console.log("Overview - Total bookings found:", totalBookings);
-      console.log("Overview - Completed bookings:", completedBookings);
-      
-      // If no bookings found with companyId, try alternative query
-      if (snap.size === 0) {
-        console.log("Overview - No bookings with companyId, trying alternative...");
-        // Try without companyId filter for debugging
-        const altBookingsQ = query(collection(db, "service_bookings"));
-        onSnapshot(altBookingsQ, (altSnap) => {
-          console.log("Overview - Alternative query found:", altSnap.size, "bookings");
-          if (altSnap.size > 0) {
-            console.log("Overview - Sample booking:", altSnap.docs[0].data());
-            // Process alternative results
-            const altTotalBookings = altSnap.size;
-            const altCompletedBookings = altSnap.docs.filter(d => d.data().status === 'completed').length;
-            
-            const altTotalRevenue = altSnap.docs.reduce((sum, doc) => {
-              const booking = doc.data();
-              if (booking.status === 'completed') {
-                return sum + (booking.totalPrice || booking.price || booking.amount || 0);
-              }
-              return sum;
-            }, 0);
-
-            const altCompletionRate = altTotalBookings > 0 ? (altCompletedBookings / altTotalBookings) * 100 : 0;
-
-            setStats(prev => ({ 
-              ...prev, 
-              totalBookings: altTotalBookings,
-              completedBookings: altCompletedBookings,
-              totalRevenue: altTotalRevenue,
-              completionRate: altCompletionRate
-            }));
-
-            const weeklyStats = processWeeklyData(altSnap.docs);
-            setWeeklyData(weeklyStats);
-
-            const servicesStats = processTopServices(altSnap.docs);
-            setTopServices(servicesStats);
-          }
-        });
-        return;
-      }
-      
-      if (snap.size > 0) {
-        console.log("Overview - Sample booking:", snap.docs[0].data());
-      }
       
       // Calculate total revenue
       const totalRevenue = snap.docs.reduce((sum, doc) => {
@@ -235,35 +179,11 @@ const Overview = () => {
     });
 
     const unsubRecentBookings = onSnapshot(recentBookingsQ, (snap) => {
-      console.log("Overview - Recent bookings found:", snap.size);
-      
-      // If no recent bookings with companyId, try alternative
-      if (snap.size === 0) {
-        console.log("Overview - No recent bookings with companyId, trying alternative...");
-        const altRecentQ = query(
-          collection(db, "service_bookings"),
-          orderBy("createdAt", "desc"),
-          limit(4)
-        );
-        onSnapshot(altRecentQ, (altSnap) => {
-          console.log("Overview - Alternative recent bookings found:", altSnap.size);
-          const altBookings = altSnap.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            createdAt: doc.data().createdAt?.toDate()
-          }));
-          console.log("Overview - Alternative recent bookings data:", altBookings);
-          setRecentBookings(altBookings);
-        });
-        return;
-      }
-      
       const bookings = snap.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
         createdAt: doc.data().createdAt?.toDate()
       }));
-      console.log("Overview - Recent bookings data:", bookings);
       setRecentBookings(bookings);
     });
 
@@ -397,7 +317,7 @@ const Overview = () => {
             <div className="modern-welcome-content-compact">
               <div className="modern-welcome-text">
                 <h1 className="modern-welcome-title-compact">
-                  Welcome back, <span className="modern-name-highlight">{serviceData?.ownerName || 'Ritik'}</span>! ✨
+                  Welcome back, <span className="modern-name-highlight">{serviceData?.name || (loading ? 'Loading...' : 'User')}</span>! ✨
                 </h1>
                 <p className="modern-welcome-subtitle-compact">
                   Here's what's happening with your business today.
@@ -425,7 +345,7 @@ const Overview = () => {
                 <div className="modern-company-info-compact">
                   <h1 className="modern-company-name-compact">{serviceData?.companyName || serviceData?.name || 'The Alpha'} ✨</h1>
                   <div className="modern-company-meta">
-                    <span className="modern-owner-text">Owner: {serviceData?.ownerName || 'Ritik'}</span>
+                    <span className="modern-owner-text">Owner: {serviceData?.name || (loading ? 'Loading...' : 'User')}</span>
                     <div className="modern-status-compact">
                       <div className="modern-status-dot-compact"></div>
                       <span>Business Active</span>

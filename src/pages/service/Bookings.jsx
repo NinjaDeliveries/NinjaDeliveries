@@ -89,50 +89,18 @@ const Bookings = () => {
     },
   };
   //fetch booking
+
   const fetchBookings = async () => {
     try {
       const user = auth.currentUser;
-      if (!user) {
-        console.log("No authenticated user found");
-        return;
-      }
+      if (!user) return;
 
-      console.log("Current user UID:", user.uid);
-
-      // First try with companyId
-      let q = query(
+      const q = query(
         collection(db, "service_bookings"),
         where("companyId", "==", user.uid)
       );
 
-      let snap = await getDocs(q);
-      console.log("Bookings found with companyId:", snap.size);
-      
-      // If no bookings found with companyId, try with workName field
-      if (snap.size === 0) {
-        console.log("Trying with workName field...");
-        q = query(
-          collection(db, "service_bookings"),
-          where("workName", "==", "Doorbell & security system")
-        );
-        snap = await getDocs(q);
-        console.log("Bookings found with workName:", snap.size);
-      }
-
-      // If still no bookings, try without any filter (for debugging)
-      if (snap.size === 0) {
-        console.log("Trying without filter for debugging...");
-        const allBookingsQ = query(collection(db, "service_bookings"));
-        const allSnap = await getDocs(allBookingsQ);
-        console.log("Total bookings in collection:", allSnap.size);
-        
-        if (allSnap.size > 0) {
-          console.log("Sample booking data:", allSnap.docs[0].data());
-          // Use all bookings for now (remove this in production)
-          snap = allSnap;
-        }
-      }
-
+      const snap = await getDocs(q);
       const today = new Date().toISOString().split("T")[0];
 
       const list = [];
@@ -140,7 +108,6 @@ const Bookings = () => {
 
       for (const docSnap of snap.docs) {
         const data = docSnap.data();
-        console.log("Processing booking:", data);
 
         // Auto-expire logic - check if booking should be expired
         if (
@@ -181,7 +148,6 @@ const Bookings = () => {
         }
       }
 
-      console.log("Final bookings list:", list);
       setBookings(list);
     } catch (err) {
       console.error("Fetch bookings error:", err);
