@@ -140,10 +140,28 @@ const handleToggleCategoryStatus = async (categoryId, currentStatus) => {
       );
 
       const snap = await getDocs(q);
-      const list = snap.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+      const list = [];
+
+      // Fetch admin categories to get images
+      const adminCategoriesSnap = await getDocs(collection(db, "service_categories_master"));
+      const adminCategoriesMap = {};
+      adminCategoriesSnap.docs.forEach(doc => {
+        adminCategoriesMap[doc.id] = doc.data();
+      });
+
+      // Map service categories with admin category data (including images)
+      for (const doc of snap.docs) {
+        const categoryData = doc.data();
+        const adminCategory = adminCategoriesMap[categoryData.masterCategoryId];
+        
+        list.push({
+          id: doc.id,
+          ...categoryData,
+          // Get image from admin category
+          imageUrl: adminCategory?.imageUrl || null,
+          description: adminCategory?.description || categoryData.description,
+        });
+      }
 
       setCategories(list);
     } catch (err) {
@@ -234,9 +252,11 @@ const syncAppCategory = async (adminCat) => {
   const payload = {
   companyId: user.uid,
 
-  // 🔥 FIXED NAMING
+  // 🔥 FIXED NAMING - Include image URL from admin category
   masterCategoryId: adminCat.id,
   name: adminCat.name,
+  imageUrl: adminCat.imageUrl || null, // Include image URL
+  description: adminCat.description || null, // Include description
 
   isActive: true,
   updatedAt: new Date(),
