@@ -1,25 +1,33 @@
 import React, { useEffect, useState } from "react";
 import { auth, db } from "../../context/Firebase";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, query, where, getDocs, addDoc, deleteDoc, doc, serverTimestamp } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { storage } from "../../context/Firebase";
+import "../../style/ServiceDashboard.css";
 
 function BannerManagement({ onBack }) {
   const [userId, setUserId] = useState("");
-
   const [categories, setCategories] = useState([]);
   const [services, setServices] = useState([]);
+  const [banners, setBanners] = useState([]);
+  const [loading, setLoading] = useState(true);
 
+  // Form states
   const [selectedCategoryMasterId, setSelectedCategoryMasterId] = useState("");
   const [selectedServiceId, setSelectedServiceId] = useState("");
-
   const [originalPrice, setOriginalPrice] = useState("");
   const [offerPrice, setOfferPrice] = useState("");
+  const [bannerImage, setBannerImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState("");
+  const [uploading, setUploading] = useState(false);
 
-  // Get user
+  // Get user and fetch data
   useEffect(() => {
     const u = auth.currentUser;
     if (u) {
       setUserId(u.uid);
       fetchCompanyCategories(u.uid);
+      fetchBanners(u.uid);
     }
   }, []);
 
@@ -34,11 +42,27 @@ function BannerManagement({ onBack }) {
 
       const snap = await getDocs(q);
       const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-      console.log("Company categories:", list);
       setCategories(list);
+      setLoading(false);
     } catch (err) {
       console.error("Category fetch error:", err);
+      setLoading(false);
+    }
+  };
+
+  // Fetch existing banners
+  const fetchBanners = async (uid) => {
+    try {
+      const q = query(
+        collection(db, "service_banners"),
+        where("companyId", "==", uid)
+      );
+
+      const snap = await getDocs(q);
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setBanners(list);
+    } catch (err) {
+      console.error("Banner fetch error:", err);
     }
   };
 
@@ -48,13 +72,12 @@ function BannerManagement({ onBack }) {
       const q = query(
         collection(db, "service_services"),
         where("companyId", "==", userId),
-        where("categoryMasterId", "==", categoryMasterId)
+        where("masterCategoryId", "==", categoryMasterId),
+        where("isActive", "==", true)
       );
 
       const snap = await getDocs(q);
       const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-      console.log("Services for category:", list);
       setServices(list);
     } catch (err) {
       console.error("Service fetch error:", err);
@@ -77,67 +100,334 @@ function BannerManagement({ onBack }) {
 
     const svc = services.find(s => s.id === id);
     if (svc) {
-      setOriginalPrice(
-        svc.price || svc.globalPrice || ""
-      );
+      setOriginalPrice(svc.globalPrice || svc.price || "");
     }
   };
 
-  const inputStyle = {
-    padding: "10px",
-    borderRadius: "6px",
-    border: "1px solid #d1d5db",
-    width: "100%",
-    marginBottom: "12px"
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      alert("Please select an image file");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Image size should be less than 5MB");
+      return;
+    }
+
+    setBannerImage(file);
+
+    const reader = new FileReader();
+    reader.onload = (e) => setImagePreview(e.target.result);
+    reader.readAsDataURL(file);
   };
 
+  const uploadBannerImage = async () => {
+    if (!bannerImage) return null;
+
+    const fileName = `banner-images/${userId}/${Date.now()}_${bannerImage.name}`;
+    const storageRef = ref(storage, fileName);
+
+    const snapshot = await uploadBytes(storageRef, bannerImage);
+    return await getDownloadURL(snapshot.ref);
+  };
+
+  const handleCreateBanner = async () => {
+    if (!selectedServiceId || !offerPrice) {
+      alert("Please fill all required fields");
+      return;
+    }
+
+    if (parseFloat(offerPrice) >= parseFloat(originalPrice)) {
+      alert("Offer price should be less than original price");
+      return;
+    }
+
+    try {
+      setUploading(true);
+
+      let imageUrl = null;
+      if (bannerImage) {
+        imageUrl = await uploadBannerImage();
+      }
+
+      const selectedService = services.find(s => s.id === selectedServiceId);
+      const selectedCategory = categories.find(c => c.masterCategoryId === selectedCategoryMasterId);
+
+      await addDoc(collection(db, "service_banners"), {
+        companyId: userId,
+        serviceId: selectedServiceId,
+        serviceName: selectedService?.name || "",
+        categoryId: selectedCategoryMasterId,
+        categoryName: selectedCategory?.name || "",
+        originalPrice: parseFloat(originalPrice),
+        offerPrice: parseFloat(offerPrice),
+        discount: Math.round(((originalPrice - offerPrice) / originalPrice) * 100),
+        imageUrl: imageUrl,
+        isActive: true,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+
+      // Reset form
+      setSelectedCategoryMasterId("");
+      setSelectedServiceId("");
+      setOriginalPrice("");
+      setOfferPrice("");
+      setBannerImage(null);
+      setImagePreview("");
+      setServices([]);
+
+      // Refresh banners
+      fetchBanners(userId);
+
+      alert("Banner created successfully!");
+    } catch (error) {
+      console.error("Error creating banner:", error);
+      alert("Error creating banner. Please try again.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDeleteBanner = async (bannerId) => {
+    if (!window.confirm("Are you sure you want to delete this banner?")) return;
+
+    try {
+      await deleteDoc(doc(db, "service_banners", bannerId));
+      fetchBanners(userId);
+      alert("Banner deleted successfully!");
+    } catch (error) {
+      console.error("Error deleting banner:", error);
+      alert("Error deleting banner. Please try again.");
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="banner-loading">
+        <div className="banner-loading-spinner"></div>
+        <p>Loading banner management...</p>
+      </div>
+    );
+  }
+
   return (
-    <div style={{ padding: 25, background: "#fff", borderRadius: 16, maxWidth: 650 }}>
+    <div className="banner-management">
+      {/* Header */}
+      <div className="banner-header">
+        <button className="banner-back-btn" onClick={onBack}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M19 12H5"/>
+            <path d="M12 19l-7-7 7-7"/>
+          </svg>
+          Back to Dashboard
+        </button>
+        <h2>Banner Management</h2>
+      </div>
 
-      <button onClick={onBack} style={{ border: "none", background: "none", color: "#4f46e5" }}>
-        ← Back to Dashboard
-      </button>
+      {/* Create Banner Form */}
+      <div className="banner-form-card">
+        <div className="banner-form-header">
+          <h3>Create New Banner</h3>
+          <p>Design promotional banners for your services</p>
+        </div>
 
-      <h2>Create New Banner</h2>
+        <div className="banner-form-body">
+          <div className="banner-form-row">
+            <div className="banner-form-group">
+              <label>Select Category</label>
+              <select 
+                value={selectedCategoryMasterId} 
+                onChange={handleCategoryChange}
+                className="banner-form-select"
+              >
+                <option value="">Choose a category</option>
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.masterCategoryId}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-      {/* CATEGORY */}
-      <select style={inputStyle} value={selectedCategoryMasterId} onChange={handleCategoryChange}>
-        <option value="">Select Category</option>
-        {categories.map(cat => (
-          <option key={cat.id} value={cat.masterCategoryId}>
-            {cat.name}
-          </option>
-        ))}
-      </select>
+            <div className="banner-form-group">
+              <label>Select Service</label>
+              <select 
+                value={selectedServiceId} 
+                onChange={handleServiceChange}
+                className="banner-form-select"
+                disabled={!selectedCategoryMasterId}
+              >
+                <option value="">Choose a service</option>
+                {services.map(svc => (
+                  <option key={svc.id} value={svc.id}>
+                    {svc.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
 
-      {/* SERVICE */}
-      <select style={inputStyle} value={selectedServiceId} onChange={handleServiceChange}>
-        <option value="">Select Service</option>
-        {services.map(svc => (
-          <option key={svc.id} value={svc.id}>
-            {svc.name}
-          </option>
-        ))}
-      </select>
+          <div className="banner-form-row">
+            <div className="banner-form-group">
+              <label>Original Price</label>
+              <input
+                type="number"
+                value={originalPrice}
+                readOnly
+                placeholder="Select service to see price"
+                className="banner-form-input readonly"
+              />
+            </div>
 
-      <input style={inputStyle} value={originalPrice} readOnly placeholder="Original Price" />
+            <div className="banner-form-group">
+              <label>Offer Price</label>
+              <input
+                type="number"
+                value={offerPrice}
+                onChange={(e) => setOfferPrice(e.target.value)}
+                placeholder="Enter discounted price"
+                className="banner-form-input"
+              />
+            </div>
+          </div>
 
-      <input
-        style={inputStyle}
-        value={offerPrice}
-        onChange={(e) => setOfferPrice(e.target.value)}
-        placeholder="Offer Price"
-      />
+          {originalPrice && offerPrice && (
+            <div className="banner-discount-preview">
+              <span className="banner-discount-badge">
+                {Math.round(((originalPrice - offerPrice) / originalPrice) * 100)}% OFF
+              </span>
+              <span className="banner-savings">
+                Save ₹{(originalPrice - offerPrice).toFixed(2)}
+              </span>
+            </div>
+          )}
 
-      <button style={{
-        background: "#4f46e5",
-        color: "#fff",
-        padding: "10px 16px",
-        border: "none",
-        borderRadius: 6
-      }}>
-        Add Banner
-      </button>
+          <div className="banner-form-group">
+            <label>Banner Image (Optional)</label>
+            <div className="banner-image-upload">
+              {imagePreview ? (
+                <div className="banner-image-preview">
+                  <img src={imagePreview} alt="Banner preview" />
+                  <button
+                    type="button"
+                    className="banner-remove-image-btn"
+                    onClick={() => {
+                      setImagePreview("");
+                      setBannerImage(null);
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <div className="banner-image-placeholder">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                    <polyline points="21,15 16,10 5,21"/>
+                  </svg>
+                  <span>Upload banner image</span>
+                </div>
+              )}
+
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="banner-file-input"
+                id="banner-image"
+              />
+              <label htmlFor="banner-image" className="banner-file-label">
+                {imagePreview ? "Change Image" : "Choose Image"}
+              </label>
+            </div>
+            <small className="banner-form-help">
+              Recommended size: 1200x400px. Max size: 5MB
+            </small>
+          </div>
+
+          <button
+            className="banner-create-btn"
+            onClick={handleCreateBanner}
+            disabled={!selectedServiceId || !offerPrice || uploading}
+          >
+            {uploading ? (
+              <>
+                <div className="banner-btn-spinner"></div>
+                Creating Banner...
+              </>
+            ) : (
+              <>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <line x1="12" y1="5" x2="12" y2="19"/>
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                Create Banner
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Existing Banners */}
+      <div className="banner-list-card">
+        <div className="banner-list-header">
+          <h3>Active Banners ({banners.length})</h3>
+          <p>Manage your promotional banners</p>
+        </div>
+
+        {banners.length === 0 ? (
+          <div className="banner-empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+              <line x1="4" y1="22" x2="4" y2="15"/>
+            </svg>
+            <h4>No banners created yet</h4>
+            <p>Create your first promotional banner to attract customers</p>
+          </div>
+        ) : (
+          <div className="banner-grid">
+            {banners.map(banner => (
+              <div key={banner.id} className="banner-item">
+                {banner.imageUrl && (
+                  <div className="banner-item-image">
+                    <img src={banner.imageUrl} alt={banner.serviceName} />
+                  </div>
+                )}
+                
+                <div className="banner-item-content">
+                  <div className="banner-item-header">
+                    <h4>{banner.serviceName}</h4>
+                    <span className="banner-item-category">{banner.categoryName}</span>
+                  </div>
+
+                  <div className="banner-item-pricing">
+                    <span className="banner-original-price">₹{banner.originalPrice}</span>
+                    <span className="banner-offer-price">₹{banner.offerPrice}</span>
+                    <span className="banner-discount">{banner.discount}% OFF</span>
+                  </div>
+
+                  <button
+                    className="banner-delete-btn"
+                    onClick={() => handleDeleteBanner(banner.id)}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <polyline points="3,6 5,6 21,6"/>
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                    </svg>
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

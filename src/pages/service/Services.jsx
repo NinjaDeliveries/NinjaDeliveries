@@ -10,7 +10,6 @@ import {
   doc, 
   updateDoc 
 } from "firebase/firestore";
-// import { collection, query, where, getDocs, addDoc, deleteDoc, doc } from "firebase/firestore";
 import AddServiceModal from "./AddServiceModal";
 import "../../style/ServiceDashboard.css";
 import AddGlobalServiceModal from "./AddGlobalServiceModal";
@@ -23,9 +22,12 @@ const Services = () => {
   const [editService, setEditService] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState("");
   const [openGlobalServiceModal, setOpenGlobalServiceModal] = useState(false);
-
   const [categoryMasters, setCategoryMasters] = useState([]);
   const [serviceMasters, setServiceMasters] = useState([]);
+  
+  // Search and filter states
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeFilter, setActiveFilter] = useState("all");
 
 
   // const fetchServices = async () => {
@@ -311,200 +313,335 @@ const getServiceName = (service) => {
 
   return master ? master.name : service.name;
 };
-  // const filteredServices = selectedCategory 
-  //   ? services.filter(service => service.categoryId === selectedCategory)
-  //   : services;
-  const filteredServices = selectedCategory
-  ? services.filter(s => s.categoryMasterId === selectedCategory)
-  : services;
-  
-  <select value={selectedCategory} onChange={handleCategoryChange}>
-  <option value="">All Categories</option>
-  {categoryMasters.map(cat => (
-    <option key={cat.id} value={cat.id}>
-      {cat.name}
-    </option>
-  ))}
-</select>
+  // Filter services based on search, category, and status
+  const filteredServices = services.filter((service) => {
+    const serviceName = getServiceName(service);
+    const matchesSearch = !searchQuery || 
+      serviceName.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesCategory = !selectedCategory || 
+      service.categoryMasterId === selectedCategory || 
+      service.masterCategoryId === selectedCategory;
+    
+    const matchesStatus = activeFilter === "all" ||
+      (activeFilter === "active" && (service.isActive ?? true)) ||
+      (activeFilter === "inactive" && !(service.isActive ?? true));
+    
+    return matchesSearch && matchesCategory && matchesStatus;
+  });
 
+  // Calculate stats
+  const activeCount = services.filter(s => s.isActive ?? true).length;
+  const inactiveCount = services.filter(s => !(s.isActive ?? true)).length;
+  const withPackagesCount = services.filter(s => s.hasPackage || s.globalPackageId).length;
   return (
     <div className="sd-main">
+      {/* Page Header */}
       <div className="sd-header">
-        <h1>Services</h1>
-        <div className="sd-header-actions">
-          {/* <select 
-            className="sd-filter-select"
-            value={selectedCategory} 
-            onChange={handleCategoryChange}
-          >
-            <option value="">All Categories</option>
-            {categories.map(category => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
-          </select> */}
+        <div>
+          <h1>Services</h1>
+          <p>Manage all your service offerings and pricing</p>
+        </div>
+        <button className="sd-primary-btn" onClick={handleAddService}>
+          + Add Service
+        </button>
+      </div>
 
-          <select 
-  className="sd-filter-select"
-  value={selectedCategory} 
-  onChange={handleCategoryChange}
->
-  <option value="">All Categories</option>
-  {categoryMasters.map(cat => (
-  <option key={cat.id} value={cat.id}>
-    {cat.name}
-  </option>
-))}
-</select>
-          {/* <button className="sd-primary-btn" onClick={handleAddService}>
-            + Add Package
-          </button> */}
+      {/* Stats Cards */}
+      <div className="services-stats-grid">
+        <div className="services-stat-card">
+          <div className="services-stat-icon total">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+            </svg>
+          </div>
+          <div className="services-stat-content">
+            <p className="services-stat-label">Total Services</p>
+            <p className="services-stat-value">{services.length}</p>
+          </div>
+        </div>
 
-            <button className="sd-primary-btn" onClick={handleAddService}>
-  {/* + Add Package */}
-  + Add Service
-</button>
+        <div className="services-stat-card">
+          <div className="services-stat-icon active">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+              <polyline points="22,4 12,14.01 9,11.01"/>
+            </svg>
+          </div>
+          <div className="services-stat-content">
+            <p className="services-stat-label">Active Services</p>
+            <p className="services-stat-value">{activeCount}</p>
+          </div>
+        </div>
 
-{/* <button
-  className="sd-primary-btn"
-  style={{ marginLeft: "10px", background: "#6366f1" }}
-  onClick={handleAddGlobalService}
->
-  + Add Service
-</button> */}
+        <div className="services-stat-card">
+          <div className="services-stat-icon inactive">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="15" y1="9" x2="9" y2="15"/>
+              <line x1="9" y1="9" x2="15" y2="15"/>
+            </svg>
+          </div>
+          <div className="services-stat-content">
+            <p className="services-stat-label">Inactive Services</p>
+            <p className="services-stat-value">{inactiveCount}</p>
+          </div>
+        </div>
 
+        <div className="services-stat-card">
+          <div className="services-stat-icon packages">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/>
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+              <polyline points="3.27,6.96 12,12.01 20.73,6.96"/>
+              <line x1="12" y1="22.08" x2="12" y2="12"/>
+            </svg>
+          </div>
+          <div className="services-stat-content">
+            <p className="services-stat-label">With Packages</p>
+            <p className="services-stat-value">{withPackagesCount}</p>
+          </div>
         </div>
       </div>
 
+      {/* Filters */}
+      <div className="services-filters">
+        <div className="services-search">
+          <svg className="services-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="m21 21-4.35-4.35"/>
+          </svg>
+          <input
+            type="text"
+            placeholder="Search services..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="services-search-input"
+          />
+        </div>
+
+        <select 
+          className="services-filter-select"
+          value={selectedCategory} 
+          onChange={(e) => setSelectedCategory(e.target.value)}
+        >
+          <option value="">All Categories</option>
+          {categoryMasters.map(cat => (
+            <option key={cat.id} value={cat.id}>
+              {cat.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+
+      {/* Status Tabs */}
+      <div className="services-tabs">
+        <button 
+          className={`services-tab ${activeFilter === 'all' ? 'active' : ''}`}
+          onClick={() => setActiveFilter('all')}
+        >
+          All ({services.length})
+        </button>
+        <button 
+          className={`services-tab ${activeFilter === 'active' ? 'active' : ''}`}
+          onClick={() => setActiveFilter('active')}
+        >
+          Active ({activeCount})
+        </button>
+        <button 
+          className={`services-tab ${activeFilter === 'inactive' ? 'active' : ''}`}
+          onClick={() => setActiveFilter('inactive')}
+        >
+          Inactive ({inactiveCount})
+        </button>
+      </div>
+
       {loading ? (
-        <div className="sd-loading">
+        <div className="services-loading">
+          <div className="services-loading-spinner"></div>
           <p>Loading services...</p>
         </div>
       ) : filteredServices.length === 0 ? (
-        <div className="sd-empty-state">
-          <p><strong>No services found{selectedCategory ? " in this category" : ""}.</strong></p>
-          <p>Total services in database: {services.length}</p>
-          <p>Selected category: {selectedCategory || "All Categories"}</p>
-          <button className="sd-primary-btn" onClick={handleAddService}>
-            + Add Your First Service
-          </button>
+        <div className="services-empty-state">
+          <div className="services-empty-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+            </svg>
+          </div>
+          <h3>No services found</h3>
+          <p>
+            {searchQuery || selectedCategory || activeFilter !== "all"
+              ? "Try adjusting your filters"
+              : "Get started by creating your first service"}
+          </p>
+          {!searchQuery && !selectedCategory && activeFilter === "all" && (
+            <button className="sd-primary-btn" onClick={handleAddService}>
+              + Add Service
+            </button>
+          )}
         </div>
       ) : (
-        <div className="sd-table">
+        <div className="services-list">
           {filteredServices.map(service => {
-            console.log("Rendering service:", service.name, "with ID:", service.id); // Debug log
+            const serviceName = getServiceName(service);
+            const isActive = service.isActive ?? true;
+            
             return (
-            <div key={service.id} className="sd-service-card">
-              {service.imageUrl && (
-                <div className="sd-service-image">
-                  <img src={service.imageUrl} alt={service.name} />
-                </div>
-              )}
-              <div className="sd-service-info">
-                <div>
-                  {/* <h3>{service.name}</h3> */}
-                  <h3>{getServiceName(service)}</h3>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
-                    {/* {service.categoryId && getCategoryName(service.categoryId) && (
+              <div key={service.id} className={`services-card ${!isActive ? 'inactive' : ''}`}>
+                <div className="services-card-content">
+                  <div className="services-main-section">
+                    <div className="services-icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                      </svg>
+                    </div>
+                    
+                    <div className="services-info">
+                      <div className="services-header">
+                        <div className="services-badges">
+                          <h3 className="services-name">{serviceName}</h3>
+                          <span className={`services-status-badge ${isActive ? 'active' : 'inactive'}`}>
+                            <svg className="services-status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                              {isActive ? (
+                                <>
+                                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                                  <polyline points="22,4 12,14.01 9,11.01"/>
+                                </>
+                              ) : (
+                                <>
+                                  <circle cx="12" cy="12" r="10"/>
+                                  <line x1="15" y1="9" x2="9" y2="15"/>
+                                  <line x1="9" y1="9" x2="15" y2="15"/>
+                                </>
+                              )}
+                            </svg>
+                            {isActive ? 'Active' : 'Inactive'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="services-details">
+                        {(service.masterCategoryId || service.categoryMasterId) && (
+                          <div className="services-category-badge">
+                            <svg className="services-category-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                              <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+                              <line x1="7" y1="7" x2="7.01" y2="7"/>
+                            </svg>
+                            {getCategoryName(service.masterCategoryId || service.categoryMasterId)}
+                          </div>
+                        )}
+                        
+                        {service.duration && (
+                          <div className="services-duration">
+                            <svg className="services-duration-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                              <circle cx="12" cy="12" r="10"/>
+                              <polyline points="12,6 12,12 16,14"/>
+                            </svg>
+                            <span>{service.duration}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {service.description && (
+                        <p className="services-description">{service.description}</p>
+                      )}
+
+                      {/* Package Details */}
+                      {service.globalPrice && isActive && (
+                        <div className="services-package-info">
+                          <span className="services-package-badge">Global Package</span>
+                        </div>
+                      )}
+
+                      {!service.globalPackageId && service.packages && service.packages.length > 0 && (
+                        <div className="services-packages">
+                          <p className="services-packages-label">Packages:</p>
+                          <div className="services-packages-list">
+                            {service.packages.map((pkg, index) => (
+                              <span key={index} className="services-package-item">
+                                {pkg.duration} {pkg.unit}(s) - ₹{pkg.price}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {!isActive && (
+                        <div className="services-warning">
+                          <svg className="services-warning-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                            <line x1="12" y1="9" x2="12" y2="13"/>
+                            <line x1="12" y1="17" x2="12.01" y2="17"/>
+                          </svg>
+                          Service inactive (global package not added)
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="services-actions-section">
+                    <div className="services-price">
+                      {service.globalPrice && (
+                        <div className="services-price-display">
+                          <svg className="services-rupee-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M6 3h12"/>
+                            <path d="M6 8h12"/>
+                            <path d="M6 13L13 20"/>
+                            <path d="M6 13h7"/>
+                          </svg>
+                          <span>{service.globalPrice.toLocaleString()}</span>
+                        </div>
+                      )}
+                      <p className="services-price-label">per service</p>
+                    </div>
+
+                    <div className="services-actions">
+                      <button
+                        className="services-action-btn edit"
+                        onClick={() => {
+                          if (service.globalPackageId) {
+                            setEditService(service);
+                            setOpenGlobalServiceModal(true);
+                          } else {
+                            handleEditService(service);
+                          }
+                        }}
+                      >
+                        <svg className="services-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                        </svg>
+                        Edit
+                      </button>
                       
-                      <span className="sd-badge category">
-                        {getCategoryName(service.categoryId)}
-                      </span>
-                    )} */}
-                    {/* {service.categoryMasterId && getCategoryName(service.categoryMasterId)} */}
-                    {service.masterCategoryId && (
-  <span className="sd-badge category">
-    {getCategoryName(service.masterCategoryId)}
-  </span>
-)}
-                    <span className={`sd-status-badge ${(service.isActive ?? true) ? 'active' : 'inactive'}`}>
-                      {(service.isActive ?? true) ? 'Active' : 'Inactive'}
-                    </span>
+                      <button
+                        className={`services-action-btn toggle ${isActive ? 'disable' : 'enable'}`}
+                        onClick={() => handleToggleServiceStatus(service.id, isActive)}
+                      >
+                        <svg className="services-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <circle cx="12" cy="12" r="3"/>
+                          <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"/>
+                        </svg>
+                        {isActive ? 'Disable' : 'Enable'}
+                      </button>
+                      
+                      <button
+                        className="services-action-btn delete"
+                        onClick={() => handleDeleteService(service.id)}
+                      >
+                        <svg className="services-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <polyline points="3,6 5,6 21,6"/>
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                          <line x1="10" y1="11" x2="10" y2="17"/>
+                          <line x1="14" y1="11" x2="14" y2="17"/>
+                        </svg>
+                        Delete
+                      </button>
+                    </div>
                   </div>
                 </div>
-
-                {/* {service.packages && (
-                  <div className="sd-package-details">
-                    {service.packages.map((pkg, index) => (
-                      <p key={index}>
-                        {pkg.duration} {pkg.unit}(s) - ₹{pkg.price}
-                      </p>
-                    ))}
-                  </div>
-                )} */}
-
-                {service.globalPrice && service.isActive && (
-                  <div className="sd-package-details">
-                  <p>₹{service.globalPrice}</p>
-                </div>
-              )}
-              {/* {service.packages && service.packages.length > 0 && (
-                  <div className="sd-package-details">
-                  {service.packages.map((pkg, index) => (
-                  <p key={index}>
-                  {pkg.duration} {pkg.unit}(s) - ₹{pkg.price}
-                </p>
-              ))}
-            </div>
-          )} */}
-
-          {!service.globalPackageId &&
- service.packages &&
- service.packages.length > 0 && (
-   <div className="sd-package-details">
-     {service.packages.map((pkg, index) => (
-       <p key={index}>
-         {pkg.duration} {pkg.unit}(s) - ₹{pkg.price}
-       </p>
-     ))}
-   </div>
-)}
-
-{service.isActive === false && (
-  <p style={{ color: "#f97316", marginTop: "6px" }}>
-    ⚠ Service inactive (global package not added)
-  </p>
-)}
               </div>
-
-              <div className="sd-service-actions">
-                {service.globalPackageId ? (
-                  <button
-                    className="sd-edit-btn"
-                    onClick={() => {
-                      setEditService(service);
-                      setOpenGlobalServiceModal(true);
-                    }}
-                  >
-                    Edit
-                  </button>
-                ) : (
-                  <button
-                    className="sd-edit-btn"
-                    onClick={() => handleEditService(service)}
-                  >
-                    Edit
-                  </button>
-                )}
-                
-                <button 
-                  className={`sd-toggle-btn ${(service.isActive ?? true) ? 'active' : 'inactive'}`}
-                  onClick={() => handleToggleServiceStatus(service.id, (service.isActive ?? true))}
-                  title={(service.isActive ?? true) ? 'Deactivate Service' : 'Activate Service'}
-                >
-                  {(service.isActive ?? true) ? 'Disable' : 'Enable'}
-                </button>
-                
-                <button 
-                  className="sd-delete-btn"
-                  onClick={() => handleDeleteService(service.id)}
-                  title="Delete Service"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
             );
           })}
         </div>

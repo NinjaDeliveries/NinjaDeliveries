@@ -1,196 +1,735 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { auth, db } from "../../context/Firebase";
-import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { doc, collection, query, where, onSnapshot, orderBy, limit } from "firebase/firestore";
 import "../../style/ServiceDashboard.css";
-import { useNotifications } from "../../context/NotificationContext";
 import BannerManagement from "./BannerManagement";
+
+// Animated Counter Component
+function AnimatedCounter({ end, duration = 2000, prefix = "", suffix = "", decimals = 0 }) {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    let startTime = null;
+    let animationFrame;
+
+    const animate = (timestamp) => {
+      if (!startTime) startTime = timestamp;
+      const progress = Math.min((timestamp - startTime) / duration, 1);
+      const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+      setCount(end * easeOutQuart);
+
+      if (progress < 1) {
+        animationFrame = requestAnimationFrame(animate);
+      }
+    };
+
+    animationFrame = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animationFrame);
+  }, [end, duration]);
+
+  return (
+    <span>
+      {prefix}
+      {decimals > 0 ? count.toFixed(decimals) : Math.floor(count).toLocaleString("en-IN")}
+      {suffix}
+    </span>
+  );
+}
 
 const Overview = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
-
   const [serviceData, setServiceData] = useState(null);
   const [deliveryZoneInfo, setDeliveryZoneInfo] = useState(null);
-
   const [stats, setStats] = useState({
     totalServices: 0,
     totalWorkers: 0,
     totalCategories: 0,
-    activeSlots: 0
+    activeSlots: 0,
+    totalBookings: 0,
+    completedBookings: 0,
+    totalRevenue: 0,
+    completionRate: 0
   });
-
+  const [recentBookings, setRecentBookings] = useState([]);
+  const [topServices, setTopServices] = useState([]);
+  const [weeklyData, setWeeklyData] = useState([
+    { day: "Mon", bookings: 0, revenue: 0 },
+    { day: "Tue", bookings: 0, revenue: 0 },
+    { day: "Wed", bookings: 0, revenue: 0 },
+    { day: "Thu", bookings: 0, revenue: 0 },
+    { day: "Fri", bookings: 0, revenue: 0 },
+    { day: "Sat", bookings: 0, revenue: 0 },
+    { day: "Sun", bookings: 0, revenue: 0 },
+  ]);
   const [loading, setLoading] = useState(true);
-  const { showNotification, notificationSettings } = useNotifications();
+  const [hoveredBar, setHoveredBar] = useState(null);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const user = auth.currentUser;
-        if (!user) return;
+    const user = auth.currentUser;
+    if (!user) {
+      console.log("Overview - No authenticated user");
+      return;
+    }
 
-        const companyRef = doc(db, "service_company", user.uid);
-        const companySnap = await getDoc(companyRef);
+    console.log("Overview - Current user:", {
+      uid: user.uid,
+      email: user.email,
+      displayName: user.displayName
+    });
 
-        if (companySnap.exists()) {
-          const data = companySnap.data();
-          setServiceData(data);
+    // Company data (LIVE)
+    const companyRef = doc(db, "service_company", user.uid);
+    const unsubCompany = onSnapshot(companyRef, (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        setServiceData(data);
 
-          if (data.deliveryZoneId) {
-            try {
-              const zoneRef = doc(db, "deliveryZones", data.deliveryZoneId);
-              const zoneSnap = await getDoc(zoneRef);
-
-              if (zoneSnap.exists()) {
-                setDeliveryZoneInfo(zoneSnap.data());
-              } else {
-                setDeliveryZoneInfo({
-                  name: data.deliveryZoneName || "Unknown Zone",
-                  id: data.deliveryZoneId
-                });
-              }
-            } catch {
-              setDeliveryZoneInfo({
-                name: data.deliveryZoneName || "Unknown Zone",
-                id: data.deliveryZoneId
-              });
+        if (data.deliveryZoneId) {
+          const zoneRef = doc(db, "deliveryZones", data.deliveryZoneId);
+          onSnapshot(zoneRef, (zoneSnap) => {
+            if (zoneSnap.exists()) {
+              setDeliveryZoneInfo(zoneSnap.data());
             }
-          }
+          });
         }
-
-        const [servicesSnap, workersSnap, categoriesSnap, slotsSnap] = await Promise.all([
-          getDocs(query(collection(db, "service_services"), where("serviceId", "==", user.uid))),
-          getDocs(query(collection(db, "service_technicians"), where("serviceId", "==", user.uid))),
-          getDocs(query(collection(db, "service_categories"), where("serviceId", "==", user.uid))),
-          getDocs(query(collection(db, "service_slot_templates"), where("serviceId", "==", user.uid)))
-        ]);
-
-        setStats({
-          totalServices: servicesSnap.size,
-          totalWorkers: workersSnap.size,
-          totalCategories: categoriesSnap.size,
-          activeSlots: slotsSnap.docs.filter(doc => doc.data().isActive).length
-        });
-
-      } catch (error) {
-        console.error("Error fetching overview data:", error);
-      } finally {
-        setLoading(false);
       }
-    };
+    });
 
-    fetchData();
+    // Services (LIVE)
+    const servicesQ = query(
+      collection(db, "service_services"),
+      where("companyId", "==", user.uid)
+    );
+
+    // Workers (LIVE)
+    const workersQ = query(
+      collection(db, "service_technicians"),
+      where("companyId", "==", user.uid)
+    );
+
+    // Categories (LIVE)
+    const categoriesQ = query(
+      collection(db, "service_categories"),
+      where("companyId", "==", user.uid)
+    );
+
+    // Slots (LIVE)
+    const slotsQ = query(
+      collection(db, "service_slot_templates"),
+      where("companyId", "==", user.uid)
+    );
+
+    // Bookings (LIVE) - Try multiple approaches
+    let bookingsQ = query(
+      collection(db, "service_bookings"),
+      where("companyId", "==", user.uid)
+    );
+
+    // Recent Bookings (LIVE) - Try multiple approaches  
+    let recentBookingsQ = query(
+      collection(db, "service_bookings"),
+      where("companyId", "==", user.uid),
+      orderBy("createdAt", "desc"),
+      limit(4)
+    );
+
+    const unsubServices = onSnapshot(servicesQ, (snap) => {
+      const activeServices = snap.docs.filter(d => d.data().isActive !== false).length;
+      setStats(prev => ({ ...prev, totalServices: activeServices }));
+    });
+
+    const unsubWorkers = onSnapshot(workersQ, (snap) => {
+      const activeWorkers = snap.docs.filter(d => d.data().isActive !== false).length;
+      setStats(prev => ({ ...prev, totalWorkers: activeWorkers }));
+    });
+
+    const unsubCategories = onSnapshot(categoriesQ, (snap) => {
+      const activeCategories = snap.docs.filter(d => d.data().isActive !== false).length;
+      setStats(prev => ({ ...prev, totalCategories: activeCategories }));
+    });
+
+    const unsubSlots = onSnapshot(slotsQ, (snap) => {
+      const activeSlots = snap.docs.filter(d => d.data().isActive !== false).length;
+      setStats(prev => ({ ...prev, activeSlots: activeSlots }));
+    });
+
+    const unsubBookings = onSnapshot(bookingsQ, (snap) => {
+      const totalBookings = snap.size;
+      const completedBookings = snap.docs.filter(d => d.data().status === 'completed').length;
+      
+      console.log("Overview - Total bookings found:", totalBookings);
+      console.log("Overview - Completed bookings:", completedBookings);
+      
+      // If no bookings found with companyId, try alternative query
+      if (snap.size === 0) {
+        console.log("Overview - No bookings with companyId, trying alternative...");
+        // Try without companyId filter for debugging
+        const altBookingsQ = query(collection(db, "service_bookings"));
+        onSnapshot(altBookingsQ, (altSnap) => {
+          console.log("Overview - Alternative query found:", altSnap.size, "bookings");
+          if (altSnap.size > 0) {
+            console.log("Overview - Sample booking:", altSnap.docs[0].data());
+            // Process alternative results
+            const altTotalBookings = altSnap.size;
+            const altCompletedBookings = altSnap.docs.filter(d => d.data().status === 'completed').length;
+            
+            const altTotalRevenue = altSnap.docs.reduce((sum, doc) => {
+              const booking = doc.data();
+              if (booking.status === 'completed') {
+                return sum + (booking.totalPrice || booking.price || booking.amount || 0);
+              }
+              return sum;
+            }, 0);
+
+            const altCompletionRate = altTotalBookings > 0 ? (altCompletedBookings / altTotalBookings) * 100 : 0;
+
+            setStats(prev => ({ 
+              ...prev, 
+              totalBookings: altTotalBookings,
+              completedBookings: altCompletedBookings,
+              totalRevenue: altTotalRevenue,
+              completionRate: altCompletionRate
+            }));
+
+            const weeklyStats = processWeeklyData(altSnap.docs);
+            setWeeklyData(weeklyStats);
+
+            const servicesStats = processTopServices(altSnap.docs);
+            setTopServices(servicesStats);
+          }
+        });
+        return;
+      }
+      
+      if (snap.size > 0) {
+        console.log("Overview - Sample booking:", snap.docs[0].data());
+      }
+      
+      // Calculate total revenue
+      const totalRevenue = snap.docs.reduce((sum, doc) => {
+        const booking = doc.data();
+        if (booking.status === 'completed') {
+          return sum + (booking.totalPrice || booking.price || booking.amount || 0);
+        }
+        return sum;
+      }, 0);
+
+      // Calculate completion rate
+      const completionRate = totalBookings > 0 ? (completedBookings / totalBookings) * 100 : 0;
+
+      setStats(prev => ({ 
+        ...prev, 
+        totalBookings: totalBookings,
+        completedBookings: completedBookings,
+        totalRevenue: totalRevenue,
+        completionRate: completionRate
+      }));
+
+      // Process weekly data
+      const weeklyStats = processWeeklyData(snap.docs);
+      setWeeklyData(weeklyStats);
+
+      // Process top services
+      const servicesStats = processTopServices(snap.docs);
+      setTopServices(servicesStats);
+    });
+
+    const unsubRecentBookings = onSnapshot(recentBookingsQ, (snap) => {
+      console.log("Overview - Recent bookings found:", snap.size);
+      
+      // If no recent bookings with companyId, try alternative
+      if (snap.size === 0) {
+        console.log("Overview - No recent bookings with companyId, trying alternative...");
+        const altRecentQ = query(
+          collection(db, "service_bookings"),
+          orderBy("createdAt", "desc"),
+          limit(4)
+        );
+        onSnapshot(altRecentQ, (altSnap) => {
+          console.log("Overview - Alternative recent bookings found:", altSnap.size);
+          const altBookings = altSnap.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt?.toDate()
+          }));
+          console.log("Overview - Alternative recent bookings data:", altBookings);
+          setRecentBookings(altBookings);
+        });
+        return;
+      }
+      
+      const bookings = snap.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate()
+      }));
+      console.log("Overview - Recent bookings data:", bookings);
+      setRecentBookings(bookings);
+    });
+
+    setLoading(false);
+
+    // Cleanup
+    return () => {
+      unsubCompany();
+      unsubServices();
+      unsubWorkers();
+      unsubCategories();
+      unsubSlots();
+      unsubBookings();
+      unsubRecentBookings();
+    };
   }, []);
 
-  const tabButtonStyle = (active) => ({
-    padding: "10px 22px",
-    borderRadius: "12px",
-    border: "none",
-    cursor: "pointer",
-    fontWeight: 600,
-    transition: "0.25s",
-    background: active ? "linear-gradient(135deg,#6366f1,#4f46e5)" : "#e5e7eb",
-    color: active ? "#fff" : "#111",
-    boxShadow: active ? "0 8px 18px rgba(79,70,229,0.45)" : "0 2px 6px rgba(0,0,0,0.1)"
-  });
+  const processWeeklyData = (bookingDocs) => {
+    const weekData = [
+      { day: "Mon", bookings: 0, revenue: 0 },
+      { day: "Tue", bookings: 0, revenue: 0 },
+      { day: "Wed", bookings: 0, revenue: 0 },
+      { day: "Thu", bookings: 0, revenue: 0 },
+      { day: "Fri", bookings: 0, revenue: 0 },
+      { day: "Sat", bookings: 0, revenue: 0 },
+      { day: "Sun", bookings: 0, revenue: 0 },
+    ];
+
+    const today = new Date();
+    const weekStart = new Date(today.setDate(today.getDate() - today.getDay()));
+
+    bookingDocs.forEach(doc => {
+      const booking = doc.data();
+      const bookingDate = booking.createdAt?.toDate();
+      
+      if (bookingDate && bookingDate >= weekStart) {
+        const dayIndex = bookingDate.getDay();
+        weekData[dayIndex].bookings += 1;
+        if (booking.status === 'completed') {
+          weekData[dayIndex].revenue += (booking.totalPrice || booking.price || booking.amount || 0);
+        }
+      }
+    });
+
+    return weekData;
+  };
+
+  const processTopServices = (bookingDocs) => {
+    const serviceStats = {};
+
+    bookingDocs.forEach(doc => {
+      const booking = doc.data();
+      const serviceName = booking.serviceName || 'Unknown Service';
+      
+      if (!serviceStats[serviceName]) {
+        serviceStats[serviceName] = { bookings: 0, revenue: 0 };
+      }
+      
+      serviceStats[serviceName].bookings += 1;
+      if (booking.status === 'completed') {
+        serviceStats[serviceName].revenue += (booking.totalPrice || booking.price || booking.amount || 0);
+      }
+    });
+
+    return Object.entries(serviceStats)
+      .map(([name, stats]) => ({
+        name,
+        bookings: stats.bookings,
+        revenue: `₹${stats.revenue.toLocaleString()}`,
+        progress: Math.min((stats.bookings / Math.max(...Object.values(serviceStats).map(s => s.bookings))) * 100, 100),
+        color: getServiceColor(name)
+      }))
+      .sort((a, b) => b.bookings - a.bookings)
+      .slice(0, 4);
+  };
+
+  const getServiceColor = (serviceName) => {
+    const colors = [
+      "from-blue-500 to-indigo-500",
+      "from-purple-500 to-pink-500", 
+      "from-emerald-500 to-teal-500",
+      "from-orange-500 to-red-500"
+    ];
+    return colors[serviceName.length % colors.length];
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'completed': return 'bg-emerald-100 text-emerald-700';
+      case 'in-progress': return 'bg-blue-100 text-blue-700';
+      case 'pending': return 'bg-amber-100 text-amber-700';
+      default: return 'bg-gray-100 text-gray-700';
+    }
+  };
+
+  const formatTimeAgo = (date) => {
+    if (!date) return 'Unknown time';
+    
+    const now = new Date();
+    const diffInMinutes = Math.floor((now - date) / (1000 * 60));
+    
+    if (diffInMinutes < 1) return 'Just now';
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+    
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    if (diffInHours < 24) return `${diffInHours}h ago`;
+    
+    const diffInDays = Math.floor(diffInHours / 24);
+    return `${diffInDays}d ago`;
+  };
+
+  const maxRevenue = Math.max(...weeklyData.map(d => d.revenue));
 
   if (loading) {
-    return <div className="sd-main"><p>Loading overview...</p></div>;
+    return (
+      <div className="sd-main">
+        <div className="modern-loading">
+          <div className="modern-loading-spinner"></div>
+          <p>Loading dashboard...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="sd-main">
-
-      <div className="sd-header">
-        <h1>
-          {serviceData
-            ? `${serviceData.companyName} - ${deliveryZoneInfo?.name || serviceData.deliveryZoneName || 'Dashboard'}`
-            : 'Welcome back!'
-          }
-        </h1>
-        <p>SERVICE ACCOUNT</p>
-      </div>
-
-      {serviceData && (
-        <div className="sd-simple-info-card">
-          <div className="sd-company-basic">
-            <h2>{serviceData.companyName}</h2>
-            <p className="sd-owner-name">Owner: {serviceData.ownerName || serviceData.name}</p>
-
-            <div className="sd-zone-connection">
-              <span className="sd-zone-label">📍 Service Area:</span>
-              <span className="sd-zone-name">
-                {deliveryZoneInfo ? deliveryZoneInfo.name : serviceData.deliveryZoneName}
-              </span>
-            </div>
-
-            <div style={{ marginTop: 8, fontSize: 13 }}>
-              Business Type: <strong>{serviceData.businessType || "Service"}</strong>
+    <div className="sd-main modern-dashboard">
+      {activeTab === 'dashboard' ? (
+        <>
+          {/* Compact Welcome Header - Top */}
+          <div className="modern-welcome-compact">
+            <div className="modern-welcome-content-compact">
+              <div className="modern-welcome-text">
+                <h1 className="modern-welcome-title-compact">
+                  Welcome back, <span className="modern-name-highlight">{serviceData?.ownerName || 'Ritik'}</span>! ✨
+                </h1>
+                <p className="modern-welcome-subtitle-compact">
+                  Here's what's happening with your business today.
+                </p>
+              </div>
+              <div className="modern-welcome-status">
+                <div className="modern-status-badge-compact online">
+                  <span className="modern-status-dot-small"></span>
+                  Business Online
+                </div>
+                <div className="modern-time-badge-compact">
+                  🕐 Last updated: Just now
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      )}
 
-      {/* Banner Button */}
-      <div style={{ marginBottom: 25 }}>
-        <button
-          style={tabButtonStyle(activeTab === "banner")}
-          onClick={() => setActiveTab("banner")}
-        >
-          🎯 Banner Management
-        </button>
-      </div>
+          {/* Compact Company Header */}
+          <div className="modern-company-header-compact">
+            <div className="modern-company-content-compact">
+              <div className="modern-company-main">
+                <div className="modern-company-icon-compact">
+                  🏢
+                </div>
+                <div className="modern-company-info-compact">
+                  <h1 className="modern-company-name-compact">{serviceData?.companyName || serviceData?.name || 'The Alpha'} ✨</h1>
+                  <div className="modern-company-meta">
+                    <span className="modern-owner-text">Owner: {serviceData?.ownerName || 'Ritik'}</span>
+                    <div className="modern-status-compact">
+                      <div className="modern-status-dot-compact"></div>
+                      <span>Business Active</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="modern-badges-compact">
+                <div className="modern-location-compact">
+                  📍 {deliveryZoneInfo?.name || serviceData?.deliveryZoneName || 'Dharamshala'}
+                </div>
+                <div className="modern-business-type-compact">
+                  Business Type: Service
+                </div>
+              </div>
+            </div>
+          </div>
 
-      {/* Content */}
-      {activeTab === "dashboard" ? (
-        <div className="sd-cards">
-          <div className="sd-card"><div>Total Services</div><div>{stats.totalServices}</div></div>
-          <div className="sd-card"><div>Active Workers</div><div>{stats.totalWorkers}</div></div>
-          <div className="sd-card"><div>Categories</div><div>{stats.totalCategories}</div></div>
-          <div className="sd-card"><div>Active Slots</div><div>{stats.activeSlots}</div></div>
-        </div>
+          {/* Enhanced Stats Grid */}
+          <div className="modern-stats-grid-enhanced">
+            <div className="modern-stat-card-enhanced revenue" style={{ animationDelay: '0.1s' }}>
+              <div className="modern-stat-icon-enhanced">💰</div>
+              <div className="modern-stat-content-enhanced">
+                <p className="modern-stat-label-enhanced">Total Revenue</p>
+                <p className="modern-stat-value-enhanced">
+                  <AnimatedCounter end={stats.totalRevenue} prefix="₹" duration={2000} />
+                </p>
+                <div className="modern-stat-change-enhanced positive">
+                  <span className="modern-change-icon-enhanced">↗</span>
+                  <span>Live Data</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="modern-stat-card-enhanced bookings" style={{ animationDelay: '0.2s' }}>
+              <div className="modern-stat-icon-enhanced">📅</div>
+              <div className="modern-stat-content-enhanced">
+                <p className="modern-stat-label-enhanced">Total Bookings</p>
+                <p className="modern-stat-value-enhanced">
+                  <AnimatedCounter end={stats.totalBookings} duration={2200} />
+                </p>
+                <div className="modern-stat-change-enhanced positive">
+                  <span className="modern-change-icon-enhanced">↗</span>
+                  <span>Live Data</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="modern-stat-card-enhanced workers" style={{ animationDelay: '0.3s' }}>
+              <div className="modern-stat-icon-enhanced">👥</div>
+              <div className="modern-stat-content-enhanced">
+                <p className="modern-stat-label-enhanced">Active Technicians</p>
+                <p className="modern-stat-value-enhanced">
+                  <AnimatedCounter end={stats.totalWorkers} duration={2400} />
+                </p>
+                <div className="modern-stat-change-enhanced positive">
+                  <span className="modern-change-icon-enhanced">↗</span>
+                  <span>Live Data</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="modern-stat-card-enhanced completion" style={{ animationDelay: '0.4s' }}>
+              <div className="modern-stat-icon-enhanced">📈</div>
+              <div className="modern-stat-content-enhanced">
+                <p className="modern-stat-label-enhanced">Completion Rate</p>
+                <p className="modern-stat-value-enhanced">
+                  <AnimatedCounter end={stats.completionRate} suffix="%" decimals={1} duration={2600} />
+                </p>
+                <div className="modern-stat-change-enhanced neutral">
+                  <span className="modern-change-icon-enhanced">📊</span>
+                  <span>Live Data</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Charts & Activity Row */}
+          <div className="modern-charts-row">
+            {/* Weekly Revenue Chart */}
+            <div className="modern-chart-card" style={{ animationDelay: '0.5s' }}>
+              <div className="modern-chart-header">
+                <div className="modern-chart-title-section">
+                  <div className="modern-chart-icon">
+                    �
+                  </div>
+                  <div>
+                    <h3 className="modern-chart-title">Weekly Revenue</h3>
+                    <p className="modern-chart-subtitle">Last 7 days performance</p>
+                  </div>
+                </div>
+                <div className="modern-trend-badge positive">
+                  📈 Live Data
+                </div>
+              </div>
+
+              <div className="modern-chart-content">
+                <div className="modern-bar-chart">
+                  {weeklyData.map((data, index) => (
+                    <div
+                      key={data.day}
+                      className="modern-bar-container"
+                      onMouseEnter={() => setHoveredBar(index)}
+                      onMouseLeave={() => setHoveredBar(null)}
+                    >
+                      {hoveredBar === index && (
+                        <div className="modern-chart-tooltip">
+                          <p>₹{data.revenue.toLocaleString()}</p>
+                          <p className="modern-tooltip-bookings">{data.bookings} bookings</p>
+                        </div>
+                      )}
+                      <div
+                        className={`modern-bar ${hoveredBar === index ? 'hovered' : ''}`}
+                        style={{
+                          height: `${maxRevenue > 0 ? (data.revenue / maxRevenue) * 180 : 0}px`,
+                          animationDelay: `${0.5 + index * 0.1}s`
+                        }}
+                      >
+                        <div className="modern-bar-shimmer"></div>
+                      </div>
+                      <span className={`modern-bar-label ${hoveredBar === index ? 'active' : ''}`}>
+                        {data.day}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="modern-chart-summary">
+                  <div className="modern-summary-stats">
+                    <div className="modern-summary-item">
+                      <p className="modern-summary-label">Total Revenue</p>
+                      <p className="modern-summary-value">₹{weeklyData.reduce((sum, d) => sum + d.revenue, 0).toLocaleString()}</p>
+                    </div>
+                    <div className="modern-summary-item">
+                      <p className="modern-summary-label">Total Bookings</p>
+                      <p className="modern-summary-value">{weeklyData.reduce((sum, d) => sum + d.bookings, 0)}</p>
+                    </div>
+                  </div>
+                  <button className="modern-report-btn">
+                    View Full Report
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Activity Feed */}
+            <div className="modern-activity-card" style={{ animationDelay: '0.6s' }}>
+              <div className="modern-activity-header">
+                <div className="modern-activity-icon">⚡</div>
+                <h3 className="modern-activity-title">Live Activity</h3>
+              </div>
+              <div className="modern-activity-content">
+                {recentBookings.length > 0 ? (
+                  recentBookings.slice(0, 4).map((booking, index) => (
+                    <div key={booking.id} className="modern-activity-item">
+                      <div className={`modern-activity-dot ${booking.status === 'completed' ? 'completed' : booking.status === 'assigned' ? 'assigned' : 'new'}`}></div>
+                      <div className="modern-activity-info">
+                        <p className="modern-activity-text">
+                          {booking.status === 'completed' ? 'Service completed' : 
+                           booking.status === 'assigned' ? 'Technician assigned' : 
+                           'New booking received'} - {booking.serviceName}
+                        </p>
+                        <p className="modern-activity-time">{formatTimeAgo(booking.createdAt)}</p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="modern-activity-item">
+                    <div className="modern-activity-dot new"></div>
+                    <div className="modern-activity-info">
+                      <p className="modern-activity-text">No recent activity</p>
+                      <p className="modern-activity-time">Waiting for bookings...</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Content Grid */}
+          <div className="modern-content-grid">
+            {/* Recent Bookings */}
+            <div className="modern-bookings-card" style={{ animationDelay: '0.7s' }}>
+              <div className="modern-bookings-header">
+                <div className="modern-bookings-title-section">
+                  <div className="modern-bookings-icon">📅</div>
+                  <h3 className="modern-bookings-title">Recent Bookings</h3>
+                </div>
+                <button className="modern-view-all-btn">
+                  View All →
+                </button>
+              </div>
+
+              <div className="modern-bookings-content">
+                {recentBookings.length === 0 ? (
+                  <div className="modern-empty-state">
+                    <p>No recent bookings found</p>
+                  </div>
+                ) : (
+                  <div className="modern-bookings-list">
+                    {recentBookings.map((booking, index) => (
+                      <div
+                        key={booking.id}
+                        className="modern-booking-item"
+                        style={{ animationDelay: `${0.8 + index * 0.1}s` }}
+                      >
+                        <div className="modern-booking-avatar">
+                          {booking.serviceName?.charAt(0) || 'S'}
+                        </div>
+                        <div className="modern-booking-details">
+                          <p className="modern-booking-service">{booking.serviceName || 'Service'}</p>
+                          <p className="modern-booking-customer">
+                            {booking.customerName || 'Customer'} • {formatTimeAgo(booking.createdAt)}
+                          </p>
+                        </div>
+                        <div className="modern-booking-status">
+                          <span className={`modern-status-badge ${getStatusColor(booking.status)}`}>
+                            {booking.status === 'completed' && '✅ '}
+                            {booking.status || 'pending'}
+                          </span>
+                        </div>
+                        <div className="modern-booking-amount">
+                          ₹{(booking.totalPrice || booking.price || booking.amount || 0).toLocaleString()}
+                        </div>
+                        <button className="modern-booking-view">👁</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Top Services */}
+            <div className="modern-services-card" style={{ animationDelay: '0.8s' }}>
+              <div className="modern-services-header">
+                <div className="modern-services-icon">🥧</div>
+                <h3 className="modern-services-title">Top Services</h3>
+              </div>
+              <div className="modern-services-content">
+                {topServices.length > 0 ? (
+                  topServices.map((service, index) => (
+                    <div
+                      key={service.name}
+                      className="modern-service-item"
+                      style={{ animationDelay: `${0.9 + index * 0.1}s` }}
+                    >
+                      <div className="modern-service-info">
+                        <p className="modern-service-name">{service.name}</p>
+                        <span className="modern-service-revenue">{service.revenue}</span>
+                      </div>
+                      <div className="modern-service-progress">
+                        <div className="modern-progress-bar">
+                          <div
+                            className={`modern-progress-fill ${service.color}`}
+                            style={{ width: `${service.progress}%` }}
+                          ></div>
+                        </div>
+                        <span className="modern-service-bookings">{service.bookings} bookings</span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="modern-empty-state">
+                    <p>No services data available</p>
+                    <small>Services will appear here once you have bookings</small>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="modern-actions-card" style={{ animationDelay: '1s' }}>
+            <div className="modern-actions-header">
+              <div className="modern-actions-icon">⚡</div>
+              <h3 className="modern-actions-title">Quick Actions</h3>
+            </div>
+            <div className="modern-actions-grid">
+              <button className="modern-action-btn" onClick={() => setActiveTab('banner')}>
+                <div className="modern-action-icon bookings">📅</div>
+                <span>Banner Management</span>
+              </button>
+              <button className="modern-action-btn">
+                <div className="modern-action-icon technicians">👥</div>
+                <span>Add Technician</span>
+              </button>
+              <button className="modern-action-btn">
+                <div className="modern-action-icon payments">💰</div>
+                <span>View Payments</span>
+              </button>
+              <button className="modern-action-btn">
+                <div className="modern-action-icon goals">🎯</div>
+                <span>Set Goals</span>
+              </button>
+              <button className="modern-action-btn">
+                <div className="modern-action-icon reports">�</div>
+                <span>View Reports</span>
+              </button>
+            </div>
+          </div>
+        </>
       ) : (
-        <BannerManagement onBack={() => setActiveTab("dashboard")} />
+        <BannerManagement onBack={() => setActiveTab('dashboard')} />
       )}
-
-      {/* Debug Section */}
-      <div className="sd-card" style={{ marginTop: 20, background: "#fff3cd" }}>
-        <h3>🔧 Debug Mode</h3>
-
-        <button
-          className="sd-primary-btn"
-          onClick={() =>
-            showNotification({
-              id: Date.now(),
-              type: "booking",
-              title: "Test Booking",
-              message: "Testing notification",
-              timestamp: new Date()
-            })
-          }
-        >
-          Test Notification
-        </button>
-
-        <button
-          className="sd-secondary-btn"
-          onClick={() => {
-            const audio = new Audio("/servicebeep.mp3");
-            audio.play();
-          }}
-        >
-          Test Sound
-        </button>
-
-        <button
-          className="sd-secondary-btn"
-          onClick={() => {
-            const user = auth.currentUser;
-            alert(`User: ${user?.email}`);
-          }}
-        >
-          Check Settings
-        </button>
-      </div>
-
     </div>
   );
 };

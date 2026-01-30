@@ -28,8 +28,6 @@ const ServiceDashboard = () => {
     { label: "Feedback", path: "/service-dashboard/feedback" },
     { label: "Payments", path: "/service-dashboard/payments" },
     { label: "Settings", path: "/service-dashboard/settings" },
-    
-
   ];
 
   useEffect(() => {

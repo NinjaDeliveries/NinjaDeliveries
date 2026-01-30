@@ -38,7 +38,6 @@ import { useLocation } from "react-router-dom";
 import { useUser } from "./context/adminContext";
 import ProtectedRoute from "./ProtectedRoute";
 import { logAdminActivity } from "./utils/activityLogger";
-
 // Service Dashboard
 import ServiceDashboard from "./pages/service/ServiceDashboard";
 import ServiceRegister from "./pages/service/ServiceRegister";
