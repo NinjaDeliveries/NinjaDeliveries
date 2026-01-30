@@ -56,6 +56,7 @@ import AdminCategoriesServices from "./pages/Admin/AdminCategoriesServices";
 // Notification System
 import { NotificationProvider } from "./context/NotificationContext";
 import NotificationAlert from "./components/NotificationAlert";
+import Feedback from "./pages/service/Feedback";
 
 function App() {
   const { user, loadingUser } = useUser();
@@ -359,12 +360,14 @@ function App() {
             <Route path="technicians" element={<Technicians />} />
             <Route path="payments" element={<Payments />} />
             <Route path="settings" element={<Settings />} />
+            <Route path="feedback" element={<Feedback />} />
           </Route>
 
           <Route
             path="/admin/categories-services"
             element={<AdminCategoriesServices />}
           />
+
 
           {/* Service Register */}
           <Route path="/service-register" element={<ServiceRegister />} />

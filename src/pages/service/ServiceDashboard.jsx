@@ -25,7 +25,7 @@ const ServiceDashboard = () => {
     },
     { label: "Calendar / Slots", path: "/service-dashboard/slots" },
     { label: "Technicians", path: "/service-dashboard/technicians" },
-    { label: "Banner Management", path: "/service-dashboard/banners" },
+    { label: "Feedback", path: "/service-dashboard/feedback" },
     { label: "Payments", path: "/service-dashboard/payments" },
     { label: "Settings", path: "/service-dashboard/settings" },
     
