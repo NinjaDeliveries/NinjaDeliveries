@@ -21,11 +21,12 @@ const AdminCategoriesServices = () => {
 
   // modal
   const [showModal, setShowModal] = useState(false);
-  const [mode, setMode] = useState(""); // "category" | "service" | "edit"
+  const [mode, setMode] = useState(""); // "category" | "service" | "edit" | "edit-service"
   const [name, setName] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
   const [editingCategory, setEditingCategory] = useState(null);
+  const [editingService, setEditingService] = useState(null);
   
   // Image upload states
   const [categoryImage, setCategoryImage] = useState(null);
@@ -37,9 +38,19 @@ const AdminCategoriesServices = () => {
   const [serviceSearchTerms, setServiceSearchTerms] = useState({});
 
   // ================= SEARCH FUNCTIONALITY =================
-  const filteredCategories = categories.filter(category =>
-    category.name.toLowerCase().includes(categorySearchTerm.toLowerCase())
-  );
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+
+  const filteredCategories = categories.filter(category => {
+    const matchesSearch = !searchQuery || 
+      category.name.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesStatus = statusFilter === "all" ||
+      (statusFilter === "active" && (category.isActive ?? true)) ||
+      (statusFilter === "inactive" && !(category.isActive ?? true));
+    
+    return matchesSearch && matchesStatus;
+  });
 
   const getFilteredServices = (categoryName) => {
     const categoryServices = services.filter(s => s.categoryName === categoryName);
@@ -58,6 +69,11 @@ const AdminCategoriesServices = () => {
       [categoryName]: searchTerm
     }));
   };
+
+  // Calculate stats
+  const activeCount = categories.filter(c => c.isActive ?? true).length;
+  const inactiveCount = categories.filter(c => !(c.isActive ?? true)).length;
+  const totalServices = services.length;
 
   // ================= FETCH =================
   const fetchCategories = useCallback(async () => {
@@ -126,6 +142,14 @@ const AdminCategoriesServices = () => {
     setSelectedCategory(categoryName);
     setSelectedCategoryId(categoryId);
     setName("");
+    setShowModal(true);
+  };
+
+  const openEditService = (service) => {
+    setMode("edit-service");
+    setName(service.name);
+    setEditingService(service);
+    setSelectedCategory(service.categoryName);
     setShowModal(true);
   };
 
@@ -212,10 +236,18 @@ const AdminCategoriesServices = () => {
         });
       }
 
+      if (mode === "edit-service" && editingService) {
+        await updateDoc(doc(db, "service_services_master", editingService.id), {
+          name: name.trim(),
+          updatedAt: serverTimestamp(),
+        });
+      }
+
       setShowModal(false);
       setCategoryImage(null);
       setImagePreview("");
       setEditingCategory(null);
+      setEditingService(null);
       await fetchServices();
       await fetchCategories();
     } catch (err) {
@@ -320,244 +352,350 @@ const AdminCategoriesServices = () => {
 
   return (
     <div className="sd-main">
-      {/* HEADER */}
-      <div className="admin-header">
-        <div className="admin-header-content">
-          <h1 className="admin-title">Categories & Services</h1>
-          <p className="admin-subtitle">Manage service categories and their associated services</p>
+      {/* Page Header */}
+      <div className="sd-header">
+        <div>
+          <h1>Categories & Services</h1>
+          <p>Manage service categories and their associated services</p>
         </div>
-        <button className="admin-primary-btn" onClick={openAddCategory}>
-          <span className="btn-icon">➕</span>
-          Add Category
+        <button className="sd-primary-btn" onClick={openAddCategory}>
+          + Add Category
         </button>
       </div>
 
-      {/* STATS */}
-      <div className="admin-stats">
-        <div className="admin-stat-card">
-          <div className="stat-number">{stats.totalCategories}</div>
-          <div className="stat-label">Total Categories</div>
+      {/* Stats Cards */}
+      <div className="categories-stats-grid">
+        <div className="categories-stat-card">
+          <div className="categories-stat-icon total">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v11z"/>
+            </svg>
+          </div>
+          <div className="categories-stat-content">
+            <p className="categories-stat-label">Total Categories</p>
+            <p className="categories-stat-value">{categories.length}</p>
+          </div>
         </div>
-        <div className="admin-stat-card">
-          <div className="stat-number">{stats.totalServices}</div>
-          <div className="stat-label">Total Services</div>
+
+        <div className="categories-stat-card">
+          <div className="categories-stat-icon services">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+            </svg>
+          </div>
+          <div className="categories-stat-content">
+            <p className="categories-stat-label">Total Services</p>
+            <p className="categories-stat-value">{totalServices}</p>
+          </div>
         </div>
-        <div className="admin-stat-card">
-          <div className="stat-number">{stats.activeCategories}</div>
-          <div className="stat-label">Active Categories</div>
+
+        <div className="categories-stat-card">
+          <div className="categories-stat-icon active">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+              <polyline points="22,4 12,14.01 9,11.01"/>
+            </svg>
+          </div>
+          <div className="categories-stat-content">
+            <p className="categories-stat-label">Active Categories</p>
+            <p className="categories-stat-value">{activeCount}</p>
+          </div>
         </div>
-        <div className="admin-stat-card">
-          <div className="stat-number">{stats.activeServices}</div>
-          <div className="stat-label">Active Services</div>
+
+        <div className="categories-stat-card">
+          <div className="categories-stat-icon inactive">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="15" y1="9" x2="9" y2="15"/>
+              <line x1="9" y1="9" x2="15" y2="15"/>
+            </svg>
+          </div>
+          <div className="categories-stat-content">
+            <p className="categories-stat-label">Inactive Categories</p>
+            <p className="categories-stat-value">{inactiveCount}</p>
+          </div>
         </div>
       </div>
 
-      {/* CONTENT */}
-      <div className="admin-content">
-        {categories.length === 0 ? (
-          <div className="admin-empty-state">
-            <div className="empty-icon">📂</div>
-            <h3>No Categories Yet</h3>
-            <p>Create your first service category to get started</p>
-            <button className="admin-primary-btn" onClick={openAddCategory}>
-              <span className="btn-icon">➕</span>
-              Create First Category
-            </button>
+      {/* Filters */}
+      <div className="categories-filters">
+        <div className="categories-search">
+          <svg className="categories-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="m21 21-4.35-4.35"/>
+          </svg>
+          <input
+            type="text"
+            placeholder="Search categories..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="categories-search-input"
+          />
+        </div>
+      </div>
+
+      {/* Status Tabs */}
+      <div className="categories-tabs">
+        <button 
+          className={`categories-tab ${statusFilter === 'all' ? 'active' : ''}`}
+          onClick={() => setStatusFilter('all')}
+        >
+          All ({categories.length})
+        </button>
+        <button 
+          className={`categories-tab ${statusFilter === 'active' ? 'active' : ''}`}
+          onClick={() => setStatusFilter('active')}
+        >
+          Active ({activeCount})
+        </button>
+        <button 
+          className={`categories-tab ${statusFilter === 'inactive' ? 'active' : ''}`}
+          onClick={() => setStatusFilter('inactive')}
+        >
+          Inactive ({inactiveCount})
+        </button>
+      </div>
+
+      {/* Categories List */}
+      {filteredCategories.length === 0 ? (
+        <div className="categories-empty-state">
+          <div className="categories-empty-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v11z"/>
+            </svg>
           </div>
-        ) : (
-          <>
-            {/* CATEGORY SEARCH */}
-            <div className="search-container">
-              <div className="compact-search-wrapper">
-                <div className="search-input-container">
-                  <svg className="search-icon-left" viewBox="0 0 512 512">
-                    <path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352a144 144 0 1 0 0-288 144 144 0 1 0 0 288z" />
-                  </svg>
-                  <input 
-                    className="compact-search-input" 
-                    placeholder="Search categories..." 
-                    type="text"
-                    value={categorySearchTerm}
-                    onChange={(e) => setCategorySearchTerm(e.target.value)}
-                  />
-                  {categorySearchTerm && (
-                    <button 
-                      className="clear-search-btn"
-                      onClick={() => setCategorySearchTerm("")}
-                    >
-                      <svg viewBox="0 0 24 24">
-                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-                      </svg>
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="admin-categories-grid">
-              {filteredCategories.length === 0 ? (
-                <div className="no-search-results">
-                  <h3>No categories found</h3>
-                  <p>Try adjusting your search terms or create a new category</p>
-                </div>
-              ) : (
-                filteredCategories.map((cat) => {
-                const categoryServices = getFilteredServices(cat.name);
-                const allCategoryServices = services.filter(s => s.categoryName === cat.name);
-                const isExpanded = expandedCategories.has(cat.id);
-                
-                return (
-                  <div key={cat.id} className="admin-category-card">
-                    <div className="category-header" onClick={() => toggleCategory(cat.id)}>
-                      <div className="category-info">
-                        <div className="category-title-section">
-                          {cat.imageUrl && (
-                            <img 
-                              src={cat.imageUrl} 
-                              alt={cat.name}
-                              className="admin-category-image"
-                            />
-                          )}
-                          <h3 className="category-name">{cat.name}</h3>
+          <h3>No categories found</h3>
+          <p>
+            {searchQuery || statusFilter !== "all"
+              ? "Try adjusting your filters"
+              : "Get started by creating your first category"}
+          </p>
+          {!searchQuery && statusFilter === "all" && (
+            <button className="sd-primary-btn" onClick={openAddCategory}>
+              + Add Category
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="categories-list">
+          {filteredCategories.map((cat) => {
+            const categoryServices = getFilteredServices(cat.name);
+            const allCategoryServices = services.filter(s => s.categoryName === cat.name);
+            const isExpanded = expandedCategories.has(cat.id);
+            const isActive = cat.isActive !== false;
+            
+            return (
+              <div key={cat.id} className={`categories-card ${!isActive ? 'inactive' : ''}`}>
+                <div className="categories-card-content">
+                  <div className="categories-main-section">
+                    <div className="categories-image-section">
+                      {cat.imageUrl ? (
+                        <img 
+                          src={cat.imageUrl} 
+                          alt={cat.name}
+                          className="categories-image"
+                        />
+                      ) : (
+                        <div className="categories-placeholder">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v11z"/>
+                          </svg>
                         </div>
-                        <div className="category-meta">
-                          <span className="service-count">
-                            {allCategoryServices.length} service{allCategoryServices.length !== 1 ? 's' : ''}
-                          </span>
-                          <span className={`status-badge ${cat.isActive !== false ? 'active' : 'inactive'}`}>
-                            {cat.isActive !== false ? 'Active' : 'Inactive'}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="category-actions">
-                        <button
-                          className="expand-btn"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleCategory(cat.id);
-                          }}
-                        >
-                          <span className={`expand-icon ${isExpanded ? 'expanded' : ''}`}>▼</span>
-                        </button>
-                      </div>
+                      )}
                     </div>
-
-                    {isExpanded && (
-                      <div className="category-content">
-                        <div className="category-toolbar">
-                          <button
-                            className="add-service-btn"
-                            onClick={() => openAddService(cat.name, cat.id)}
-                          >
-                            Add Service
-                          </button>
-                          <button
-                            className="edit-category-btn"
-                            onClick={() => openEditCategory(cat)}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            className={`toggle-category-btn ${cat.isActive !== false ? 'active' : 'inactive'}`}
-                            onClick={() => toggleCategoryStatus(cat.id, cat.isActive !== false)}
-                          >
-                            {cat.isActive !== false ? 'OFF' : 'ON'}
-                          </button>
-                          <button
-                            className="delete-category-btn"
-                            onClick={() => deleteCategory(cat)}
-                          >
-                            Delete
-                          </button>
-                        </div>
-
-                        {/* SERVICE SEARCH */}
-                        {allCategoryServices.length > 3 && (
-                          <div className="service-search-container">
-                            <div className="compact-search-wrapper service-search">
-                              <div className="search-input-container">
-                                <svg className="search-icon-left" viewBox="0 0 512 512">
-                                  <path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352a144 144 0 1 0 0-288 144 144 0 1 0 0 288z" />
-                                </svg>
-                                <input 
-                                  className="compact-search-input" 
-                                  placeholder="Search services..." 
-                                  type="text"
-                                  value={serviceSearchTerms[cat.name] || ""}
-                                  onChange={(e) => handleServiceSearch(cat.name, e.target.value)}
-                                />
-                                {serviceSearchTerms[cat.name] && (
-                                  <button 
-                                    className="clear-search-btn"
-                                    onClick={() => handleServiceSearch(cat.name, "")}
-                                  >
-                                    <svg viewBox="0 0 24 24">
-                                      <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-                                    </svg>
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        <div className="services-list">
-                          {categoryServices.length === 0 ? (
-                            <div className="no-services">
-                              {allCategoryServices.length === 0 ? (
+                    
+                    <div className="categories-info">
+                      <div className="categories-header">
+                        <div className="categories-title-section">
+                          <h3 className="categories-name">{cat.name}</h3>
+                          <span className={`categories-status-badge ${isActive ? 'active' : 'inactive'}`}>
+                            <svg className="categories-status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                              {isActive ? (
                                 <>
-                                  <p>No services in this category yet</p>
-                                  <button
-                                    className="add-first-service-btn"
-                                    onClick={() => openAddService(cat.name, cat.id)}
-                                  >
-                                    Add First Service
-                                  </button>
+                                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                                  <polyline points="22,4 12,14.01 9,11.01"/>
                                 </>
                               ) : (
-                                <p>No services match your search criteria</p>
+                                <>
+                                  <circle cx="12" cy="12" r="10"/>
+                                  <line x1="15" y1="9" x2="9" y2="15"/>
+                                  <line x1="9" y1="9" x2="15" y2="15"/>
+                                </>
                               )}
-                            </div>
-                          ) : (
-                            <div className="services-grid">
-                              {categoryServices.map((srv) => (
-                                <div key={srv.id} className="service-item">
-                                  <div className="service-info">
-                                    <span className="service-name">{srv.name}</span>
-                                    <span className={`service-status ${srv.isActive !== false ? 'active' : 'inactive'}`}>
-                                      {srv.isActive !== false ? 'Active' : 'Inactive'}
-                                    </span>
-                                  </div>
-                                  <div className="service-actions">
-                                    <button
-                                      className={`toggle-service-btn ${srv.isActive !== false ? 'active' : 'inactive'}`}
-                                      onClick={() => toggleServiceStatus(srv.id, srv.isActive !== false)}
-                                      title={srv.isActive !== false ? 'Deactivate service' : 'Activate service'}
-                                    >
-                                      {srv.isActive !== false ? 'OFF' : 'ON'}
-                                    </button>
-                                    <button
-                                      className="delete-service-btn"
-                                      onClick={() => deleteService(srv)}
-                                      title="Delete service"
-                                    >
-                                      Delete
-                                    </button>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
+                            </svg>
+                            {isActive ? 'Active' : 'Inactive'}
+                          </span>
                         </div>
                       </div>
-                    )}
+
+                      <div className="categories-meta">
+                        <div className="categories-service-count">
+                          <svg className="categories-service-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                          </svg>
+                          <span>{allCategoryServices.length} service{allCategoryServices.length !== 1 ? 's' : ''}</span>
+                        </div>
+                      </div>
+
+                      {/* Services Preview */}
+                      {allCategoryServices.length > 0 && (
+                        <div className="categories-services-preview">
+                          <p className="categories-services-label">Services:</p>
+                          <div className="categories-services-list">
+                            {allCategoryServices.slice(0, 3).map((service, index) => (
+                              <span key={index} className="categories-service-badge">
+                                {service.name}
+                              </span>
+                            ))}
+                            {allCategoryServices.length > 3 && (
+                              <span className="categories-more-services">
+                                +{allCategoryServices.length - 3} more
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                );
-              }))}
-            </div>
-          </>
-        )}
-      </div>
+
+                  <div className="categories-actions-section">
+                    <div className="categories-expand-section">
+                      <button
+                        className="categories-expand-btn"
+                        onClick={() => toggleCategory(cat.id)}
+                      >
+                        <svg className={`categories-expand-icon ${isExpanded ? 'expanded' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <polyline points="6,9 12,15 18,9"/>
+                        </svg>
+                        {isExpanded ? 'Collapse' : 'Expand'}
+                      </button>
+                    </div>
+
+                    <div className="categories-actions">
+                      <button
+                        className="categories-action-btn edit"
+                        onClick={() => openEditCategory(cat)}
+                      >
+                        <svg className="categories-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                        </svg>
+                        Edit
+                      </button>
+                      
+                      <button
+                        className={`categories-action-btn toggle ${isActive ? 'disable' : 'enable'}`}
+                        onClick={() => toggleCategoryStatus(cat.id, isActive)}
+                      >
+                        <svg className="categories-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <circle cx="12" cy="12" r="3"/>
+                          <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"/>
+                        </svg>
+                        {isActive ? 'Disable' : 'Enable'}
+                      </button>
+                      
+                      <button
+                        className="categories-action-btn delete"
+                        onClick={() => deleteCategory(cat)}
+                      >
+                        <svg className="categories-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <polyline points="3,6 5,6 21,6"/>
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2 2v2"/>
+                          <line x1="10" y1="11" x2="10" y2="17"/>
+                          <line x1="14" y1="11" x2="14" y2="17"/>
+                        </svg>
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Expanded Services Section */}
+                {isExpanded && (
+                  <div className="categories-expanded-content">
+                    <div className="categories-services-header">
+                      <h4>Services in {cat.name}</h4>
+                      <button
+                        className="categories-add-service-btn"
+                        onClick={() => openAddService(cat.name, cat.id)}
+                      >
+                        <svg className="categories-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <line x1="12" y1="5" x2="12" y2="19"/>
+                          <line x1="5" y1="12" x2="19" y2="12"/>
+                        </svg>
+                        Add Service
+                      </button>
+                    </div>
+
+                    {/* Service Search */}
+                    {allCategoryServices.length > 3 && (
+                      <div className="categories-service-search">
+                        <svg className="categories-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <circle cx="11" cy="11" r="8"/>
+                          <path d="m21 21-4.35-4.35"/>
+                        </svg>
+                        <input
+                          type="text"
+                          placeholder="Search services..."
+                          value={serviceSearchTerms[cat.name] || ""}
+                          onChange={(e) => handleServiceSearch(cat.name, e.target.value)}
+                          className="categories-search-input"
+                        />
+                      </div>
+                    )}
+
+                    {/* Services List */}
+                    <div className="categories-services-grid">
+                      {categoryServices.length === 0 ? (
+                        <div className="categories-no-services">
+                          <p>No services found in this category</p>
+                          <button
+                            className="categories-add-service-btn"
+                            onClick={() => openAddService(cat.name, cat.id)}
+                          >
+                            + Add First Service
+                          </button>
+                        </div>
+                      ) : (
+                        categoryServices.map((service) => (
+                          <div key={service.id} className="categories-service-item">
+                            <div className="categories-service-info">
+                              <h5 className="categories-service-name">{service.name}</h5>
+                              <span className={`categories-service-status ${service.isActive !== false ? 'active' : 'inactive'}`}>
+                                {service.isActive !== false ? 'Active' : 'Inactive'}
+                              </span>
+                            </div>
+                            <div className="categories-service-actions">
+                              <button
+                                className="categories-service-btn edit"
+                                onClick={() => openEditService(service)}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                className={`categories-service-btn toggle ${service.isActive !== false ? 'disable' : 'enable'}`}
+                                onClick={() => toggleServiceStatus(service.id, service.isActive !== false)}
+                              >
+                                {service.isActive !== false ? 'OFF' : 'ON'}
+                              </button>
+                              <button
+                                className="categories-service-btn delete"
+                                onClick={() => deleteService(service.id)}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* MODAL */}
       {showModal && (
@@ -567,6 +705,7 @@ const AdminCategoriesServices = () => {
               <h2>
                 {mode === "category" ? "Add New Category" : 
                  mode === "edit" ? "Edit Category" : 
+                 mode === "edit-service" ? "Edit Service" :
                  "Add New Service"}
               </h2>
               <button
@@ -638,7 +777,7 @@ const AdminCategoriesServices = () => {
                 </div>
               )}
 
-              {mode === "service" && (
+              {(mode === "service" || mode === "edit-service") && (
                 <div className="admin-form-group">
                   <label>Category</label>
                   <div className="selected-category">
@@ -664,6 +803,7 @@ const AdminCategoriesServices = () => {
                 {uploading ? "Uploading..." : 
                  (mode === "category" ? "Create Category" : 
                   mode === "edit" ? "Update Category" : 
+                  mode === "edit-service" ? "Update Service" :
                   "Create Service")}
               </button>
             </div>

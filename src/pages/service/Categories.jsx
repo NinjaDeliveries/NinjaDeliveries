@@ -2,13 +2,12 @@ import React, { useEffect, useState } from "react";
 import { auth, db } from "../../context/Firebase";
 import { collection, query, where, getDocs, addDoc, doc, updateDoc, deleteDoc } from "firebase/firestore";
 import "../../style/ServiceDashboard.css";
-import { create } from "@mui/material/styles/createTransitions";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "../../context/Firebase";
 
 const Categories = () => {
   const [categoryImage, setCategoryImage] = useState(null);
-const [imagePreview, setImagePreview] = useState("");
+  const [imagePreview, setImagePreview] = useState("");
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -17,21 +16,42 @@ const [imagePreview, setImagePreview] = useState("");
   const [categoryDescription, setCategoryDescription] = useState("");
 
   const [adminCategories, setAdminCategories] = useState([]);
-const [selectedCategoryId, setSelectedCategoryId] = useState("");
+  const [selectedCategoryId, setSelectedCategoryId] = useState("");
+  
+  // Search and filter states
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
 
-const fetchAdminCategories = async () => {
-  const snap = await getDocs(collection(db, "service_categories_master"));
-  const list = snap.docs.map(d => ({
-    id: d.id,
-    ...d.data(),
-  }));
-  setAdminCategories(list.filter(c => c.isActive));
-};
+  // Filter categories based on search and status
+  const filteredCategories = categories.filter((category) => {
+    const matchesSearch = !searchQuery || 
+      category.name.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesStatus = statusFilter === "all" ||
+      (statusFilter === "active" && (category.isActive ?? true)) ||
+      (statusFilter === "inactive" && !(category.isActive ?? true));
+    
+    return matchesSearch && matchesStatus;
+  });
 
-useEffect(() => {
-  fetchCategories();       // company categories
-  fetchAdminCategories();  // admin categories
-}, []);
+  // Calculate stats
+  const activeCount = categories.filter(c => c.isActive ?? true).length;
+  const inactiveCount = categories.filter(c => !(c.isActive ?? true)).length;
+  const totalCount = categories.length;
+
+  const fetchAdminCategories = async () => {
+    const snap = await getDocs(collection(db, "service_categories_master"));
+    const list = snap.docs.map(d => ({
+      id: d.id,
+      ...d.data(),
+    }));
+    setAdminCategories(list.filter(c => c.isActive));
+  };
+
+  useEffect(() => {
+    fetchCategories();       // company categories
+    fetchAdminCategories();  // admin categories
+  }, []);
 const syncAppCategoryVisibility = async (masterCategoryId) => {
   // 1️⃣ Check if ANY active company still uses this category
   const q = query(
@@ -161,13 +181,14 @@ const handleToggleCategoryStatus = async (categoryId, currentStatus) => {
   };
 
   const handleEditCategory = (category) => {
-  setEditCategory(category);
-  setCategoryName(category.name);
-  setCategoryDescription(category.description || "");
-  setImagePreview(category.imageUrl || "");
-  setCategoryImage(null);
-  setShowModal(true);
-};
+    setEditCategory(category);
+    setCategoryName(category.name);
+    setCategoryDescription(category.description || "");
+    setImagePreview(category.imageUrl || "");
+    setCategoryImage(null);
+    setSelectedCategoryId(category.masterCategoryId || "");
+    setShowModal(true);
+  };
 
 const syncAppCategory = async (adminCat) => {
   const q = query(
@@ -343,6 +364,9 @@ const syncAppCategory = async (adminCat) => {
     setCategoryName("");
     setCategoryDescription("");
     setEditCategory(null);
+    setSelectedCategoryId("");
+    setImagePreview("");
+    setCategoryImage(null);
   };
 
   useEffect(() => {
@@ -351,170 +375,340 @@ const syncAppCategory = async (adminCat) => {
 
   return (
     <div className="sd-main">
+      {/* Page Header */}
       <div className="sd-header">
-        <h1>Service Categories</h1>
+        <div>
+          <h1>Service Categories</h1>
+          <p>Manage your service categories and organize your offerings</p>
+        </div>
         <button className="sd-primary-btn" onClick={handleAddCategory}>
           + Add Category
         </button>
       </div>
 
+      {/* Stats Cards */}
+      <div className="categories-stats-grid">
+        <div className="categories-stat-card">
+          <div className="categories-stat-icon total">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v11z"/>
+            </svg>
+          </div>
+          <div className="categories-stat-content">
+            <p className="categories-stat-label">Total Categories</p>
+            <p className="categories-stat-value">{totalCount}</p>
+          </div>
+        </div>
+
+        <div className="categories-stat-card">
+          <div className="categories-stat-icon active">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+              <polyline points="22,4 12,14.01 9,11.01"/>
+            </svg>
+          </div>
+          <div className="categories-stat-content">
+            <p className="categories-stat-label">Active Categories</p>
+            <p className="categories-stat-value">{activeCount}</p>
+          </div>
+        </div>
+
+        <div className="categories-stat-card">
+          <div className="categories-stat-icon inactive">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="15" y1="9" x2="9" y2="15"/>
+              <line x1="9" y1="9" x2="15" y2="15"/>
+            </svg>
+          </div>
+          <div className="categories-stat-content">
+            <p className="categories-stat-label">Inactive Categories</p>
+            <p className="categories-stat-value">{inactiveCount}</p>
+          </div>
+        </div>
+
+        <div className="categories-stat-card">
+          <div className="categories-stat-icon services">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+              <line x1="7" y1="7" x2="7.01" y2="7"/>
+            </svg>
+          </div>
+          <div className="categories-stat-content">
+            <p className="categories-stat-label">Available Master</p>
+            <p className="categories-stat-value">{adminCategories.length}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="categories-filters">
+        <div className="categories-search">
+          <svg className="categories-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="m21 21-4.35-4.35"/>
+          </svg>
+          <input
+            type="text"
+            placeholder="Search categories..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="categories-search-input"
+          />
+        </div>
+      </div>
+
+      {/* Status Tabs */}
+      <div className="categories-tabs">
+        <button 
+          className={`categories-tab ${statusFilter === 'all' ? 'active' : ''}`}
+          onClick={() => setStatusFilter('all')}
+        >
+          All ({totalCount})
+        </button>
+        <button 
+          className={`categories-tab ${statusFilter === 'active' ? 'active' : ''}`}
+          onClick={() => setStatusFilter('active')}
+        >
+          Active ({activeCount})
+        </button>
+        <button 
+          className={`categories-tab ${statusFilter === 'inactive' ? 'active' : ''}`}
+          onClick={() => setStatusFilter('inactive')}
+        >
+          Inactive ({inactiveCount})
+        </button>
+      </div>
+
       {loading ? (
-        <p>Loading categories...</p>
-      ) : categories.length === 0 ? (
-        <div className="sd-empty-state">
-          <p>No categories created yet.</p>
-          <p>Create categories to organize your services better.</p>
+        <div className="categories-loading">
+          <div className="categories-loading-spinner"></div>
+          <p>Loading categories...</p>
+        </div>
+      ) : filteredCategories.length === 0 ? (
+        <div className="categories-empty-state">
+          <div className="categories-empty-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v11z"/>
+            </svg>
+          </div>
+          <h3>No categories found</h3>
+          <p>
+            {searchQuery || statusFilter !== "all"
+              ? "Try adjusting your filters"
+              : "Get started by adding your first category"}
+          </p>
+          {!searchQuery && statusFilter === "all" && (
+            <button className="sd-primary-btn" onClick={handleAddCategory}>
+              + Add Category
+            </button>
+          )}
         </div>
       ) : (
-        <div className="sd-table">
-          {categories.map(category => (
-            <div key={category.id} className="sd-service-card">
-              <div className="sd-service-info">
-                 {/* CATEGORY IMAGE */}
-  {category.imageUrl && (
-    <img
-      src={category.imageUrl}
-      alt={category.name}
-      className="sd-category-image"
-    />
-  )}
+        <div className="categories-list">
+          {filteredCategories.map(category => {
+            const isActive = category.isActive ?? true;
+            
+            return (
+              <div key={category.id} className={`categories-card ${!isActive ? 'inactive' : ''}`}>
+                <div className="categories-card-content">
+                  <div className="categories-main-section">
+                    <div className="categories-image-section">
+                      {category.imageUrl ? (
+                        <img 
+                          src={category.imageUrl} 
+                          alt={category.name}
+                          className="categories-image"
+                        />
+                      ) : (
+                        <div className="categories-placeholder">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v11z"/>
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="categories-info">
+                      <div className="categories-header">
+                        <div className="categories-title-section">
+                          <h3 className="categories-name">{category.name}</h3>
+                          <span className={`categories-status-badge ${isActive ? 'active' : 'inactive'}`}>
+                            <svg className="categories-status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                              {isActive ? (
+                                <>
+                                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                                  <polyline points="22,4 12,14.01 9,11.01"/>
+                                </>
+                              ) : (
+                                <>
+                                  <circle cx="12" cy="12" r="10"/>
+                                  <line x1="15" y1="9" x2="9" y2="15"/>
+                                  <line x1="9" y1="9" x2="15" y2="15"/>
+                                </>
+                              )}
+                            </svg>
+                            {isActive ? 'Active' : 'Inactive'}
+                          </span>
+                        </div>
+                      </div>
 
-                <h3>{category.name}</h3>
-                {category.description && (
-                  <p>{category.description}</p>
-                )}
-               <span
-  className={`sd-status-badge ${
-    (category.isActive ?? true) ? "active" : "inactive"
-  }`}
->
-  {(category.isActive ?? true) ? "Active" : "Inactive"}
-</span>
+                      {category.description && (
+                        <p className="categories-description">{category.description}</p>
+                      )}
 
+                      <div className="categories-meta">
+                        <div className="categories-type-badge">
+                          <svg className="categories-type-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+                            <line x1="7" y1="7" x2="7.01" y2="7"/>
+                          </svg>
+                          <span>Service Category</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="categories-actions-section">
+                    <div className="categories-actions">
+                      <button
+                        className="categories-action-btn edit"
+                        onClick={() => handleEditCategory(category)}
+                      >
+                        <svg className="categories-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                        </svg>
+                        Edit
+                      </button>
+                      
+                      <button
+                        className={`categories-action-btn toggle ${isActive ? 'disable' : 'enable'}`}
+                        onClick={() => handleToggleCategoryStatus(category.id, isActive)}
+                      >
+                        <svg className="categories-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <circle cx="12" cy="12" r="3"/>
+                          <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"/>
+                        </svg>
+                        {isActive ? 'Disable' : 'Enable'}
+                      </button>
+                      
+                      <button
+                        className="categories-action-btn delete"
+                        onClick={() => handleDeleteCategory(category.id)}
+                      >
+                        <svg className="categories-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <polyline points="3,6 5,6 21,6"/>
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                          <line x1="10" y1="11" x2="10" y2="17"/>
+                          <line x1="14" y1="11" x2="14" y2="17"/>
+                        </svg>
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
-
-             <div className="sd-service-actions">
-
-  <button 
-    className="sd-edit-btn"
-    onClick={() => handleEditCategory(category)}
-  >
-    Edit
-  </button>
-
-  <button
-    className={`sd-toggle-btn ${(category.isActive ?? true) ? "active" : "inactive"}`}
-    onClick={() =>
-      handleToggleCategoryStatus(category.id, (category.isActive ?? true))
-    }
-  >
-    {(category.isActive ?? true) ? "Disable" : "Enable"}
-  </button>
-
-  <button 
-    className="sd-delete-btn"
-    onClick={() => handleDeleteCategory(category.id)}
-  >
-    Delete
-  </button>
-
-</div>
-
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
       {/* Category Modal */}
       {showModal && (
-        <div className="sd-modal-backdrop">
-          <div className="sd-modal">
-            <h2>{editCategory ? "Edit Category" : "Add Category"}</h2>
-
-            <div className="sd-form-group">
-              {/* <input
-                type="text"
-                placeholder="Enter category name"
-                value={categoryName}
-                onChange={e => setCategoryName(e.target.value)}
-              /> */}
-
-              <div className="sd-form-group">
-  <label>Select Category</label>
-
-  <select
-    value={selectedCategoryId}
-    onChange={(e) => setSelectedCategoryId(e.target.value)}
-  >
-    <option value="">Select category</option>
-
-    {adminCategories.map(cat => (
-      <option key={cat.id} value={cat.id}>
-        {cat.name}
-      </option>
-    ))}
-  </select>
-</div>
-
+        <div className="categories-modal-backdrop">
+          <div className="categories-modal">
+            <div className="categories-modal-header">
+              <h2>{editCategory ? "Edit Category" : "Add Category"}</h2>
+              <button
+                className="categories-modal-close"
+                onClick={handleCloseModal}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
             </div>
-            <div className="sd-form-group">
-  {/* <label>Category Image</label> */}
 
-  {/* <div className="sd-image-upload">
-    {imagePreview ? (
-      <div className="sd-image-preview">
-        <img src={imagePreview} alt="Category preview" />
-        <button
-          type="button"
-          className="sd-remove-image-btn"
-          onClick={() => {
-            setImagePreview("");
-            setCategoryImage(null);
-          }}
-        >
-        </button>
-      </div>
-    ) : (
-      <div className="sd-image-placeholder">
-        <span>No image selected</span>
-      </div>
-    )}
+            <div className="categories-modal-body">
+              <div className="categories-form-group">
+                <label>Select Master Category</label>
+                <select
+                  value={selectedCategoryId}
+                  onChange={(e) => setSelectedCategoryId(e.target.value)}
+                  className="categories-form-select"
+                >
+                  <option value="">Choose a category from master list</option>
+                  {adminCategories
+                    .filter(cat => {
+                      // If editing, allow current category or unused categories
+                      if (editCategory) {
+                        return cat.id === editCategory.masterCategoryId || 
+                               !categories.some(c => c.masterCategoryId === cat.id);
+                      }
+                      // If adding, only show unused categories
+                      return !categories.some(c => c.masterCategoryId === cat.id);
+                    })
+                    .map(cat => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </option>
+                    ))
+                  }
+                </select>
+                <small className="categories-form-help">
+                  Select from available master categories created by admin
+                </small>
+              </div>
 
-    <input
-      type="file"
-      accept="image/*"
-      onChange={handleImageChange}
-      className="sd-file-input"
-      id="category-image"
-    />
-    <label htmlFor="category-image" className="sd-file-label">
-      {imagePreview ? "Change Image" : "Upload Image"}
-    </label>
-  </div> */}
+              {selectedCategoryId && (
+                <div className="categories-preview">
+                  <div className="categories-preview-header">
+                    <svg className="categories-preview-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                      <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                    <span>Preview</span>
+                  </div>
+                  {(() => {
+                    const selectedCat = adminCategories.find(c => c.id === selectedCategoryId);
+                    return selectedCat ? (
+                      <div className="categories-preview-card">
+                        {selectedCat.imageUrl && (
+                          <img 
+                            src={selectedCat.imageUrl} 
+                            alt={selectedCat.name}
+                            className="categories-preview-image"
+                          />
+                        )}
+                        <div className="categories-preview-info">
+                          <h4>{selectedCat.name}</h4>
+                          <p>This category will be added to your service offerings</p>
+                        </div>
+                      </div>
+                    ) : null;
+                  })()}
+                </div>
+              )}
+            </div>
 
-  {/* <small className="sd-image-help">
-    Supported formats: JPG, PNG. Max size: 5MB
-  </small> */}
-</div>
-
-
-            {/* <div className="sd-form-group">
-              <label>Description (Optional)</label>
-              <textarea
-                placeholder="Enter category description"
-                value={categoryDescription}
-                onChange={e => setCategoryDescription(e.target.value)}
-                rows="3"
-              />
-            </div> */}
-
-            <div className="sd-modal-actions">
-              <button className="sd-cancel-btn" onClick={handleCloseModal}>
+            <div className="categories-modal-actions">
+              <button className="categories-btn-cancel" onClick={handleCloseModal}>
                 Cancel
               </button>
               
-              <button className="sd-save-btn" onClick={handleSaveCategory}>
-                {editCategory ? "Update" : "Save"}
+              <button 
+                className="categories-btn-save" 
+                onClick={handleSaveCategory}
+                disabled={!selectedCategoryId}
+              >
+                <svg className="categories-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                  <polyline points="17,21 17,13 7,13 7,21"/>
+                  <polyline points="7,3 7,8 15,8"/>
+                </svg>
+                {editCategory ? "Update Category" : "Add Category"}
               </button>
             </div>
           </div>
