@@ -29,7 +29,8 @@ export const NotificationProvider = ({ children }) => {
     reviewAlerts: true,
     marketingEmails: false,
   });
-  const [lastBookingCount, setLastBookingCount] = useState(0);
+
+  console.log('🔔 NotificationProvider loaded, notifications count:', notifications.length);
 
   // Load notification settings
   useEffect(() => {
@@ -65,18 +66,17 @@ export const NotificationProvider = ({ children }) => {
     return () => unsubscribe();
   }, []);
 
-  // Listen for new bookings
+  // Simple booking listener with proper new booking detection
   useEffect(() => {
     let unsubscribe = null;
+    let isInitialized = false;
+    let initialBookingIds = new Set();
 
-    const setupBookingListener = () => {
+    const setupBookingListener = async () => {
       const user = auth.currentUser;
-      if (!user || !notificationSettings.newBookingAlerts) {
-        console.log('❌ Booking listener not set up:', { 
-          user: !!user, 
-          userUid: user?.uid,
-          alerts: notificationSettings.newBookingAlerts 
-        });
+      
+      if (!user) {
+        console.log('❌ No user authenticated');
         return;
       }
 
@@ -90,197 +90,189 @@ export const NotificationProvider = ({ children }) => {
       );
 
       unsubscribe = onSnapshot(q, (snapshot) => {
-        console.log('📊 Booking snapshot received:', {
-          docs: snapshot.docs.length,
-          lastBookingCount,
-          currentTime: new Date().toLocaleTimeString()
+        console.log('📊 Firestore snapshot received:', {
+          size: snapshot.size,
+          empty: snapshot.empty,
+          changes: snapshot.docChanges().length,
+          isInitialized
         });
-        
-        const currentBookings = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
 
-        // Log first few bookings for debugging
-        if (currentBookings.length > 0) {
-          console.log('📋 Latest bookings:', currentBookings.slice(0, 3).map(b => ({
-            id: b.id,
-            serviceName: b.serviceName,
-            customerName: b.customerName,
-            createdAt: b.createdAt?.toDate?.()?.toLocaleString() || 'No timestamp'
-          })));
-        }
-
-        // Initialize lastBookingCount if it's the first load
-        if (lastBookingCount === 0) {
-          console.log('🔄 Initializing booking count:', currentBookings.length);
-          setLastBookingCount(currentBookings.length);
+        // First load - just store existing booking IDs, don't show notifications
+        if (!isInitialized) {
+          snapshot.docs.forEach(doc => {
+            initialBookingIds.add(doc.id);
+          });
+          console.log('🔄 Initialized with', initialBookingIds.size, 'existing bookings');
+          isInitialized = true;
           return;
         }
 
-        // Check for new bookings
-        if (currentBookings.length > lastBookingCount) {
-          const newBookingsCount = currentBookings.length - lastBookingCount;
-          console.log('🔔 NEW BOOKINGS DETECTED:', {
-            newCount: newBookingsCount,
-            previousCount: lastBookingCount,
-            currentCount: currentBookings.length
+        // Process only new bookings (not in initial set)
+        snapshot.docChanges().forEach((change) => {
+          console.log('📋 Document change detected:', {
+            type: change.type,
+            id: change.doc.id,
+            newIndex: change.newIndex,
+            oldIndex: change.oldIndex
           });
-          
-          // Get the newest bookings
-          const newBookings = currentBookings.slice(0, newBookingsCount);
-          
-          // Show notification for each new booking
-          newBookings.forEach((booking, index) => {
-            console.log('📢 Showing notification for booking:', booking.id);
+
+          if (change.type === 'added' && !initialBookingIds.has(change.doc.id)) {
+            // This is a truly new booking
+            const bookingData = change.doc.data();
+            const bookingId = change.doc.id;
+
+            // Add to our tracking set
+            initialBookingIds.add(bookingId);
+
+            console.log('🔔 NEW BOOKING DETECTED:', {
+              id: bookingId,
+              serviceName: bookingData.serviceName,
+              customerName: bookingData.customerName,
+              createdAt: bookingData.createdAt?.toDate?.()?.toLocaleString()
+            });
+
+            // Show notification
+            const notification = {
+              id: `booking-${bookingId}-${Date.now()}`,
+              type: 'booking',
+              title: '🔔 New Booking Received!',
+              message: `${bookingData.serviceName} - ${bookingData.customerName}`,
+              timestamp: new Date(),
+              data: bookingData
+            };
+
+            console.log('📢 Adding notification:', notification);
+            setNotifications(prev => {
+              const newNotifications = [notification, ...prev.slice(0, 4)];
+              console.log('📋 Updated notifications list:', newNotifications.length);
+              return newNotifications;
+            });
+
+            // Play sound
+            console.log('🔊 Playing notification sound...');
+            playNotificationSound();
+
+            // Auto remove after 3 seconds
             setTimeout(() => {
-              showNotification({
-                id: `booking-${booking.id}`,
-                type: 'booking',
-                title: 'New Booking Received!',
-                message: `${booking.serviceName} - ${booking.customerName}`,
-                timestamp: new Date(),
-                data: booking
-              });
-            }, index * 500); // Stagger notifications by 500ms
-          });
-
-          // Play notification sound once
-          console.log('🔊 Playing notification sound...');
-          playNotificationSound();
-        } else if (currentBookings.length < lastBookingCount) {
-          console.log('📉 Booking count decreased:', {
-            previousCount: lastBookingCount,
-            currentCount: currentBookings.length
-          });
-        } else {
-          console.log('📊 No new bookings, count unchanged:', currentBookings.length);
-        }
-
-        setLastBookingCount(currentBookings.length);
+              console.log('⏰ Auto-removing notification:', notification.id);
+              setNotifications(prev => prev.filter(n => n.id !== notification.id));
+            }, 3000);
+          } else if (change.type === 'added' && initialBookingIds.has(change.doc.id)) {
+            console.log('⏭️ Skipping existing booking on refresh:', change.doc.id);
+          }
+        });
       }, (error) => {
-        console.error("❌ Error listening to bookings:", error);
+        console.error("❌ Firestore listener error:", error);
+        isInitialized = false;
+        initialBookingIds.clear();
       });
     };
 
-    // Set up listener when auth state changes
+    // Set up listener when auth changes
     const authUnsubscribe = auth.onAuthStateChanged((user) => {
-      console.log('🔐 Auth state changed:', { 
-        user: !!user, 
-        uid: user?.uid,
-        alerts: notificationSettings.newBookingAlerts 
-      });
+      console.log('🔐 Auth state changed:', !!user);
       
-      if (user && notificationSettings.newBookingAlerts) {
-        setupBookingListener();
-      } else if (unsubscribe) {
-        console.log('🔇 Removing booking listener');
+      if (unsubscribe) {
         unsubscribe();
         unsubscribe = null;
+        isInitialized = false;
+        initialBookingIds.clear();
+      }
+      
+      if (user) {
+        setTimeout(() => {
+          setupBookingListener();
+        }, 1000);
       }
     });
 
-    // Also set up immediately if user is already authenticated
-    if (auth.currentUser && notificationSettings.newBookingAlerts) {
-      console.log('🚀 Setting up immediate booking listener');
+    // Setup immediately if user exists
+    if (auth.currentUser) {
       setupBookingListener();
     }
 
     return () => {
       if (unsubscribe) {
-        console.log('🧹 Cleaning up booking listener');
         unsubscribe();
       }
       authUnsubscribe();
     };
-  }, [notificationSettings.newBookingAlerts, lastBookingCount]);
+  }, []);
 
-  // Show notification
+  // Play notification sound - Final optimized version
+  const playNotificationSound = async () => {
+    try {
+      console.log('🔊 Playing notification sound...');
+      
+      // Create audio element
+      const audio = new Audio('/servicebeep.mp3');
+      audio.volume = 0.7;
+      audio.preload = 'auto';
+      
+      // Try to play
+      const playPromise = audio.play();
+      
+      if (playPromise !== undefined) {
+        playPromise.then(() => {
+          console.log('✅ Sound played successfully');
+        }).catch((error) => {
+          console.log('🔇 Sound blocked by browser, showing browser notification');
+          
+          // Show browser notification as alternative
+          if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification('🔔 New Booking Received!', {
+              body: 'You have a new service booking',
+              icon: '/favicon.ico',
+              tag: 'booking-notification',
+              requireInteraction: false,
+              silent: false
+            });
+          } else if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission().then(permission => {
+              if (permission === 'granted') {
+                new Notification('🔔 New Booking Received!', {
+                  body: 'You have a new service booking',
+                  icon: '/favicon.ico',
+                  tag: 'booking-notification'
+                });
+              }
+            });
+          }
+        });
+      }
+    } catch (error) {
+      console.error('❌ Audio error:', error);
+    }
+  };
+
+  // Show notification manually
   const showNotification = (notification) => {
-    setNotifications(prev => [notification, ...prev.slice(0, 9)]); // Keep only 10 notifications
-
-    // Auto remove after 5 seconds
+    console.log('📢 Manual notification:', notification);
+    setNotifications(prev => [notification, ...prev.slice(0, 4)]);
+    
     setTimeout(() => {
-      removeNotification(notification.id);
-    }, 5000);
+      setNotifications(prev => prev.filter(n => n.id !== notification.id));
+    }, 3000);
   };
 
   // Remove notification
   const removeNotification = (id) => {
+    console.log('🗑️ Removing notification:', id);
     setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
   // Clear all notifications
   const clearAllNotifications = () => {
+    console.log('🧹 Clearing all notifications');
     setNotifications([]);
   };
 
-  // Play notification sound with file check
-  const playNotificationSound = async () => {
-    try {
-      console.log('🔊 Attempting to play notification sound...');
-      
-      // Check if sound file exists
-      const response = await fetch('/servicebeep.mp3', { method: 'HEAD' });
-      
-      if (!response.ok) {
-        console.log('❌ Notification sound file not found in public folder');
-        return;
-      }
-      
-      console.log('✅ Sound file found, creating audio...');
-      
-      // File exists, play it
-      const audio = new Audio('/servicebeep.mp3');
-      audio.volume = 0.7;
-      
-      // Add event listeners for debugging
-      audio.addEventListener('loadstart', () => console.log('🎵 Audio loading started'));
-      audio.addEventListener('canplay', () => console.log('🎵 Audio can play'));
-      audio.addEventListener('play', () => console.log('🎵 Audio started playing'));
-      audio.addEventListener('ended', () => console.log('🎵 Audio finished playing'));
-      audio.addEventListener('error', (e) => console.log('❌ Audio error:', e));
-      
-      const playPromise = audio.play();
-      
-      if (playPromise !== undefined) {
-        playPromise.then(() => {
-          console.log('✅ Notification sound played successfully');
-        }).catch(error => {
-          console.log('❌ Could not play notification sound:', error);
-          
-          // Try alternative approach for browsers that block autoplay
-          if (error.name === 'NotAllowedError') {
-            console.log('🔇 Browser blocked autoplay - user interaction required');
-            // Store that we need to play sound when user interacts
-            sessionStorage.setItem('pendingSound', 'true');
-          }
-        });
-      }
-    } catch (error) {
-      console.log('❌ Notification sound error:', error);
-    }
+  // Get booking notification count
+  const getBookingNotificationCount = () => {
+    const count = notifications.filter(n => n.type === 'booking').length;
+    console.log('📊 Booking notification count:', count);
+    return count;
   };
-
-  // Handle pending sound on user interaction
-  const handleUserInteraction = () => {
-    if (sessionStorage.getItem('pendingSound') === 'true') {
-      console.log('🔊 Playing pending notification sound after user interaction');
-      sessionStorage.removeItem('pendingSound');
-      playNotificationSound();
-    }
-  };
-
-  // Add click listener to handle pending sounds
-  useEffect(() => {
-    document.addEventListener('click', handleUserInteraction);
-    document.addEventListener('keydown', handleUserInteraction);
-    
-    return () => {
-      document.removeEventListener('click', handleUserInteraction);
-      document.removeEventListener('keydown', handleUserInteraction);
-    };
-  }, []);
 
   // Show payment notification
   const showPaymentNotification = (paymentData) => {
@@ -310,6 +302,15 @@ export const NotificationProvider = ({ children }) => {
     });
   };
 
+  // Request notification permission on load
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().then(permission => {
+        console.log('🔔 Notification permission:', permission);
+      });
+    }
+  }, []);
+
   const value = {
     notifications,
     notificationSettings,
@@ -318,6 +319,7 @@ export const NotificationProvider = ({ children }) => {
     clearAllNotifications,
     showPaymentNotification,
     showReviewNotification,
+    getBookingNotificationCount,
   };
 
   return (

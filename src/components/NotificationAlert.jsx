@@ -5,6 +5,8 @@ import '../style/NotificationAlert.css';
 const NotificationAlert = () => {
   const { notifications, removeNotification, clearAllNotifications } = useNotifications();
 
+  console.log('🔔 NotificationAlert render - notifications:', notifications.length);
+
   if (notifications.length === 0) return null;
 
   const getNotificationIcon = (type) => {

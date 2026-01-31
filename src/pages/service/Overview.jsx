@@ -1,8 +1,149 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { auth, db } from "../../context/Firebase";
 import { doc, collection, query, where, onSnapshot, orderBy, limit } from "firebase/firestore";
 import "../../style/ServiceDashboard.css";
 import BannerManagement from "./BannerManagement";
+import { useNotifications } from "../../context/NotificationContext";
+
+// Notification Bell Component
+function NotificationBell() {
+  const { getBookingNotificationCount, notifications, clearAllNotifications, removeNotification } = useNotifications();
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 45, right: 20 });
+  
+  const badgeCount = getBookingNotificationCount();
+
+  // Calculate dropdown position when opening
+  const handleBellClick = (event) => {
+    if (!showNotifications) {
+      const rect = event.currentTarget.getBoundingClientRect();
+      const dropdownWidth = 350;
+      const rightSpace = window.innerWidth - rect.right;
+      
+      setDropdownPosition({
+        top: rect.bottom + 5,
+        right: rightSpace < dropdownWidth ? 20 : rightSpace
+      });
+    }
+    setShowNotifications(!showNotifications);
+  };
+
+  // Close notification dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showNotifications && !event.target.closest('.overview-notification-section')) {
+        setShowNotifications(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showNotifications]);
+
+  return (
+    <div className="overview-notification-section">
+      <div 
+        className={`overview-notification-bell ${showNotifications ? 'active' : ''}`}
+        onClick={handleBellClick}
+      >
+        <svg className="overview-bell-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+        </svg>
+        {badgeCount > 0 && (
+          <span className="overview-notification-badge">{badgeCount}</span>
+        )}
+      </div>
+
+      {/* Notification Dropdown - Using React Portal */}
+      {showNotifications && (
+        console.log('🔔 Rendering notification dropdown via portal'),
+        createPortal(
+          <>
+            <div 
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'transparent',
+                zIndex: 2147483646
+              }}
+              onClick={() => setShowNotifications(false)}
+            />
+            <div 
+              style={{
+                position: 'fixed',
+                top: `${dropdownPosition.top}px`,
+                right: `${dropdownPosition.right}px`,
+                zIndex: 2147483647,
+                background: 'white',
+                borderRadius: '12px',
+                boxShadow: '0 20px 40px rgba(0, 0, 0, 0.4)',
+                maxHeight: '400px',
+                width: '350px',
+                overflow: 'hidden',
+                border: '2px solid #e5e7eb'
+              }}
+            >
+              <div className="overview-notification-header">
+                <h3>Notifications</h3>
+                {notifications.length > 0 && (
+                  <button 
+                    className="overview-clear-all"
+                    onClick={clearAllNotifications}
+                  >
+                    Clear All
+                  </button>
+                )}
+              </div>
+              
+              <div className="overview-notification-list">
+                {notifications.length === 0 ? (
+                  <div className="overview-no-notifications">
+                    <svg className="overview-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                      <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                    </svg>
+                    <p>No new notifications</p>
+                  </div>
+                ) : (
+                  notifications.map((notification) => (
+                    <div key={notification.id} className="overview-notification-item">
+                      <div className="overview-notification-icon">
+                        {notification.type === 'booking' && '📅'}
+                        {notification.type === 'payment' && '💰'}
+                        {notification.type === 'review' && '⭐'}
+                      </div>
+                      <div className="overview-notification-content">
+                        <div className="overview-notification-title">{notification.title}</div>
+                        <div className="overview-notification-message">{notification.message}</div>
+                        <div className="overview-notification-time">
+                          {new Date(notification.timestamp).toLocaleTimeString()}
+                        </div>
+                      </div>
+                      <button 
+                        className="overview-notification-close"
+                        onClick={() => removeNotification(notification.id)}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </>,
+          document.body
+        )
+      )}
+    </div>
+  );
+}
 
 // Animated Counter Component
 function AnimatedCounter({ end, duration = 2000, prefix = "", suffix = "", decimals = 0 }) {
@@ -331,6 +472,8 @@ const Overview = () => {
                 <div className="modern-time-badge-compact">
                   🕐 Last updated: Just now
                 </div>
+                {/* Notification Bell */}
+                <NotificationBell />
               </div>
             </div>
           </div>

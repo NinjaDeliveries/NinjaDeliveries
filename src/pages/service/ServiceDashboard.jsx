@@ -9,10 +9,13 @@ import { useNotifications } from "../../context/NotificationContext";
 const ServiceDashboard = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { notifications } = useNotifications();
+  const { getBookingNotificationCount } = useNotifications();
 
   const [serviceData, setServiceData] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  const badgeCount = getBookingNotificationCount();
+  console.log('📊 ServiceDashboard - badge count:', badgeCount);
 
   const menu = [
     { label: "Overview", path: "/service-dashboard" },
@@ -21,7 +24,7 @@ const ServiceDashboard = () => {
     { 
       label: "Bookings", 
       path: "/service-dashboard/bookings",
-      badge: notifications.filter(n => n.type === 'booking').length
+      badge: badgeCount
     },
     { label: "Calendar / Slots", path: "/service-dashboard/slots" },
     { label: "Technicians", path: "/service-dashboard/technicians" },
