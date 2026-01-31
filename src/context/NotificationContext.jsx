@@ -23,6 +23,7 @@ export const useNotifications = () => {
 
 export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
+  const [storedNotifications, setStoredNotifications] = useState([]); // New: Store all notifications
   const [notificationSettings, setNotificationSettings] = useState({
     newBookingAlerts: true,
     paymentNotifications: true,
@@ -30,7 +31,7 @@ export const NotificationProvider = ({ children }) => {
     marketingEmails: false,
   });
 
-  console.log('🔔 NotificationProvider loaded, notifications count:', notifications.length);
+  console.log('🔔 NotificationProvider loaded, notifications count:', notifications.length, 'stored count:', storedNotifications.length);
 
   // Load notification settings
   useEffect(() => {
@@ -148,6 +149,13 @@ export const NotificationProvider = ({ children }) => {
               return newNotifications;
             });
 
+            // Store notification permanently
+            setStoredNotifications(prev => {
+              const newStored = [notification, ...prev];
+              console.log('💾 Stored notifications count:', newStored.length);
+              return newStored;
+            });
+
             // Play sound
             console.log('🔊 Playing notification sound...');
             playNotificationSound();
@@ -250,21 +258,43 @@ export const NotificationProvider = ({ children }) => {
     console.log('📢 Manual notification:', notification);
     setNotifications(prev => [notification, ...prev.slice(0, 4)]);
     
+    // Store notification permanently
+    setStoredNotifications(prev => [notification, ...prev]);
+    
     setTimeout(() => {
       setNotifications(prev => prev.filter(n => n.id !== notification.id));
     }, 3000);
   };
 
-  // Remove notification
+  // Remove notification (only from active notifications, not stored)
   const removeNotification = (id) => {
-    console.log('🗑️ Removing notification:', id);
+    console.log('🗑️ Removing active notification:', id);
     setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
-  // Clear all notifications
+  // Clear all active notifications (not stored)
   const clearAllNotifications = () => {
-    console.log('🧹 Clearing all notifications');
+    console.log('🧹 Clearing all active notifications');
     setNotifications([]);
+  };
+
+  // Remove notification from stored list
+  const removeStoredNotification = (id) => {
+    console.log('🗑️ Removing stored notification:', id);
+    setStoredNotifications(prev => prev.filter(n => n.id !== id));
+  };
+
+  // Clear all stored notifications
+  const clearAllStoredNotifications = () => {
+    console.log('🧹 Clearing all stored notifications');
+    setStoredNotifications([]);
+  };
+
+  // Get stored notification count
+  const getStoredNotificationCount = () => {
+    const count = storedNotifications.length;
+    console.log('📊 Stored notification count:', count);
+    return count;
   };
 
   // Get booking notification count
@@ -278,28 +308,32 @@ export const NotificationProvider = ({ children }) => {
   const showPaymentNotification = (paymentData) => {
     if (!notificationSettings.paymentNotifications) return;
 
-    showNotification({
+    const notification = {
       id: `payment-${Date.now()}`,
       type: 'payment',
       title: 'Payment Received!',
       message: `₹${paymentData.amount} from ${paymentData.customerName}`,
       timestamp: new Date(),
       data: paymentData
-    });
+    };
+
+    showNotification(notification);
   };
 
   // Show review notification
   const showReviewNotification = (reviewData) => {
     if (!notificationSettings.reviewAlerts) return;
 
-    showNotification({
+    const notification = {
       id: `review-${Date.now()}`,
       type: 'review',
       title: 'New Review!',
       message: `${reviewData.rating} stars - ${reviewData.customerName}`,
       timestamp: new Date(),
       data: reviewData
-    });
+    };
+
+    showNotification(notification);
   };
 
   // Request notification permission on load
@@ -313,10 +347,14 @@ export const NotificationProvider = ({ children }) => {
 
   const value = {
     notifications,
+    storedNotifications,
     notificationSettings,
     showNotification,
     removeNotification,
     clearAllNotifications,
+    removeStoredNotification,
+    clearAllStoredNotifications,
+    getStoredNotificationCount,
     showPaymentNotification,
     showReviewNotification,
     getBookingNotificationCount,

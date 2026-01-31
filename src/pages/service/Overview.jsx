@@ -8,11 +8,11 @@ import { useNotifications } from "../../context/NotificationContext";
 
 // Notification Bell Component
 function NotificationBell() {
-  const { getBookingNotificationCount, notifications, clearAllNotifications, removeNotification } = useNotifications();
+  const { getStoredNotificationCount, storedNotifications, clearAllStoredNotifications, removeStoredNotification } = useNotifications();
   const [showNotifications, setShowNotifications] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 45, right: 20 });
   
-  const badgeCount = getBookingNotificationCount();
+  const badgeCount = getStoredNotificationCount();
 
   // Calculate dropdown position when opening
   const handleBellClick = (event) => {
@@ -103,9 +103,9 @@ function NotificationBell() {
               <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: '#1f2937' }}>
                 🔔 Notifications
               </h3>
-              {notifications.length > 0 && (
+              {storedNotifications.length > 0 && (
                 <button 
-                  onClick={clearAllNotifications}
+                  onClick={clearAllStoredNotifications}
                   style={{
                     background: 'none',
                     border: 'none',
@@ -123,7 +123,7 @@ function NotificationBell() {
             </div>
             
             <div style={{ maxHeight: '320px', overflowY: 'auto' }}>
-              {notifications.length === 0 ? (
+              {storedNotifications.length === 0 ? (
                 <div style={{
                   textAlign: 'center',
                   padding: '40px 20px',
@@ -135,7 +135,7 @@ function NotificationBell() {
                   </p>
                 </div>
               ) : (
-                notifications.map((notification) => (
+                storedNotifications.map((notification) => (
                   <div key={notification.id} style={{
                     display: 'flex',
                     alignItems: 'flex-start',
@@ -179,7 +179,7 @@ function NotificationBell() {
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
-                        removeNotification(notification.id);
+                        removeStoredNotification(notification.id);
                       }}
                       style={{
                         background: 'none',
