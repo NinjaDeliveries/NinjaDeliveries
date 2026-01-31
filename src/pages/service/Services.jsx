@@ -560,7 +560,7 @@ const getServiceName = (service) => {
                           <div className="services-packages-list">
                             {service.packages.map((pkg, index) => (
                               <span key={index} className="services-package-item">
-                                {pkg.duration} {pkg.unit}(s) - ₹{pkg.price}
+                                {pkg.duration} {pkg.unit}(s) - <span className="rupee-symbol-small">₹</span>{pkg.price.toLocaleString()}
                               </span>
                             ))}
                           </div>
@@ -582,18 +582,33 @@ const getServiceName = (service) => {
 
                   <div className="services-actions-section">
                     <div className="services-price">
-                      {service.globalPrice && (
+                      {/* Show service price or package prices */}
+                      {service.globalPrice ? (
                         <div className="services-price-display">
-                          <svg className="services-rupee-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path d="M6 3h12"/>
-                            <path d="M6 8h12"/>
-                            <path d="M6 13L13 20"/>
-                            <path d="M6 13h7"/>
-                          </svg>
-                          <span>{service.globalPrice.toLocaleString()}</span>
+                          <span className="rupee-symbol">₹</span>
+                          <span className="services-price-amount">{service.globalPrice.toLocaleString()}</span>
+                        </div>
+                      ) : service.price ? (
+                        <div className="services-price-display">
+                          <span className="rupee-symbol">₹</span>
+                          <span className="services-price-amount">{service.price.toLocaleString()}</span>
+                        </div>
+                      ) : service.packages && service.packages.length > 0 ? (
+                        <div className="services-price-display">
+                          <span className="rupee-symbol">₹</span>
+                          <span className="services-price-amount">
+                            {Math.min(...service.packages.map(p => p.price)).toLocaleString()}
+                            {service.packages.length > 1 && '+'}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="services-price-display">
+                          <span className="services-price-amount">Price not set</span>
                         </div>
                       )}
-                      <p className="services-price-label">per service</p>
+                      <p className="services-price-label">
+                        {service.packages && service.packages.length > 1 ? 'starting from' : 'per service'}
+                      </p>
                     </div>
 
                     <div className="services-actions">

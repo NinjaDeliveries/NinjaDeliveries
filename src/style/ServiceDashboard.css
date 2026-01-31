@@ -9885,19 +9885,23 @@ input:checked + .settings-toggle-slider:before {
 
 .bookings-price {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: flex-end;
-  gap: 4px;
+  gap: 2px;
+  margin-bottom: 4px;
+}
+
+.bookings-price .price-amount {
   font-size: 20px;
   font-weight: 700;
-  color: #4b3cc4;
-  margin-bottom: 4px;
+  color: #4f46e5;
 }
 
 .bookings-rupee-icon {
   width: 18px;
   height: 18px;
   stroke-width: 2;
+  color: #4f46e5;
 }
 
 .bookings-category {
@@ -10218,17 +10222,21 @@ input:checked + .settings-toggle-slider:before {
 
 .amount-display {
   display: flex;
-  align-items: center;
-  gap: 4px;
+  align-items: baseline;
+  gap: 2px;
+}
+
+.amount-display .price-amount-large {
   font-size: 18px;
   font-weight: 700;
-  color: #4b3cc4;
+  color: #4f46e5;
 }
 
 .rupee-icon {
   width: 16px;
   height: 16px;
   stroke-width: 2;
+  color: #4f46e5;
 }
 
 .bookings-modal-actions {
@@ -10770,29 +10778,37 @@ input:checked + .settings-toggle-slider:before {
 
 .services-price {
   text-align: right;
+  margin-bottom: 16px;
 }
 
 .services-price-display {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: flex-end;
-  gap: 4px;
-  font-size: 20px;
-  font-weight: 700;
-  color: #4b3cc4;
+  gap: 2px;
   margin-bottom: 4px;
 }
 
-.services-rupee-icon {
-  width: 18px;
-  height: 18px;
-  stroke-width: 2;
+.services-rupee {
+  font-size: 16px;
+  font-weight: 600;
+  color: #16a34a;
+  font-family: 'Arial', sans-serif;
+}
+
+.services-price-amount {
+  font-size: 20px;
+  font-weight: 700;
+  color: #4f46e5;
+  line-height: 1;
 }
 
 .services-price-label {
+  margin: 0;
   font-size: 12px;
   color: #6b7280;
-  margin: 0;
+  font-weight: 500;
+  text-align: right;
 }
 
 .services-actions {
@@ -14925,8 +14941,10 @@ input:checked + .settings-toggle-slider:before {
 .payment-amount {
   font-size: 20px;
   font-weight: 700;
-  color: #4b3cc4;
+  color: #4f46e5;
   margin-bottom: 4px;
+  display: flex;
+  justify-content: flex-end;
 }
 
 .payment-details {
@@ -15148,4 +15166,175 @@ input:checked + .settings-toggle-slider:before {
   font-size: 13px;
   color: #0369a1;
   font-weight: 600;
+}
+/* ========== SERVICES PACKAGE PRICING ========== */
+.services-package-item .services-rupee {
+  font-size: 14px;
+  font-weight: 600;
+  color: #16a34a;
+  margin-right: 1px;
+}
+
+.services-packages-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.services-package-item {
+  background: #f0f9ff;
+  color: #0369a1;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid #bae6fd;
+}
+
+.services-packages-label {
+  font-size: 13px;
+  color: #6b7280;
+  font-weight: 500;
+  margin: 0 0 8px 0;
+}
+/* ========== GLOBAL RUPEE STYLING SYSTEM ========== */
+/* Use these classes throughout the service dashboard for consistent rupee display */
+
+.rupee-symbol {
+  font-size: 16px;
+  font-weight: 600;
+  color: #4f46e5;
+  font-family: 'Arial', sans-serif;
+  margin-right: 2px;
+}
+
+.rupee-symbol-small {
+  font-size: 14px;
+  font-weight: 600;
+  color: #4f46e5;
+  font-family: 'Arial', sans-serif;
+  margin-right: 1px;
+}
+
+.rupee-symbol-large {
+  font-size: 20px;
+  font-weight: 700;
+  color: #4f46e5;
+  font-family: 'Arial', sans-serif;
+  margin-right: 3px;
+}
+
+.rupee-symbol-xl {
+  font-size: 24px;
+  font-weight: 700;
+  color: #4f46e5;
+  font-family: 'Arial', sans-serif;
+  margin-right: 4px;
+}
+
+/* Price display containers */
+.price-display {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+}
+
+.price-display-center {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 2px;
+}
+
+.price-display-right {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 2px;
+}
+
+/* Price amount styling */
+.price-amount {
+  font-weight: 700;
+  color: #4f46e5;
+  line-height: 1;
+}
+
+.price-amount-small {
+  font-size: 14px;
+  font-weight: 600;
+  color: #4f46e5;
+  line-height: 1;
+}
+
+.price-amount-medium {
+  font-size: 18px;
+  font-weight: 700;
+  color: #4f46e5;
+  line-height: 1;
+}
+
+.price-amount-large {
+  font-size: 20px;
+  font-weight: 700;
+  color: #4f46e5;
+  line-height: 1;
+}
+
+.price-amount-xl {
+  font-size: 24px;
+  font-weight: 700;
+  color: #4f46e5;
+  line-height: 1;
+}
+
+/* Update existing rupee classes to use the new system */
+.services-rupee {
+  font-size: 16px;
+  font-weight: 600;
+  color: #4f46e5;
+  font-family: 'Arial', sans-serif;
+  margin-right: 2px;
+}
+
+.services-package-item .services-rupee {
+  font-size: 14px;
+  font-weight: 600;
+  color: #4f46e5;
+  font-family: 'Arial', sans-serif;
+  margin-right: 1px;
+}
+
+/* Show rupee icons in bookings - don't hide them */
+.rupee-icon,
+.bookings-rupee-icon {
+  width: 16px;
+  height: 16px;
+  color: #4f46e5;
+  stroke-width: 2;
+  display: inline-block;
+}
+
+.payments-rupee-icon {
+  display: none; /* Hide only in payments, keep in bookings */
+}
+
+/* Stats card rupee styling */
+.modern-stat-value-enhanced .rupee-symbol {
+  font-size: 20px;
+  font-weight: 700;
+  margin-right: 3px;
+}
+
+/* Payment card rupee styling */
+.payment-amount .rupee-symbol {
+  font-size: 18px;
+  font-weight: 700;
+  margin-right: 2px;
+}
+
+.payment-method-value .rupee-symbol {
+  font-size: 16px;
+  font-weight: 600;
+  margin-right: 2px;
 }

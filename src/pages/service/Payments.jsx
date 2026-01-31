@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { auth, db } from "../../context/Firebase";
-import { collection, query, where, onSnapshot, orderBy, getDocs } from "firebase/firestore";
+import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
 import "../../style/ServiceDashboard.css";
 
 const Payments = () => {
@@ -67,22 +67,46 @@ const Payments = () => {
 
       snapshot.docs.forEach(doc => {
         const paymentDoc = doc.data();
-        console.log('💰 Processing payment:', doc.id, paymentDoc);
+        console.log('💰 Processing payment:', doc.id, {
+          // All possible service/category fields
+          serviceName: paymentDoc.serviceName,
+          service: paymentDoc.service,
+          serviceTitle: paymentDoc.serviceTitle,
+          serviceDetails: paymentDoc.serviceDetails,
+          categoryName: paymentDoc.categoryName,
+          category: paymentDoc.category,
+          serviceCategory: paymentDoc.serviceCategory,
+          // Amount fields
+          amount: paymentDoc.amount,
+          totalPrice: paymentDoc.totalPrice,
+          price: paymentDoc.price,
+          // Worker fields
+          workerName: paymentDoc.workerName,
+          assignedWorker: paymentDoc.assignedWorker,
+          technicianName: paymentDoc.technicianName,
+          // Phone fields
+          customerPhone: paymentDoc.customerPhone,
+          phone: paymentDoc.phone,
+          // Full document for reference
+          fullDoc: paymentDoc
+        });
         
         const createdAt = paymentDoc.createdAt?.toDate();
         
         const payment = {
           id: doc.id,
-          amount: paymentDoc.amount || 0,
-          customerName: paymentDoc.customerName || 'Unknown Customer',
-          serviceName: paymentDoc.serviceName || 'Unknown Service',
+          amount: paymentDoc.amount || paymentDoc.totalPrice || paymentDoc.price || paymentDoc.finalAmount || 0,
+          customerName: paymentDoc.customerName || paymentDoc.customer || 'Unknown Customer',
+          customerPhone: paymentDoc.customerPhone || paymentDoc.phone || paymentDoc.mobile || '',
+          // Fix the service/category mapping based on your data structure
+          serviceName: paymentDoc.serviceName || paymentDoc.serviceTitle || paymentDoc.serviceDetails || paymentDoc.subService || 'Unknown Service',
+          categoryName: paymentDoc.service || paymentDoc.category || paymentDoc.categoryName || 'Unknown Category',
           paymentMethod: paymentDoc.paymentMethod || 'cash',
           paymentGateway: paymentDoc.paymentGateway || 'cash',
-          status: paymentDoc.paymentStatus || 'pending',
+          status: paymentDoc.paymentStatus || paymentDoc.status || 'pending',
           date: createdAt,
           bookingId: paymentDoc.bookingId || doc.id,
-          customerPhone: paymentDoc.customerPhone || '',
-          workerName: paymentDoc.workerName || 'Not Assigned',
+          workerName: paymentDoc.workerName || paymentDoc.assignedWorker || paymentDoc.technicianName || paymentDoc.workerAssigned || 'Not Assigned',
           companyName: paymentDoc.companyName || 'Service Provider'
         };
 
@@ -164,16 +188,18 @@ const Payments = () => {
           
           const payment = {
             id: doc.id,
-            amount: booking.totalPrice || booking.price || booking.amount || 0,
-            customerName: booking.customerName || 'Unknown Customer',
-            serviceName: booking.serviceName || 'Unknown Service',
+            amount: booking.totalPrice || booking.price || booking.amount || booking.finalAmount || 0,
+            customerName: booking.customerName || booking.customer || 'Unknown Customer',
+            customerPhone: booking.customerPhone || booking.phone || booking.mobile || '',
+            // Fix the service/category mapping based on your data structure
+            serviceName: booking.serviceName || booking.serviceTitle || booking.serviceDetails || booking.subService || 'Unknown Service',
+            categoryName: booking.service || booking.category || booking.categoryName || 'Unknown Category',
             paymentMethod: booking.paymentMethod || 'cash',
             paymentGateway: booking.paymentGateway || 'cash',
             status: 'completed',
             date: createdAt,
             bookingId: doc.id,
-            customerPhone: booking.customerPhone || '',
-            workerName: booking.assignedWorker || 'Not Assigned',
+            workerName: booking.assignedWorker || booking.workerName || booking.technicianName || booking.workerAssigned || 'Not Assigned',
             companyName: 'Service Provider'
           };
 
@@ -256,7 +282,12 @@ const Payments = () => {
   });
 
   const formatCurrency = (amount) => {
-    return `₹${amount.toLocaleString('en-IN')}`;
+    return (
+      <span className="price-display">
+        <span className="rupee-symbol">₹</span>
+        <span className="price-amount">{amount.toLocaleString('en-IN')}</span>
+      </span>
+    );
   };
 
   const formatDate = (date) => {
@@ -301,11 +332,12 @@ const Payments = () => {
       return;
     }
 
-    // Prepare CSV data
+    // Prepare CSV data with improved data mapping
     const csvHeaders = [
       'Payment ID',
       'Customer Name',
       'Customer Phone',
+      'Category Name',
       'Service Name',
       'Amount (₹)',
       'Payment Method',
@@ -315,23 +347,81 @@ const Payments = () => {
       'Booking ID'
     ];
 
-    const csvData = filteredPayments.map(payment => [
-      payment.id,
-      payment.customerName,
-      payment.customerPhone,
-      payment.serviceName,
-      payment.amount,
-      (payment.paymentGateway === 'cash' || payment.paymentMethod === 'cash') ? 'Cash' : 'Online',
-      payment.status.charAt(0).toUpperCase() + payment.status.slice(1),
-      payment.workerName,
-      formatDate(payment.date),
-      payment.bookingId
-    ]);
+    const csvData = filteredPayments.map(payment => {
+      console.log('📊 Exporting payment data:', {
+        id: payment.id,
+        customerName: payment.customerName,
+        customerPhone: payment.customerPhone,
+        serviceName: payment.serviceName,
+        categoryName: payment.categoryName,
+        amount: payment.amount,
+        workerName: payment.workerName,
+        status: payment.status
+      });
 
-    // Create CSV content
+      // Fix phone number formatting - ensure it's treated as text
+      let phoneNumber = payment.customerPhone || 'N/A';
+      if (phoneNumber && phoneNumber !== 'N/A') {
+        // Convert to string and ensure it's properly formatted
+        phoneNumber = phoneNumber.toString();
+        // Remove any non-digit characters except +
+        phoneNumber = phoneNumber.replace(/[^\d+]/g, '');
+        // Add leading apostrophe to force text format in Excel
+        phoneNumber = `'${phoneNumber}`;
+      }
+
+      // Fix worker assignment detection - check multiple possible fields
+      let workerName = 'Not Assigned';
+      if (payment.workerName && payment.workerName !== 'Not Assigned') {
+        workerName = payment.workerName;
+      } else if (payment.assignedWorker && payment.assignedWorker !== 'Not Assigned') {
+        workerName = payment.assignedWorker;
+      } else if (payment.technicianName && payment.technicianName !== 'Not Assigned') {
+        workerName = payment.technicianName;
+      } else if (payment.workerAssigned && payment.workerAssigned !== 'Not Assigned') {
+        workerName = payment.workerAssigned;
+      }
+
+      // Fix amount - ensure we get the actual payment amount
+      let actualAmount = 0;
+      if (payment.amount && payment.amount > 0) {
+        actualAmount = payment.amount;
+      } else if (payment.totalPrice && payment.totalPrice > 0) {
+        actualAmount = payment.totalPrice;
+      } else if (payment.price && payment.price > 0) {
+        actualAmount = payment.price;
+      } else if (payment.finalAmount && payment.finalAmount > 0) {
+        actualAmount = payment.finalAmount;
+      }
+
+      return [
+        payment.id || 'N/A',
+        payment.customerName || 'Unknown Customer',
+        phoneNumber,
+        payment.categoryName || 'Unknown Category',
+        payment.serviceName || 'Unknown Service',
+        actualAmount,
+        (payment.paymentGateway === 'cash' || payment.paymentMethod === 'cash') ? 'Cash' : 'Online',
+        payment.status ? payment.status.charAt(0).toUpperCase() + payment.status.slice(1) : 'Unknown',
+        workerName,
+        formatDate(payment.date),
+        payment.bookingId || payment.id || 'N/A'
+      ];
+    });
+
+    // Create CSV content with proper escaping
     const csvContent = [
       csvHeaders.join(','),
-      ...csvData.map(row => row.map(field => `"${field}"`).join(','))
+      ...csvData.map(row => 
+        row.map(field => {
+          // Properly escape fields that contain commas, quotes, or newlines
+          const fieldStr = String(field);
+          if (fieldStr.includes(',') || fieldStr.includes('"') || fieldStr.includes('\n')) {
+            return `"${fieldStr.replace(/"/g, '""')}"`;
+          }
+          return fieldStr;
+        }).join(',')
+      )
     ].join('\n');
 
     // Create and download file
@@ -354,63 +444,6 @@ const Payments = () => {
     alert(`Successfully exported ${filteredPayments.length} payments to CSV file!`);
   };
 
-  // Export payments to JSON
-  const exportPaymentsJSON = () => {
-    if (filteredPayments.length === 0) {
-      alert('No payments to export');
-      return;
-    }
-
-    // Prepare JSON data with summary
-    const exportData = {
-      exportDate: new Date().toISOString(),
-      summary: {
-        totalPayments: filteredPayments.length,
-        totalRevenue: stats.totalRevenue,
-        successfulPayments: stats.successfulPayments,
-        todaysRevenue: stats.todaysRevenue,
-        thisMonthRevenue: stats.thisMonthRevenue,
-        cashPayments: stats.cashPayments,
-        onlinePayments: stats.onlinePayments
-      },
-      payments: filteredPayments.map(payment => ({
-        id: payment.id,
-        customerName: payment.customerName,
-        customerPhone: payment.customerPhone,
-        serviceName: payment.serviceName,
-        amount: payment.amount,
-        paymentMethod: (payment.paymentGateway === 'cash' || payment.paymentMethod === 'cash') ? 'Cash' : 'Online',
-        status: payment.status,
-        workerName: payment.workerName,
-        date: payment.date?.toISOString(),
-        bookingId: payment.bookingId,
-        companyName: payment.companyName
-      }))
-    };
-
-    // Create JSON content
-    const jsonContent = JSON.stringify(exportData, null, 2);
-
-    // Create and download file
-    const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    
-    // Generate filename with current date
-    const today = new Date();
-    const dateStr = today.toISOString().split('T')[0];
-    link.setAttribute('download', `payments_export_${dateStr}.json`);
-    
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    // Show success message
-    alert(`Successfully exported ${filteredPayments.length} payments to JSON file!`);
-  };
-
   if (loading) {
     return (
       <div className="sd-main">
@@ -430,20 +463,12 @@ const Payments = () => {
           <p>Track and manage all service payments from the app</p>
         </div>
         <div className="sd-header-actions">
-          <div className="export-dropdown">
-            <button 
-              onClick={() => exportPayments()}
-              className="export-btn"
-            >
-              📥 Export CSV
-            </button>
-            <button 
-              onClick={() => exportPaymentsJSON()}
-              className="export-btn secondary"
-            >
-              📄 Export JSON
-            </button>
-          </div>
+          <button 
+            onClick={() => exportPayments()}
+            className="export-btn"
+          >
+            📥 Export CSV
+          </button>
         </div>
       </div>
 
@@ -516,14 +541,24 @@ const Payments = () => {
                 <div className="payment-method-icon">💵</div>
                 <div className="payment-method-info">
                   <p className="payment-method-label">Cash Payments</p>
-                  <p className="payment-method-value">{formatCurrency(stats.cashPayments)}</p>
+                  <p className="payment-method-value">
+                    <span className="price-display">
+                      <span className="rupee-symbol">₹</span>
+                      <span className="price-amount-medium">{stats.cashPayments.toLocaleString('en-IN')}</span>
+                    </span>
+                  </p>
                 </div>
               </div>
               <div className="payment-method-item">
                 <div className="payment-method-icon">💳</div>
                 <div className="payment-method-info">
                   <p className="payment-method-label">Online Payments</p>
-                  <p className="payment-method-value">{formatCurrency(stats.onlinePayments)}</p>
+                  <p className="payment-method-value">
+                    <span className="price-display">
+                      <span className="rupee-symbol">₹</span>
+                      <span className="price-amount-medium">{stats.onlinePayments.toLocaleString('en-IN')}</span>
+                    </span>
+                  </p>
                 </div>
               </div>
             </div>
@@ -604,11 +639,18 @@ const Payments = () => {
                   </div>
                 </div>
                 <div className="payment-amount">
-                  {formatCurrency(payment.amount)}
+                  <span className="price-display-right">
+                    <span className="rupee-symbol-large">₹</span>
+                    <span className="price-amount-large">{payment.amount.toLocaleString('en-IN')}</span>
+                  </span>
                 </div>
               </div>
               
               <div className="payment-details">
+                <div className="payment-service">
+                  <span className="payment-label">Category:</span>
+                  <span className="payment-value">{payment.categoryName}</span>
+                </div>
                 <div className="payment-service">
                   <span className="payment-label">Service:</span>
                   <span className="payment-value">{payment.serviceName}</span>

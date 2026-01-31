@@ -460,7 +460,12 @@ const Overview = () => {
       .map(([name, stats]) => ({
         name,
         bookings: stats.bookings,
-        revenue: `₹${stats.revenue.toLocaleString()}`,
+        revenue: (
+          <span className="price-display">
+            <span className="rupee-symbol-small">₹</span>
+            <span className="price-amount-small">{stats.revenue.toLocaleString()}</span>
+          </span>
+        ),
         progress: Math.min((stats.bookings / Math.max(...Object.values(serviceStats).map(s => s.bookings))) * 100, 100),
         color: getServiceColor(name)
       }))
@@ -581,7 +586,10 @@ const Overview = () => {
               <div className="modern-stat-content-enhanced">
                 <p className="modern-stat-label-enhanced">Total Revenue</p>
                 <p className="modern-stat-value-enhanced">
-                  <AnimatedCounter end={stats.totalRevenue} prefix="₹" duration={2000} />
+                  <span className="price-display">
+                    <span className="rupee-symbol-xl">₹</span>
+                    <AnimatedCounter end={stats.totalRevenue} duration={2000} />
+                  </span>
                 </p>
                 <div className="modern-stat-change-enhanced positive">
                   <span className="modern-change-icon-enhanced">↗</span>
@@ -663,7 +671,10 @@ const Overview = () => {
                     >
                       {hoveredBar === index && (
                         <div className="modern-chart-tooltip">
-                          <p>₹{data.revenue.toLocaleString()}</p>
+                          <p className="price-display">
+                            <span className="rupee-symbol">₹</span>
+                            <span className="price-amount">{data.revenue.toLocaleString()}</span>
+                          </p>
                           <p className="modern-tooltip-bookings">{data.bookings} bookings</p>
                         </div>
                       )}
@@ -687,7 +698,12 @@ const Overview = () => {
                   <div className="modern-summary-stats">
                     <div className="modern-summary-item">
                       <p className="modern-summary-label">Total Revenue</p>
-                      <p className="modern-summary-value">₹{weeklyData.reduce((sum, d) => sum + d.revenue, 0).toLocaleString()}</p>
+                      <p className="modern-summary-value">
+                        <span className="price-display">
+                          <span className="rupee-symbol">₹</span>
+                          <span className="price-amount">{weeklyData.reduce((sum, d) => sum + d.revenue, 0).toLocaleString()}</span>
+                        </span>
+                      </p>
                     </div>
                     <div className="modern-summary-item">
                       <p className="modern-summary-label">Total Bookings</p>
@@ -778,7 +794,10 @@ const Overview = () => {
                           </span>
                         </div>
                         <div className="modern-booking-amount">
-                          ₹{(booking.totalPrice || booking.price || booking.amount || 0).toLocaleString()}
+                          <span className="price-display">
+                            <span className="rupee-symbol-small">₹</span>
+                            <span className="price-amount-small">{(booking.totalPrice || booking.price || booking.amount || 0).toLocaleString()}</span>
+                          </span>
                         </div>
                         <button className="modern-booking-view">👁</button>
                       </div>

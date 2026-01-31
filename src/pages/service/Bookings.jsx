@@ -534,13 +534,10 @@ const Bookings = () => {
                 <div className="bookings-actions-section">
                   <div className="bookings-amount">
                     <div className="bookings-price">
-                      <svg className="bookings-rupee-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path d="M6 3h12"/>
-                        <path d="M6 8h12"/>
-                        <path d="M6 13L13 20"/>
-                        <path d="M6 13h7"/>
-                      </svg>
-                      <span>{(booking.totalPrice || booking.price || booking.amount || 0).toLocaleString()}</span>
+                      <span className="price-display">
+                        <span className="rupee-symbol">₹</span>
+                        <span className="price-amount">{(booking.totalPrice || booking.price || booking.amount || 0).toLocaleString()}</span>
+                      </span>
                     </div>
                     <p className="bookings-category">{booking.categoryName || "Service"}</p>
                   </div>
@@ -801,13 +798,10 @@ const Bookings = () => {
                 <div className="detail-item">
                   <h4>Amount</h4>
                   <div className="amount-display">
-                    <svg className="rupee-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                      <path d="M6 3h12"/>
-                      <path d="M6 8h12"/>
-                      <path d="M6 13L13 20"/>
-                      <path d="M6 13h7"/>
-                    </svg>
-                    <span>{(selectedBooking.totalPrice || selectedBooking.price || selectedBooking.amount || 0).toLocaleString()}</span>
+                    <span className="price-display">
+                      <span className="rupee-symbol-large">₹</span>
+                      <span className="price-amount-large">{(selectedBooking.totalPrice || selectedBooking.price || selectedBooking.amount || 0).toLocaleString()}</span>
+                    </span>
                   </div>
                 </div>
                 {selectedBooking.technicianName && (
