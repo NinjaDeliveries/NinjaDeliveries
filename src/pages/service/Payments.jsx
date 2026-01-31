@@ -1,239 +1,266 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { auth, db } from "../../context/Firebase";
-import {
-  collection,
-  query,
-  where,
-  getDocs,
-  orderBy,
-} from "firebase/firestore";
+import { collection, query, where, onSnapshot, orderBy, getDocs } from "firebase/firestore";
 import "../../style/ServiceDashboard.css";
 
 const Payments = () => {
   const [payments, setPayments] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [dateFilter, setDateFilter] = useState("all");
-  const [methodFilter, setMethodFilter] = useState("all");
   const [stats, setStats] = useState({
-    totalPayments: 0,
-    totalAmount: 0,
+    totalRevenue: 0,
     successfulPayments: 0,
-    pendingPayments: 0,
-    failedPayments: 0,
-    todayAmount: 0,
-    thisMonthAmount: 0,
+    todaysRevenue: 0,
+    thisMonthRevenue: 0,
     cashPayments: 0,
-    onlinePayments: 0,
-    cashAmount: 0,
-    onlineAmount: 0,
+    onlinePayments: 0
   });
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All Status");
+  const [timeFilter, setTimeFilter] = useState("All Time");
+  const [methodFilter, setMethodFilter] = useState("All Methods");
 
-  const statusConfig = {
-    success: {
-      label: "Success",
-      icon: (
-        <svg className="payments-status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-          <polyline points="22,4 12,14.01 9,11.01"/>
-        </svg>
-      ),
-      className: "payments-status-success",
-    },
-    pending: {
-      label: "Pending",
-      icon: (
-        <svg className="payments-status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-          <circle cx="12" cy="12" r="10"/>
-          <polyline points="12,6 12,12 16,14"/>
-        </svg>
-      ),
-      className: "payments-status-pending",
-    },
-    failed: {
-      label: "Failed",
-      icon: (
-        <svg className="payments-status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-          <circle cx="12" cy="12" r="10"/>
-          <line x1="15" y1="9" x2="9" y2="15"/>
-          <line x1="9" y1="9" x2="15" y2="15"/>
-        </svg>
-      ),
-      className: "payments-status-failed",
-    },
-    refunded: {
-      label: "Refunded",
-      icon: (
-        <svg className="payments-status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-          <path d="M3 3v5h5"/>
-        </svg>
-      ),
-      className: "payments-status-refunded",
-    },
-  };
-
-  const calculateStats = useCallback((paymentsList) => {
-    const today = new Date();
-    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-
-    const stats = paymentsList.reduce((acc, payment) => {
-      const amount = parseFloat(payment.amount || payment.totalAmount || 0);
-      const paymentDate = payment.createdAt;
-      const paymentMethod = getPaymentMethod(payment);
-      const isCash = paymentMethod.toLowerCase() === 'cash' || payment.isCashPayment || payment.paymentType === 'cash';
-
-      acc.totalPayments++;
-      acc.totalAmount += amount;
-
-      // Payment method counts
-      if (isCash) {
-        acc.cashPayments++;
-        if (payment.status === 'success' || payment.status === 'completed') {
-          acc.cashAmount += amount;
-        }
-      } else {
-        acc.onlinePayments++;
-        if (payment.status === 'success' || payment.status === 'completed') {
-          acc.onlineAmount += amount;
-        }
-      }
-
-      // Status counts
-      if (payment.status === 'success' || payment.status === 'completed') {
-        acc.successfulPayments++;
-      } else if (payment.status === 'pending') {
-        acc.pendingPayments++;
-      } else if (payment.status === 'failed') {
-        acc.failedPayments++;
-      }
-
-      // Date-based amounts
-      if (paymentDate >= startOfToday && (payment.status === 'success' || payment.status === 'completed')) {
-        acc.todayAmount += amount;
-      }
-      if (paymentDate >= startOfMonth && (payment.status === 'success' || payment.status === 'completed')) {
-        acc.thisMonthAmount += amount;
-      }
-
-      return acc;
-    }, {
-      totalPayments: 0,
-      totalAmount: 0,
-      successfulPayments: 0,
-      pendingPayments: 0,
-      failedPayments: 0,
-      todayAmount: 0,
-      thisMonthAmount: 0,
-      cashPayments: 0,
-      onlinePayments: 0,
-      cashAmount: 0,
-      onlineAmount: 0,
-    });
-
-    setStats(stats);
-  }, []);
-
-  const getPaymentMethod = (payment) => {
-    if (payment.paymentMethod) {
-      // Handle different payment methods
-      const method = payment.paymentMethod.toLowerCase();
-      if (method === 'cash' || method === 'cod') return 'Cash';
-      if (method === 'upi') return 'UPI';
-      if (method === 'card') return 'Card';
-      if (method === 'netbanking') return 'Net Banking';
-      if (method === 'wallet') return 'Wallet';
-      return payment.paymentMethod;
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (!user) {
+      console.log('❌ No authenticated user found');
+      return;
     }
-    if (payment.gateway) return payment.gateway;
-    if (payment.isCashPayment || payment.paymentType === 'cash') return 'Cash';
-    return 'Online';
-  };
 
-  const fetchPayments = useCallback(async () => {
-    try {
-      const user = auth.currentUser;
-      if (!user) {
-        setLoading(false);
-        return;
+    console.log('🔍 Setting up payments listener for user:', user.uid);
+
+    // Query payments from service_payments collection
+    const paymentsQuery = query(
+      collection(db, "service_payments"),
+      where("companyId", "==", user.uid),
+      orderBy("createdAt", "desc")
+    );
+
+    const unsubscribe = onSnapshot(paymentsQuery, (snapshot) => {
+      console.log('📊 Payments snapshot received:', {
+        size: snapshot.size,
+        empty: snapshot.empty
+      });
+
+      if (snapshot.empty) {
+        console.log('⚠️ No payments found in service_payments collection');
+        // Let's also try to check if there are any documents at all
+        const allPaymentsQuery = query(collection(db, "service_payments"));
+        onSnapshot(allPaymentsQuery, (allSnapshot) => {
+          console.log('📋 Total payments in collection:', allSnapshot.size);
+          if (allSnapshot.size > 0) {
+            console.log('📄 Sample payment document:', allSnapshot.docs[0].data());
+          }
+        });
       }
 
-      // Query service_payments collection
-      const q = query(
-        collection(db, "service_payments"),
+      const paymentsData = [];
+      let totalRevenue = 0;
+      let successfulPayments = 0;
+      let todaysRevenue = 0;
+      let thisMonthRevenue = 0;
+      let cashPayments = 0;
+      let onlinePayments = 0;
+
+      const today = new Date();
+      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+      snapshot.docs.forEach(doc => {
+        const paymentDoc = doc.data();
+        console.log('💰 Processing payment:', doc.id, paymentDoc);
+        
+        const createdAt = paymentDoc.createdAt?.toDate();
+        
+        const payment = {
+          id: doc.id,
+          amount: paymentDoc.amount || 0,
+          customerName: paymentDoc.customerName || 'Unknown Customer',
+          serviceName: paymentDoc.serviceName || 'Unknown Service',
+          paymentMethod: paymentDoc.paymentMethod || 'cash',
+          paymentGateway: paymentDoc.paymentGateway || 'cash',
+          status: paymentDoc.paymentStatus || 'pending',
+          date: createdAt,
+          bookingId: paymentDoc.bookingId || doc.id,
+          customerPhone: paymentDoc.customerPhone || '',
+          workerName: paymentDoc.workerName || 'Not Assigned',
+          companyName: paymentDoc.companyName || 'Service Provider'
+        };
+
+        paymentsData.push(payment);
+
+        // Calculate stats - only for completed/successful payments
+        if (payment.status === 'completed' || payment.status === 'success' || payment.status === 'paid') {
+          const amount = payment.amount;
+          totalRevenue += amount;
+          successfulPayments += 1;
+
+          if (createdAt >= startOfDay) {
+            todaysRevenue += amount;
+          }
+
+          if (createdAt >= startOfMonth) {
+            thisMonthRevenue += amount;
+          }
+
+          if (payment.paymentMethod === 'cash' || payment.paymentGateway === 'cash') {
+            cashPayments += amount;
+          } else {
+            onlinePayments += amount;
+          }
+        }
+      });
+
+      console.log('📈 Calculated stats:', {
+        totalRevenue,
+        successfulPayments,
+        todaysRevenue,
+        thisMonthRevenue,
+        cashPayments,
+        onlinePayments,
+        totalPayments: paymentsData.length
+      });
+
+      setPayments(paymentsData);
+      setStats({
+        totalRevenue,
+        successfulPayments,
+        todaysRevenue,
+        thisMonthRevenue,
+        cashPayments,
+        onlinePayments
+      });
+      setLoading(false);
+    }, (error) => {
+      console.error("❌ Error fetching payments:", error);
+      
+      // If service_payments doesn't work, let's try service_bookings as fallback
+      console.log('🔄 Trying fallback: service_bookings collection');
+      
+      const fallbackQuery = query(
+        collection(db, "service_bookings"),
         where("companyId", "==", user.uid),
+        where("status", "==", "completed"),
         orderBy("createdAt", "desc")
       );
 
-      const snap = await getDocs(q);
-      const paymentsList = snap.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate() || new Date(doc.data().createdAt),
-      }));
+      onSnapshot(fallbackQuery, (fallbackSnapshot) => {
+        console.log('📊 Fallback bookings snapshot:', fallbackSnapshot.size);
+        
+        const paymentsData = [];
+        let totalRevenue = 0;
+        let successfulPayments = 0;
+        let todaysRevenue = 0;
+        let thisMonthRevenue = 0;
+        let cashPayments = 0;
+        let onlinePayments = 0;
 
-      setPayments(paymentsList);
-      calculateStats(paymentsList);
-    } catch (error) {
-      console.error("Error fetching payments:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [calculateStats]);
+        const today = new Date();
+        const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
-  useEffect(() => {
-    fetchPayments();
-  }, [fetchPayments]);
+        fallbackSnapshot.docs.forEach(doc => {
+          const booking = doc.data();
+          const createdAt = booking.createdAt?.toDate();
+          
+          const payment = {
+            id: doc.id,
+            amount: booking.totalPrice || booking.price || booking.amount || 0,
+            customerName: booking.customerName || 'Unknown Customer',
+            serviceName: booking.serviceName || 'Unknown Service',
+            paymentMethod: booking.paymentMethod || 'cash',
+            paymentGateway: booking.paymentGateway || 'cash',
+            status: 'completed',
+            date: createdAt,
+            bookingId: doc.id,
+            customerPhone: booking.customerPhone || '',
+            workerName: booking.assignedWorker || 'Not Assigned',
+            companyName: 'Service Provider'
+          };
 
-  // Filter payments based on search, status, date, and method
-  const filteredPayments = payments.filter((payment) => {
-    const matchesSearch = !searchQuery || 
-      payment.customerName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      payment.serviceName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      payment.transactionId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      payment.id?.toLowerCase().includes(searchQuery.toLowerCase());
+          paymentsData.push(payment);
 
-    const matchesStatus = statusFilter === "all" || payment.status === statusFilter;
+          const amount = payment.amount;
+          totalRevenue += amount;
+          successfulPayments += 1;
 
-    const matchesMethod = methodFilter === "all" || 
-      (methodFilter === "cash" && (getPaymentMethod(payment).toLowerCase() === 'cash' || payment.isCashPayment || payment.paymentType === 'cash')) ||
-      (methodFilter === "online" && getPaymentMethod(payment).toLowerCase() !== 'cash' && !payment.isCashPayment && payment.paymentType !== 'cash') ||
-      getPaymentMethod(payment).toLowerCase().includes(methodFilter.toLowerCase());
+          if (createdAt >= startOfDay) {
+            todaysRevenue += amount;
+          }
 
-    let matchesDate = true;
-    if (dateFilter !== "all") {
-      const paymentDate = payment.createdAt;
+          if (createdAt >= startOfMonth) {
+            thisMonthRevenue += amount;
+          }
+
+          if (payment.paymentMethod === 'cash' || payment.paymentGateway === 'cash') {
+            cashPayments += amount;
+          } else {
+            onlinePayments += amount;
+          }
+        });
+
+        console.log('📈 Fallback stats:', {
+          totalRevenue,
+          successfulPayments,
+          totalPayments: paymentsData.length
+        });
+
+        setPayments(paymentsData);
+        setStats({
+          totalRevenue,
+          successfulPayments,
+          todaysRevenue,
+          thisMonthRevenue,
+          cashPayments,
+          onlinePayments
+        });
+        setLoading(false);
+      });
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Filter payments based on search and filters
+  const filteredPayments = payments.filter(payment => {
+    const matchesSearch = payment.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         payment.serviceName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         payment.bookingId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         payment.companyName.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesStatus = statusFilter === "All Status" || 
+                         payment.status.toLowerCase() === statusFilter.toLowerCase() ||
+                         (statusFilter === "Completed" && (payment.status === 'success' || payment.status === 'paid' || payment.status === 'completed'));
+    
+    const matchesMethod = methodFilter === "All Methods" || 
+                         payment.paymentMethod.toLowerCase() === methodFilter.toLowerCase() ||
+                         payment.paymentGateway.toLowerCase() === methodFilter.toLowerCase();
+
+    let matchesTime = true;
+    if (timeFilter !== "All Time") {
+      const paymentDate = payment.date;
       const today = new Date();
       
-      switch (dateFilter) {
-        case "today":
-          const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-          matchesDate = paymentDate >= startOfToday;
-          break;
-        case "week":
-          const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-          matchesDate = paymentDate >= weekAgo;
-          break;
-        case "month":
-          const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-          matchesDate = paymentDate >= startOfMonth;
-          break;
-        default:
-          matchesDate = true;
+      if (timeFilter === "Today") {
+        const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        matchesTime = paymentDate >= startOfDay;
+      } else if (timeFilter === "This Week") {
+        const startOfWeek = new Date(today.setDate(today.getDate() - today.getDay()));
+        matchesTime = paymentDate >= startOfWeek;
+      } else if (timeFilter === "This Month") {
+        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        matchesTime = paymentDate >= startOfMonth;
       }
     }
 
-    return matchesSearch && matchesStatus && matchesDate && matchesMethod;
+    return matchesSearch && matchesStatus && matchesMethod && matchesTime;
   });
 
   const formatCurrency = (amount) => {
-    return `₹${parseFloat(amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+    return `₹${amount.toLocaleString('en-IN')}`;
   };
 
   const formatDate = (date) => {
-    if (!date) return 'N/A';
+    if (!date) return 'Unknown Date';
     return date.toLocaleDateString('en-IN', {
       year: 'numeric',
       month: 'short',
@@ -243,11 +270,152 @@ const Payments = () => {
     });
   };
 
+  const getStatusClass = (status) => {
+    const lowerStatus = status.toLowerCase();
+    if (lowerStatus === 'completed' || lowerStatus === 'success' || lowerStatus === 'paid') {
+      return 'completed';
+    } else if (lowerStatus === 'pending') {
+      return 'pending';
+    } else if (lowerStatus === 'failed' || lowerStatus === 'cancelled') {
+      return 'failed';
+    }
+    return 'pending';
+  };
+
+  const getStatusIcon = (status) => {
+    const lowerStatus = status.toLowerCase();
+    if (lowerStatus === 'completed' || lowerStatus === 'success' || lowerStatus === 'paid') {
+      return '✅';
+    } else if (lowerStatus === 'pending') {
+      return '⏳';
+    } else if (lowerStatus === 'failed' || lowerStatus === 'cancelled') {
+      return '❌';
+    }
+    return '⏳';
+  };
+
+  // Export payments to CSV
+  const exportPayments = () => {
+    if (filteredPayments.length === 0) {
+      alert('No payments to export');
+      return;
+    }
+
+    // Prepare CSV data
+    const csvHeaders = [
+      'Payment ID',
+      'Customer Name',
+      'Customer Phone',
+      'Service Name',
+      'Amount (₹)',
+      'Payment Method',
+      'Status',
+      'Worker Name',
+      'Date',
+      'Booking ID'
+    ];
+
+    const csvData = filteredPayments.map(payment => [
+      payment.id,
+      payment.customerName,
+      payment.customerPhone,
+      payment.serviceName,
+      payment.amount,
+      (payment.paymentGateway === 'cash' || payment.paymentMethod === 'cash') ? 'Cash' : 'Online',
+      payment.status.charAt(0).toUpperCase() + payment.status.slice(1),
+      payment.workerName,
+      formatDate(payment.date),
+      payment.bookingId
+    ]);
+
+    // Create CSV content
+    const csvContent = [
+      csvHeaders.join(','),
+      ...csvData.map(row => row.map(field => `"${field}"`).join(','))
+    ].join('\n');
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    
+    // Generate filename with current date
+    const today = new Date();
+    const dateStr = today.toISOString().split('T')[0];
+    link.setAttribute('download', `payments_export_${dateStr}.csv`);
+    
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    // Show success message
+    alert(`Successfully exported ${filteredPayments.length} payments to CSV file!`);
+  };
+
+  // Export payments to JSON
+  const exportPaymentsJSON = () => {
+    if (filteredPayments.length === 0) {
+      alert('No payments to export');
+      return;
+    }
+
+    // Prepare JSON data with summary
+    const exportData = {
+      exportDate: new Date().toISOString(),
+      summary: {
+        totalPayments: filteredPayments.length,
+        totalRevenue: stats.totalRevenue,
+        successfulPayments: stats.successfulPayments,
+        todaysRevenue: stats.todaysRevenue,
+        thisMonthRevenue: stats.thisMonthRevenue,
+        cashPayments: stats.cashPayments,
+        onlinePayments: stats.onlinePayments
+      },
+      payments: filteredPayments.map(payment => ({
+        id: payment.id,
+        customerName: payment.customerName,
+        customerPhone: payment.customerPhone,
+        serviceName: payment.serviceName,
+        amount: payment.amount,
+        paymentMethod: (payment.paymentGateway === 'cash' || payment.paymentMethod === 'cash') ? 'Cash' : 'Online',
+        status: payment.status,
+        workerName: payment.workerName,
+        date: payment.date?.toISOString(),
+        bookingId: payment.bookingId,
+        companyName: payment.companyName
+      }))
+    };
+
+    // Create JSON content
+    const jsonContent = JSON.stringify(exportData, null, 2);
+
+    // Create and download file
+    const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    
+    // Generate filename with current date
+    const today = new Date();
+    const dateStr = today.toISOString().split('T')[0];
+    link.setAttribute('download', `payments_export_${dateStr}.json`);
+    
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    // Show success message
+    alert(`Successfully exported ${filteredPayments.length} payments to JSON file!`);
+  };
+
   if (loading) {
     return (
       <div className="sd-main">
-        <div className="payments-loading">
-          <div className="payments-loading-spinner"></div>
+        <div className="modern-loading">
+          <div className="modern-loading-spinner"></div>
           <p>Loading payments...</p>
         </div>
       </div>
@@ -256,276 +424,218 @@ const Payments = () => {
 
   return (
     <div className="sd-main">
-      {/* Page Header */}
       <div className="sd-header">
         <div>
           <h1>Payments</h1>
           <p>Track and manage all service payments from the app</p>
         </div>
+        <div className="sd-header-actions">
+          <div className="export-dropdown">
+            <button 
+              onClick={() => exportPayments()}
+              className="export-btn"
+            >
+              📥 Export CSV
+            </button>
+            <button 
+              onClick={() => exportPaymentsJSON()}
+              className="export-btn secondary"
+            >
+              📄 Export JSON
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="payments-stats-grid">
-        <div className="payments-stat-card">
-          <div className="payments-stat-icon total">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path d="M6 3h12"/>
-              <path d="M6 8h12"/>
-              <path d="M6 13L13 20"/>
-              <path d="M6 13h7"/>
-            </svg>
-          </div>
-          <div className="payments-stat-content">
-            <p className="payments-stat-label">Total Revenue</p>
-            <p className="payments-stat-value">{formatCurrency(stats.totalAmount)}</p>
+      <div className="modern-stats-grid-enhanced">
+        <div className="modern-stat-card-enhanced revenue">
+          <div className="modern-stat-icon-enhanced">💰</div>
+          <div className="modern-stat-content-enhanced">
+            <p className="modern-stat-label-enhanced">Total Revenue</p>
+            <p className="modern-stat-value-enhanced">{formatCurrency(stats.totalRevenue)}</p>
+            <div className="modern-stat-change-enhanced positive">
+              <span className="modern-change-icon-enhanced">↗</span>
+              <span>Live Data</span>
+            </div>
           </div>
         </div>
 
-        <div className="payments-stat-card">
-          <div className="payments-stat-icon success">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-              <polyline points="22,4 12,14.01 9,11.01"/>
-            </svg>
-          </div>
-          <div className="payments-stat-content">
-            <p className="payments-stat-label">Successful</p>
-            <p className="payments-stat-value">{stats.successfulPayments}</p>
-          </div>
-        </div>
-
-        <div className="payments-stat-card">
-          <div className="payments-stat-icon today">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
-              <line x1="16" x2="16" y1="2" y2="6"/>
-              <line x1="8" x2="8" y1="2" y2="6"/>
-              <line x1="3" x2="21" y1="10" y2="10"/>
-            </svg>
-          </div>
-          <div className="payments-stat-content">
-            <p className="payments-stat-label">Today's Revenue</p>
-            <p className="payments-stat-value">{formatCurrency(stats.todayAmount)}</p>
+        <div className="modern-stat-card-enhanced bookings">
+          <div className="modern-stat-icon-enhanced">✅</div>
+          <div className="modern-stat-content-enhanced">
+            <p className="modern-stat-label-enhanced">Successful Payments</p>
+            <p className="modern-stat-value-enhanced">{stats.successfulPayments}</p>
+            <div className="modern-stat-change-enhanced positive">
+              <span className="modern-change-icon-enhanced">↗</span>
+              <span>Live Data</span>
+            </div>
           </div>
         </div>
 
-        <div className="payments-stat-card">
-          <div className="payments-stat-icon month">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="7,10 12,15 17,10"/>
-              <line x1="12" x2="12" y1="15" y2="3"/>
-            </svg>
-          </div>
-          <div className="payments-stat-content">
-            <p className="payments-stat-label">This Month</p>
-            <p className="payments-stat-value">{formatCurrency(stats.thisMonthAmount)}</p>
+        <div className="modern-stat-card-enhanced workers">
+          <div className="modern-stat-icon-enhanced">📅</div>
+          <div className="modern-stat-content-enhanced">
+            <p className="modern-stat-label-enhanced">Today's Revenue</p>
+            <p className="modern-stat-value-enhanced">{formatCurrency(stats.todaysRevenue)}</p>
+            <div className="modern-stat-change-enhanced positive">
+              <span className="modern-change-icon-enhanced">↗</span>
+              <span>Live Data</span>
+            </div>
           </div>
         </div>
 
-        <div className="payments-stat-card">
-          <div className="payments-stat-icon cash">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path d="M6 3h12"/>
-              <path d="M6 8h12"/>
-              <path d="M6 13L13 20"/>
-              <path d="M6 13h7"/>
-            </svg>
-          </div>
-          <div className="payments-stat-content">
-            <p className="payments-stat-label">Cash Payments</p>
-            <p className="payments-stat-value">{formatCurrency(stats.cashAmount)}</p>
-            <p className="payments-stat-count">({stats.cashPayments} payments)</p>
+        <div className="modern-stat-card-enhanced completion">
+          <div className="modern-stat-icon-enhanced">📊</div>
+          <div className="modern-stat-content-enhanced">
+            <p className="modern-stat-label-enhanced">This Month</p>
+            <p className="modern-stat-value-enhanced">{formatCurrency(stats.thisMonthRevenue)}</p>
+            <div className="modern-stat-change-enhanced positive">
+              <span className="modern-change-icon-enhanced">↗</span>
+              <span>Live Data</span>
+            </div>
           </div>
         </div>
+      </div>
 
-        <div className="payments-stat-card">
-          <div className="payments-stat-icon online">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <rect width="20" height="14" x="2" y="5" rx="2"/>
-              <line x1="2" x2="22" y1="10" y2="10"/>
-            </svg>
+      {/* Payment Method Stats */}
+      <div className="modern-charts-row">
+        <div className="modern-chart-card">
+          <div className="modern-chart-header">
+            <div className="modern-chart-title-section">
+              <div className="modern-chart-icon">💳</div>
+              <div>
+                <h3 className="modern-chart-title">Payment Methods</h3>
+                <p className="modern-chart-subtitle">Cash vs Online payments</p>
+              </div>
+            </div>
           </div>
-          <div className="payments-stat-content">
-            <p className="payments-stat-label">Online Payments</p>
-            <p className="payments-stat-value">{formatCurrency(stats.onlineAmount)}</p>
-            <p className="payments-stat-count">({stats.onlinePayments} payments)</p>
+          <div className="modern-chart-content">
+            <div className="payment-method-stats">
+              <div className="payment-method-item">
+                <div className="payment-method-icon">💵</div>
+                <div className="payment-method-info">
+                  <p className="payment-method-label">Cash Payments</p>
+                  <p className="payment-method-value">{formatCurrency(stats.cashPayments)}</p>
+                </div>
+              </div>
+              <div className="payment-method-item">
+                <div className="payment-method-icon">💳</div>
+                <div className="payment-method-info">
+                  <p className="payment-method-label">Online Payments</p>
+                  <p className="payment-method-value">{formatCurrency(stats.onlinePayments)}</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="payments-filters">
-        <div className="payments-search">
-          <svg className="payments-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <circle cx="11" cy="11" r="8"/>
-            <path d="m21 21-4.35-4.35"/>
-          </svg>
-          <input
-            type="text"
-            placeholder="Search payments..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="payments-search-input"
-          />
-        </div>
-
-        <select 
-          className="payments-filter-select"
-          value={statusFilter} 
+      <div className="sd-header-actions">
+        <input
+          type="text"
+          placeholder="Search payments..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="payments-search-input"
+        />
+        <select
+          value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-        >
-          <option value="all">All Status</option>
-          <option value="success">Success</option>
-          <option value="completed">Completed</option>
-          <option value="pending">Pending</option>
-          <option value="failed">Failed</option>
-          <option value="refunded">Refunded</option>
-        </select>
-
-        <select 
           className="payments-filter-select"
-          value={dateFilter} 
-          onChange={(e) => setDateFilter(e.target.value)}
         >
-          <option value="all">All Time</option>
-          <option value="today">Today</option>
-          <option value="week">This Week</option>
-          <option value="month">This Month</option>
+          <option>All Status</option>
+          <option>Completed</option>
+          <option>Success</option>
+          <option>Paid</option>
+          <option>Pending</option>
+          <option>Failed</option>
+          <option>Cancelled</option>
         </select>
-
-        <select 
+        <select
+          value={timeFilter}
+          onChange={(e) => setTimeFilter(e.target.value)}
           className="payments-filter-select"
-          value={methodFilter} 
+        >
+          <option>All Time</option>
+          <option>Today</option>
+          <option>This Week</option>
+          <option>This Month</option>
+        </select>
+        <select
+          value={methodFilter}
           onChange={(e) => setMethodFilter(e.target.value)}
+          className="payments-filter-select"
         >
-          <option value="all">All Methods</option>
-          <option value="cash">Cash</option>
-          <option value="online">Online</option>
-          <option value="upi">UPI</option>
-          <option value="card">Card</option>
-          <option value="netbanking">Net Banking</option>
-          <option value="wallet">Wallet</option>
+          <option>All Methods</option>
+          <option>Cash</option>
+          <option>Online</option>
         </select>
+        
+        {/* Export Summary */}
+        {filteredPayments.length > 0 && (
+          <div className="export-summary">
+            <span className="export-count">
+              {filteredPayments.length} payments ready to export
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Payments List */}
       <div className="payments-list">
         {filteredPayments.length === 0 ? (
-          <div className="payments-empty-state">
-            <div className="payments-empty-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path d="M6 3h12"/>
-                <path d="M6 8h12"/>
-                <path d="M6 13L13 20"/>
-                <path d="M6 13h7"/>
-              </svg>
-            </div>
-            <h3>No payments found</h3>
-            <p>
-              {searchQuery || statusFilter !== "all" || dateFilter !== "all"
-                ? "Try adjusting your filters"
-                : "Payments will appear here when customers make them through the app"}
-            </p>
+          <div className="sd-empty-state">
+            <p>No payments found</p>
+            <small>Payments will appear here once services are completed</small>
           </div>
         ) : (
-          filteredPayments.map((payment) => {
-            const status = statusConfig[payment.status] || statusConfig.pending;
-            
-            return (
-              <div key={payment.id} className="payments-card">
-                <div className="payments-card-content">
-                  <div className="payments-main-section">
-                    <div className="payments-avatar">
-                      {payment.customerName ? payment.customerName.split(" ").map(n => n[0]).join("").toUpperCase() : "U"}
-                    </div>
-                    
-                    <div className="payments-info">
-                      <div className="payments-header">
-                        <div className="payments-badges">
-                          <span className="payments-id-badge">
-                            #{payment.transactionId || payment.id.slice(-8)}
-                          </span>
-                          <span className={`payments-status-badge ${status.className}`}>
-                            {status.icon}
-                            <span>{status.label}</span>
-                          </span>
-                        </div>
-                        <h3 className="payments-service-name">{payment.serviceName || 'Service Payment'}</h3>
-                      </div>
-
-                      <div className="payments-details">
-                        <div className="payments-detail-item">
-                          <svg className="payments-detail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                            <circle cx="12" cy="7" r="4"/>
-                          </svg>
-                          <span>{payment.customerName || 'Customer'}</span>
-                        </div>
-                        <div className="payments-detail-item">
-                          <svg className="payments-detail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <rect width="20" height="14" x="2" y="5" rx="2"/>
-                            <line x1="2" x2="22" y1="10" y2="10"/>
-                          </svg>
-                          <span>{getPaymentMethod(payment)}</span>
-                        </div>
-                        <div className="payments-detail-item">
-                          <svg className="payments-detail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <circle cx="12" cy="12" r="10"/>
-                            <polyline points="12,6 12,12 16,14"/>
-                          </svg>
-                          <span>{formatDate(payment.createdAt)}</span>
-                        </div>
-                      </div>
-
-                      {payment.bookingId && (
-                        <div className="payments-booking-badge">
-                          <svg className="payments-booking-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
-                            <line x1="16" x2="16" y1="2" y2="6"/>
-                            <line x1="8" x2="8" y1="2" y2="6"/>
-                            <line x1="3" x2="21" y1="10" y2="10"/>
-                          </svg>
-                          Booking: #{payment.bookingId.slice(-8)}
-                        </div>
-                      )}
-                    </div>
+          filteredPayments.map((payment) => (
+            <div key={payment.id} className="payment-card">
+              <div className="payment-header">
+                <div className="payment-customer">
+                  <div className="payment-avatar">
+                    {payment.customerName.charAt(0).toUpperCase()}
                   </div>
-
-                  <div className="payments-actions-section">
-                    <div className="payments-amount">
-                      <div className="payments-price">
-                        <svg className="payments-rupee-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                          <path d="M6 3h12"/>
-                          <path d="M6 8h12"/>
-                          <path d="M6 13L13 20"/>
-                          <path d="M6 13h7"/>
-                        </svg>
-                        <span>{formatCurrency(payment.amount || payment.totalAmount)}</span>
-                      </div>
-                      <p className="payments-method">{getPaymentMethod(payment)}</p>
-                    </div>
-
-                    <div className="payments-actions">
-                      <button
-                        className="payments-view-btn"
-                        onClick={() => {
-                          // You can add a modal to show payment details
-                          console.log('View payment details:', payment);
-                        }}
-                      >
-                        <svg className="payments-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                          <circle cx="12" cy="12" r="3"/>
-                        </svg>
-                        View Details
-                      </button>
-                    </div>
+                  <div className="payment-customer-info">
+                    <h4>{payment.customerName}</h4>
+                    <p>{payment.customerPhone}</p>
                   </div>
                 </div>
+                <div className="payment-amount">
+                  {formatCurrency(payment.amount)}
+                </div>
               </div>
-            );
-          })
+              
+              <div className="payment-details">
+                <div className="payment-service">
+                  <span className="payment-label">Service:</span>
+                  <span className="payment-value">{payment.serviceName}</span>
+                </div>
+                <div className="payment-method">
+                  <span className="payment-label">Method:</span>
+                  <span className={`payment-method-badge ${payment.paymentGateway || payment.paymentMethod}`}>
+                    {(payment.paymentGateway === 'cash' || payment.paymentMethod === 'cash') ? '💵 Cash' : '💳 Online'}
+                  </span>
+                </div>
+                <div className="payment-worker">
+                  <span className="payment-label">Worker:</span>
+                  <span className="payment-value">{payment.workerName}</span>
+                </div>
+                <div className="payment-date">
+                  <span className="payment-label">Date:</span>
+                  <span className="payment-value">{formatDate(payment.date)}</span>
+                </div>
+              </div>
+
+              <div className="payment-status">
+                <span className={`payment-status-badge ${getStatusClass(payment.status)}`}>
+                  {getStatusIcon(payment.status)} {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
+                </span>
+              </div>
+            </div>
+          ))
         )}
       </div>
     </div>

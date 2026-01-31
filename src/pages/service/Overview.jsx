@@ -58,88 +58,155 @@ function NotificationBell() {
         )}
       </div>
 
-      {/* Notification Dropdown - Using React Portal */}
-      {showNotifications && (
-        console.log('🔔 Rendering notification dropdown via portal'),
-        createPortal(
-          <>
-            <div 
-              style={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                background: 'transparent',
-                zIndex: 2147483646
-              }}
-              onClick={() => setShowNotifications(false)}
-            />
-            <div 
-              style={{
-                position: 'fixed',
-                top: `${dropdownPosition.top}px`,
-                right: `${dropdownPosition.right}px`,
-                zIndex: 2147483647,
-                background: 'white',
-                borderRadius: '12px',
-                boxShadow: '0 20px 40px rgba(0, 0, 0, 0.4)',
-                maxHeight: '400px',
-                width: '350px',
-                overflow: 'hidden',
-                border: '2px solid #e5e7eb'
-              }}
-            >
-              <div className="overview-notification-header">
-                <h3>Notifications</h3>
-                {notifications.length > 0 && (
-                  <button 
-                    className="overview-clear-all"
-                    onClick={clearAllNotifications}
-                  >
-                    Clear All
-                  </button>
-                )}
-              </div>
-              
-              <div className="overview-notification-list">
-                {notifications.length === 0 ? (
-                  <div className="overview-no-notifications">
-                    <svg className="overview-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-                      <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-                    </svg>
-                    <p>No new notifications</p>
-                  </div>
-                ) : (
-                  notifications.map((notification) => (
-                    <div key={notification.id} className="overview-notification-item">
-                      <div className="overview-notification-icon">
-                        {notification.type === 'booking' && '📅'}
-                        {notification.type === 'payment' && '💰'}
-                        {notification.type === 'review' && '⭐'}
-                      </div>
-                      <div className="overview-notification-content">
-                        <div className="overview-notification-title">{notification.title}</div>
-                        <div className="overview-notification-message">{notification.message}</div>
-                        <div className="overview-notification-time">
-                          {new Date(notification.timestamp).toLocaleTimeString()}
-                        </div>
-                      </div>
-                      <button 
-                        className="overview-notification-close"
-                        onClick={() => removeNotification(notification.id)}
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))
-                )}
-              </div>
+      {/* Notification Dropdown - Using React Portal with better positioning */}
+      {showNotifications && createPortal(
+        <>
+          {/* Full screen backdrop */}
+          <div 
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              width: '100vw',
+              height: '100vh',
+              background: 'rgba(0, 0, 0, 0.1)',
+              zIndex: 999999,
+              backdropFilter: 'blur(1px)'
+            }}
+            onClick={() => setShowNotifications(false)}
+          />
+          {/* Notification dropdown */}
+          <div 
+            style={{
+              position: 'fixed',
+              top: '120px',
+              right: '20px',
+              zIndex: 1000000,
+              background: 'white',
+              borderRadius: '12px',
+              boxShadow: '0 25px 50px rgba(0, 0, 0, 0.5)',
+              maxHeight: '400px',
+              width: '350px',
+              overflow: 'hidden',
+              border: '3px solid #4f46e5',
+              animation: 'slideDown 0.3s ease-out'
+            }}
+          >
+            <div style={{
+              padding: '16px 20px',
+              borderBottom: '1px solid #e5e7eb',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              background: '#f8fafc'
+            }}>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: '#1f2937' }}>
+                🔔 Notifications
+              </h3>
+              {notifications.length > 0 && (
+                <button 
+                  onClick={clearAllNotifications}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#4f46e5',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    padding: '4px 8px',
+                    borderRadius: '4px'
+                  }}
+                >
+                  Clear All
+                </button>
+              )}
             </div>
-          </>,
-          document.body
-        )
+            
+            <div style={{ maxHeight: '320px', overflowY: 'auto' }}>
+              {notifications.length === 0 ? (
+                <div style={{
+                  textAlign: 'center',
+                  padding: '40px 20px',
+                  color: '#9ca3af'
+                }}>
+                  <div style={{ fontSize: '32px', marginBottom: '12px' }}>🔔</div>
+                  <p style={{ margin: 0, fontSize: '14px', fontWeight: 500 }}>
+                    No new notifications
+                  </p>
+                </div>
+              ) : (
+                notifications.map((notification) => (
+                  <div key={notification.id} style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '12px',
+                    padding: '16px 20px',
+                    borderBottom: '1px solid #f3f4f6',
+                    cursor: 'pointer',
+                    transition: 'background 0.2s ease'
+                  }}>
+                    <div style={{ fontSize: '18px', flexShrink: 0, marginTop: '2px' }}>
+                      {notification.type === 'booking' && '📅'}
+                      {notification.type === 'payment' && '💰'}
+                      {notification.type === 'review' && '⭐'}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        color: '#1f2937',
+                        marginBottom: '4px',
+                        lineHeight: 1.2
+                      }}>
+                        {notification.title}
+                      </div>
+                      <div style={{
+                        fontSize: '12px',
+                        color: '#6b7280',
+                        marginBottom: '4px',
+                        lineHeight: 1.3
+                      }}>
+                        {notification.message}
+                      </div>
+                      <div style={{
+                        fontSize: '11px',
+                        color: '#9ca3af',
+                        fontWeight: 500
+                      }}>
+                        {new Date(notification.timestamp).toLocaleTimeString()}
+                      </div>
+                    </div>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeNotification(notification.id);
+                      }}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#9ca3af',
+                        cursor: 'pointer',
+                        padding: '2px',
+                        borderRadius: '3px',
+                        fontSize: '12px',
+                        lineHeight: 1,
+                        width: '16px',
+                        height: '16px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </>,
+        document.body
       )}
     </div>
   );
@@ -771,20 +838,20 @@ const Overview = () => {
                 <div className="modern-action-icon bookings">📅</div>
                 <span>Banner Management</span>
               </button>
-              <button className="modern-action-btn">
+              <button className="modern-action-btn" onClick={() => window.location.href = '/admin.html#/service-dashboard/technicians'}>
                 <div className="modern-action-icon technicians">👥</div>
                 <span>Add Technician</span>
               </button>
-              <button className="modern-action-btn">
+              <button className="modern-action-btn" onClick={() => window.location.href = '/admin.html#/service-dashboard/payments'}>
                 <div className="modern-action-icon payments">💰</div>
                 <span>View Payments</span>
               </button>
-              <button className="modern-action-btn">
+              <button className="modern-action-btn" onClick={() => alert('Goals feature coming soon!')}>
                 <div className="modern-action-icon goals">🎯</div>
                 <span>Set Goals</span>
               </button>
-              <button className="modern-action-btn">
-                <div className="modern-action-icon reports">�</div>
+              <button className="modern-action-btn" onClick={() => alert('Reports feature coming soon!')}>
+                <div className="modern-action-icon reports">📊</div>
                 <span>View Reports</span>
               </button>
             </div>
