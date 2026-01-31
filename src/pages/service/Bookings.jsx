@@ -259,11 +259,13 @@ const Bookings = () => {
 
   // Filter bookings based on status filter and search
   const filteredBookings = bookings.filter((booking) => {
-    // Search filter
+    // Search filter - include more fields for better search
     const matchesSearch = !searchQuery || 
       booking.serviceName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      booking.workName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       booking.customerName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      booking.id?.toLowerCase().includes(searchQuery.toLowerCase());
+      booking.id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      booking.notes?.toLowerCase().includes(searchQuery.toLowerCase());
 
     if (!matchesSearch) return false;
 
@@ -488,7 +490,12 @@ const Bookings = () => {
                           <span>{status.label}</span>
                         </span>
                       </div>
-                      <h3 className="bookings-service-name">{booking.serviceName}</h3>
+                      <h3 className="bookings-service-name">
+                        {booking.workName || booking.serviceName || "Service Request"}
+                      </h3>
+                      {booking.serviceName && booking.workName && booking.serviceName !== booking.workName && (
+                        <p className="bookings-main-service">Category: {booking.serviceName}</p>
+                      )}
                     </div>
 
                     <div className="bookings-details">
@@ -751,9 +758,19 @@ const Bookings = () => {
             <div className="bookings-modal-body">
               {/* Service Info */}
               <div className="bookings-modal-section service-section">
-                <h4>Service</h4>
-                <p className="service-name">{selectedBooking.serviceName}</p>
-                <span className="service-category">{selectedBooking.categoryName || "Service"}</span>
+                <h4>Service Details</h4>
+                <p className="service-name">
+                  {selectedBooking.workName || selectedBooking.serviceName || "Service Request"}
+                </p>
+                {selectedBooking.serviceName && selectedBooking.workName && selectedBooking.serviceName !== selectedBooking.workName && (
+                  <p className="main-service">Category: {selectedBooking.serviceName}</p>
+                )}
+                {selectedBooking.notes && (
+                  <div className="problem-description">
+                    <h5>Additional Notes:</h5>
+                    <p>{selectedBooking.notes}</p>
+                  </div>
+                )}
               </div>
 
               {/* Customer Info */}
