@@ -6,6 +6,7 @@ import "../../style/ServiceDashboard.css";
 const Technicians = () => {
   const [technicians, setTechnicians] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [categoryMasters, setCategoryMasters] = useState([]);
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -20,7 +21,7 @@ const Technicians = () => {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [aadharNumber, setAadharNumber] = useState("");
-  const [role, setRole] = useState("");
+  const [assignedCategories, setAssignedCategories] = useState([]); // New: multiple categories
   const [assignedServices, setAssignedServices] = useState([]);
   const [isActive, setIsActive] = useState(true);
 
@@ -78,7 +79,8 @@ const Technicians = () => {
 
       const q = query(
         collection(db, "service_categories"),
-        where("companyId", "==", user.uid)
+        where("companyId", "==", user.uid),
+        where("isActive", "==", true)
       );
 
       const snap = await getDocs(q);
@@ -87,16 +89,33 @@ const Technicians = () => {
         ...doc.data(),
       }));
 
+      console.log("Company categories:", list);
       setCategories(list);
     } catch (err) {
       console.error("Fetch categories error:", err);
     }
   };
 
+  const fetchCategoryMasters = async () => {
+    try {
+      const snap = await getDocs(collection(db, "service_categories_master"));
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setCategoryMasters(list);
+      console.log("Fetched category masters:", list);
+    } catch (err) {
+      console.error("Fetch category masters error:", err);
+    }
+  };
+
   const fetchServices = async () => {
     try {
       const user = auth.currentUser;
-      if (!user) return;
+      if (!user) {
+        console.log("No user found, cannot fetch services");
+        return;
+      }
+
+      console.log("Fetching services for user:", user.uid);
 
       const q = query(
         collection(db, "service_services"),
@@ -109,6 +128,9 @@ const Technicians = () => {
         ...doc.data(),
       }));
 
+      console.log("Fetched services:", list);
+      console.log("Number of services:", list.length);
+      
       setServices(list);
     } catch (err) {
       console.error("Fetch services error:", err);
@@ -120,7 +142,7 @@ const Technicians = () => {
     setName("");
     setPhone("");
     setAadharNumber("");
-    setRole("");
+    setAssignedCategories([]);
     setAssignedServices([]);
     setIsActive(true);
     setShowModal(true);
@@ -131,7 +153,8 @@ const Technicians = () => {
     setName(technician.name || "");
     setPhone(technician.phone || "");
     setAadharNumber(technician.aadharNumber || "");
-    setRole(technician.role || "");
+    // Handle both old single role and new multiple categories
+    setAssignedCategories(technician.assignedCategories || (technician.role ? [technician.role] : []));
     setAssignedServices(technician.assignedServices || []);
     setIsActive(technician.isActive ?? true);
     setShowModal(true);
@@ -156,7 +179,8 @@ const Technicians = () => {
         name: name.trim(),
         phone: phone.trim(),
         aadharNumber: aadharNumber.trim() || null,
-        role: role || null,
+        role: assignedCategories.length > 0 ? assignedCategories[0] : null, // Keep first category as primary role for backward compatibility
+        assignedCategories: assignedCategories, // New field for multiple categories
         assignedServices: assignedServices,
         isActive: isActive,
         rating: editTechnician?.rating || 4.5,
@@ -212,7 +236,7 @@ const Technicians = () => {
     setName("");
     setPhone("");
     setAadharNumber("");
-    setRole("");
+    setAssignedCategories([]);
     setAssignedServices([]);
     setIsActive(true);
     setEditTechnician(null);
@@ -231,9 +255,89 @@ const Technicians = () => {
     );
   };
 
+  const handleCategoryToggle = (categoryId) => {
+    setAssignedCategories(prev => {
+      const newCategories = prev.includes(categoryId)
+        ? prev.filter(id => id !== categoryId)
+        : [...prev, categoryId];
+      
+      console.log("Categories changed to:", newCategories);
+      
+      // When categories change, filter assigned services to only keep valid ones
+      if (newCategories.length > 0) {
+        const validServices = services.filter(service => {
+          const serviceCategoryMasterId = service.categoryMasterId;
+          
+          // Check if any selected company category maps to this service's master category
+          return newCategories.some(companyCategoryId => {
+            const companyCategory = categories.find(cat => cat.id === companyCategoryId);
+            const masterCategoryId = companyCategory?.masterCategoryId;
+            return masterCategoryId === serviceCategoryMasterId;
+          });
+        }).map(service => service.id);
+        
+        console.log("Valid services for new categories:", validServices);
+        setAssignedServices(prev => prev.filter(serviceId => validServices.includes(serviceId)));
+      } else {
+        // If no categories selected, clear all services
+        setAssignedServices([]);
+      }
+      
+      return newCategories;
+    });
+  };
+
+  // Get services filtered by selected categories
+  const getFilteredServices = () => {
+    if (assignedCategories.length === 0) {
+      return [];
+    }
+    
+    console.log("Filtering services with categories:", assignedCategories);
+    console.log("Available services:", services.length);
+    console.log("Available company categories:", categories.length);
+    
+    return services.filter(service => {
+      const serviceCategoryMasterId = service.categoryMasterId;
+      console.log(`Checking service "${service.name}" with categoryMasterId: ${serviceCategoryMasterId}`);
+      
+      // Check if any selected company category maps to this service's master category
+      const matches = assignedCategories.some(companyCategoryId => {
+        const companyCategory = categories.find(cat => cat.id === companyCategoryId);
+        console.log(`Company category ${companyCategoryId}:`, companyCategory);
+        
+        // Company category should have masterCategoryId field
+        const masterCategoryId = companyCategory?.masterCategoryId;
+        console.log(`Master category ID: ${masterCategoryId}, Service master ID: ${serviceCategoryMasterId}`);
+        
+        return masterCategoryId === serviceCategoryMasterId;
+      });
+      
+      console.log(`Service "${service.name}": matches=${matches}`);
+      return matches;
+    });
+  };
+
   const getCategoryName = (categoryId) => {
+    console.log(`Looking for category ID: "${categoryId}"`);
+    console.log("Available categories:", categories.map(cat => ({id: cat.id, name: cat.name})));
+    
     const category = categories.find(cat => cat.id === categoryId);
-    return category ? category.name : "Unknown Category";
+    const result = category ? category.name : "Unknown Category";
+    console.log(`Category ID "${categoryId}" -> "${result}"`);
+    return result;
+  };
+
+  const getCategoryMasterName = (categoryMasterId) => {
+    const cat = categoryMasters.find(c => c.id === categoryMasterId);
+    return cat ? cat.name : "Unknown Category";
+  };
+
+  const getServiceCategoryName = (service) => {
+    // Use categoryMasterId as the primary field and get name from categoryMasters
+    const categoryId = service.categoryMasterId;
+    const categoryName = getCategoryMasterName(categoryId);
+    return categoryName || "No Category";
   };
 
   const getServiceName = (serviceId) => {
@@ -244,8 +348,24 @@ const Technicians = () => {
   useEffect(() => {
     fetchTechnicians();
     fetchCategories();
+    fetchCategoryMasters(); // Add this
     fetchServices();
   }, []);
+
+  // Debug effect to log data when it changes
+  useEffect(() => {
+    console.log("=== DEBUG INFO ===");
+    console.log("Categories loaded:", categories.length);
+    console.log("Services loaded:", services.length);
+    console.log("Category Masters loaded:", categoryMasters.length);
+    
+    if (categories.length > 0) {
+      console.log("Sample category:", categories[0]);
+    }
+    if (services.length > 0) {
+      console.log("Sample service:", services[0]);
+    }
+  }, [categories, services, categoryMasters]);
 
   return (
     <div className="sd-main">
@@ -449,7 +569,16 @@ const Technicians = () => {
                         </div>
                       )}
                       
-                      {technician.role && (
+                      {(technician.assignedCategories && technician.assignedCategories.length > 0) ? (
+                        <div className="technicians-contact-item">
+                          <svg className="technicians-contact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                            <line x1="8" y1="21" x2="16" y2="21"/>
+                            <line x1="12" y1="17" x2="12" y2="21"/>
+                          </svg>
+                          <span>Categories: {technician.assignedCategories.map(catId => getCategoryName(catId)).join(", ")}</span>
+                        </div>
+                      ) : technician.role && (
                         <div className="technicians-contact-item">
                           <svg className="technicians-contact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                             <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
@@ -598,15 +727,41 @@ const Technicians = () => {
               </div>
 
               <div className="sd-form-group">
-                <label>Role / Specialization</label>
-                <select value={role} onChange={e => setRole(e.target.value)}>
-                  <option value="">Select role</option>
-                  {categories.map(category => (
+                <label>Categories / Specializations</label>
+                <select 
+                  value="" 
+                  onChange={(e) => {
+                    if (e.target.value && !assignedCategories.includes(e.target.value)) {
+                      handleCategoryToggle(e.target.value);
+                    }
+                  }}
+                  className="sd-form-select"
+                >
+                  <option value="">Select category to add</option>
+                  {categories.filter(cat => !assignedCategories.includes(cat.id)).map(category => (
                     <option key={category.id} value={category.id}>
                       {category.name}
                     </option>
                   ))}
                 </select>
+                
+                {assignedCategories.length > 0 && (
+                  <div className="technicians-selected-categories-list">
+                    <label>Selected Categories:</label>
+                    {assignedCategories.map(catId => (
+                      <div key={catId} className="technicians-selected-category-item">
+                        <span>{getCategoryName(catId)}</span>
+                        <button 
+                          type="button"
+                          onClick={() => handleCategoryToggle(catId)}
+                          className="technicians-remove-category-btn"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="technicians-status-toggle">
@@ -626,17 +781,32 @@ const Technicians = () => {
                 <div className="sd-services-list">
                   {services.length === 0 ? (
                     <p className="technicians-no-services">No services available. Create services first.</p>
+                  ) : assignedCategories.length === 0 ? (
+                    <div className="technicians-services-info">
+                      <small>Please select categories first to see available services.</small>
+                    </div>
                   ) : (
-                    services.map(service => (
-                      <label key={service.id} className="sd-service-checkbox">
-                        <input
-                          type="checkbox"
-                          checked={assignedServices.includes(service.id)}
-                          onChange={() => handleServiceToggle(service.id)}
-                        />
-                        <span>{service.name}</span>
-                      </label>
-                    ))
+                    <>
+                      <div className="technicians-services-info">
+                        <small>Services for selected categories ({getFilteredServices().length} found):</small>
+                      </div>
+                      {getFilteredServices().map(service => (
+                        <label key={service.id} className="sd-service-checkbox">
+                          <input
+                            type="checkbox"
+                            checked={assignedServices.includes(service.id)}
+                            onChange={() => handleServiceToggle(service.id)}
+                          />
+                          <span>{service.name}</span>
+                          <small className="service-category-label">
+                            {getServiceCategoryName(service)}
+                          </small>
+                        </label>
+                      ))}
+                      {getFilteredServices().length === 0 && (
+                        <p className="technicians-no-services">No services found for selected categories.</p>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
