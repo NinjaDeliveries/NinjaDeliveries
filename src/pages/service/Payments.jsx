@@ -69,26 +69,33 @@ const Payments = () => {
         const paymentDoc = doc.data();
         console.log('💰 Processing payment:', doc.id, {
           // All possible service/category fields
-          serviceName: paymentDoc.serviceName,
+          serviceName: paymentDoc.serviceName, // "Electrical" (category)
+          workerName: paymentDoc.workerName, // "Lakshay Saini" (worker name)
+          workName: paymentDoc.workName, // "Doorbell & security system" (service name)
           service: paymentDoc.service,
           serviceTitle: paymentDoc.serviceTitle,
           serviceDetails: paymentDoc.serviceDetails,
+          subService: paymentDoc.subService,
+          actualService: paymentDoc.actualService,
           categoryName: paymentDoc.categoryName,
           category: paymentDoc.category,
           serviceCategory: paymentDoc.serviceCategory,
+          // Worker fields
+          assignedWorker: paymentDoc.assignedWorker,
+          technicianName: paymentDoc.technicianName,
+          actualWorker: paymentDoc.actualWorker,
+          workerAssigned: paymentDoc.workerAssigned,
           // Amount fields
           amount: paymentDoc.amount,
           totalPrice: paymentDoc.totalPrice,
           price: paymentDoc.price,
-          // Worker fields
-          workerName: paymentDoc.workerName,
-          assignedWorker: paymentDoc.assignedWorker,
-          technicianName: paymentDoc.technicianName,
           // Phone fields
           customerPhone: paymentDoc.customerPhone,
           phone: paymentDoc.phone,
-          // Full document for reference
-          fullDoc: paymentDoc
+          // Booking ID to fetch details
+          bookingId: paymentDoc.bookingId,
+          // Show ALL field names to identify the correct ones
+          allFields: Object.keys(paymentDoc)
         });
         
         const createdAt = paymentDoc.createdAt?.toDate();
@@ -98,15 +105,15 @@ const Payments = () => {
           amount: paymentDoc.amount || paymentDoc.totalPrice || paymentDoc.price || paymentDoc.finalAmount || 0,
           customerName: paymentDoc.customerName || paymentDoc.customer || 'Unknown Customer',
           customerPhone: paymentDoc.customerPhone || paymentDoc.phone || paymentDoc.mobile || '',
-          // Fix the service/category mapping based on your data structure
-          serviceName: paymentDoc.serviceName || paymentDoc.serviceTitle || paymentDoc.serviceDetails || paymentDoc.subService || 'Unknown Service',
-          categoryName: paymentDoc.service || paymentDoc.category || paymentDoc.categoryName || 'Unknown Category',
+          // CORRECT mapping based on your Firebase structure:
+          categoryName: paymentDoc.serviceName || paymentDoc.service || paymentDoc.category || 'Unknown Category',
+          serviceName: paymentDoc.workName || paymentDoc.serviceDetails || paymentDoc.subService || 'Unknown Service',
           paymentMethod: paymentDoc.paymentMethod || 'cash',
           paymentGateway: paymentDoc.paymentGateway || 'cash',
           status: paymentDoc.paymentStatus || paymentDoc.status || 'pending',
           date: createdAt,
           bookingId: paymentDoc.bookingId || doc.id,
-          workerName: paymentDoc.workerName || paymentDoc.assignedWorker || paymentDoc.technicianName || paymentDoc.workerAssigned || 'Not Assigned',
+          workerName: paymentDoc.workerName || paymentDoc.assignedWorker || paymentDoc.technicianName || 'Not Assigned',
           companyName: paymentDoc.companyName || 'Service Provider'
         };
 
@@ -191,15 +198,15 @@ const Payments = () => {
             amount: booking.totalPrice || booking.price || booking.amount || booking.finalAmount || 0,
             customerName: booking.customerName || booking.customer || 'Unknown Customer',
             customerPhone: booking.customerPhone || booking.phone || booking.mobile || '',
-            // Fix the service/category mapping based on your data structure
-            serviceName: booking.serviceName || booking.serviceTitle || booking.serviceDetails || booking.subService || 'Unknown Service',
-            categoryName: booking.service || booking.category || booking.categoryName || 'Unknown Category',
+            // CORRECT mapping based on your Firebase structure:
+            categoryName: booking.serviceName || booking.service || booking.category || 'Unknown Category',
+            serviceName: booking.workName || booking.serviceDetails || booking.subService || 'Unknown Service',
             paymentMethod: booking.paymentMethod || 'cash',
             paymentGateway: booking.paymentGateway || 'cash',
             status: 'completed',
             date: createdAt,
             bookingId: doc.id,
-            workerName: booking.assignedWorker || booking.workerName || booking.technicianName || booking.workerAssigned || 'Not Assigned',
+            workerName: booking.workerName || booking.assignedWorker || booking.technicianName || 'Not Assigned',
             companyName: 'Service Provider'
           };
 

@@ -6,6 +6,270 @@ import "../../style/ServiceDashboard.css";
 import BannerManagement from "./BannerManagement";
 import { useNotifications } from "../../context/NotificationContext";
 
+// Booking Details Modal Component
+function BookingDetailsModal({ booking, onClose }) {
+  if (!booking) return null;
+
+  const formatDate = (date) => {
+    if (!date) return 'Unknown Date';
+    
+    // Handle Firebase Timestamp
+    let dateObj;
+    if (date && typeof date.toDate === 'function') {
+      dateObj = date.toDate(); // Firebase Timestamp
+    } else if (date instanceof Date) {
+      dateObj = date; // Already a Date object
+    } else if (typeof date === 'string' || typeof date === 'number') {
+      dateObj = new Date(date); // String or number timestamp
+    } else {
+      return 'Invalid Date';
+    }
+    
+    // Check if the date is valid
+    if (isNaN(dateObj.getTime())) {
+      return 'Invalid Date';
+    }
+    
+    return dateObj.toLocaleDateString('en-IN', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const getStatusColor = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'completed': return '#10b981';
+      case 'in-progress': return '#3b82f6';
+      case 'assigned': return '#8b5cf6';
+      case 'pending': return '#f59e0b';
+      default: return '#6b7280';
+    }
+  };
+
+  const getStatusIcon = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'completed': return '✅';
+      case 'in-progress': return '🔄';
+      case 'assigned': return '👤';
+      case 'pending': return '⏳';
+      default: return '📋';
+    }
+  };
+
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      background: 'rgba(0, 0, 0, 0.5)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 1000,
+      padding: '20px'
+    }}>
+      <div style={{
+        background: 'white',
+        borderRadius: '16px',
+        padding: '24px',
+        width: '100%',
+        maxWidth: '500px',
+        maxHeight: '80vh',
+        overflowY: 'auto',
+        boxShadow: '0 25px 50px rgba(0, 0, 0, 0.25)'
+      }}>
+        {/* Header */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '20px',
+          paddingBottom: '16px',
+          borderBottom: '1px solid #e5e7eb'
+        }}>
+          <h2 style={{
+            margin: 0,
+            fontSize: '20px',
+            fontWeight: '600',
+            color: '#1f2937'
+          }}>
+            📋 Booking Details
+          </h2>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'none',
+              border: 'none',
+              fontSize: '24px',
+              cursor: 'pointer',
+              color: '#6b7280',
+              padding: '4px',
+              borderRadius: '4px'
+            }}
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Booking Info */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {/* Status */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            padding: '12px',
+            background: '#f9fafb',
+            borderRadius: '8px'
+          }}>
+            <span style={{ fontSize: '20px' }}>
+              {getStatusIcon(booking.status)}
+            </span>
+            <div>
+              <p style={{ margin: 0, fontSize: '14px', color: '#6b7280' }}>Status</p>
+              <p style={{
+                margin: 0,
+                fontSize: '16px',
+                fontWeight: '600',
+                color: getStatusColor(booking.status)
+              }}>
+                {booking.status?.charAt(0).toUpperCase() + booking.status?.slice(1) || 'Unknown'}
+              </p>
+            </div>
+          </div>
+
+          {/* Service & Category */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div>
+              <p style={{ margin: '0 0 4px 0', fontSize: '14px', color: '#6b7280' }}>Category</p>
+              <p style={{ margin: 0, fontSize: '16px', fontWeight: '500', color: '#1f2937' }}>
+                {booking.serviceName || 'Unknown Category'}
+              </p>
+            </div>
+            <div>
+              <p style={{ margin: '0 0 4px 0', fontSize: '14px', color: '#6b7280' }}>Service</p>
+              <p style={{ margin: 0, fontSize: '16px', fontWeight: '500', color: '#1f2937' }}>
+                {booking.workName || booking.serviceDetails || 'Unknown Service'}
+              </p>
+            </div>
+          </div>
+
+          {/* Customer Info */}
+          <div>
+            <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: '#6b7280' }}>Customer Information</p>
+            <div style={{
+              padding: '12px',
+              background: '#f3f4f6',
+              borderRadius: '8px'
+            }}>
+              <p style={{ margin: '0 0 4px 0', fontSize: '16px', fontWeight: '500', color: '#1f2937' }}>
+                👤 {booking.customerName || 'Unknown Customer'}
+              </p>
+              <p style={{ margin: 0, fontSize: '14px', color: '#6b7280' }}>
+                📞 {booking.customerPhone || 'No phone number'}
+              </p>
+            </div>
+          </div>
+
+          {/* Worker Info */}
+          <div>
+            <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: '#6b7280' }}>Assigned Worker</p>
+            <div style={{
+              padding: '12px',
+              background: '#f3f4f6',
+              borderRadius: '8px'
+            }}>
+              <p style={{ margin: 0, fontSize: '16px', fontWeight: '500', color: '#1f2937' }}>
+                👷 {booking.workerName || booking.assignedWorker || 'Not Assigned'}
+              </p>
+            </div>
+          </div>
+
+          {/* Amount */}
+          <div>
+            <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: '#6b7280' }}>Amount</p>
+            <div style={{
+              padding: '12px',
+              background: '#ecfdf5',
+              borderRadius: '8px',
+              border: '1px solid #d1fae5'
+            }}>
+              <p style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: '#059669' }}>
+                <span className="price-display">
+                  <span className="rupee-symbol">₹</span>
+                  <span className="price-amount">{(booking.totalPrice || booking.price || booking.amount || 0).toLocaleString('en-IN')}</span>
+                </span>
+              </p>
+            </div>
+          </div>
+
+          {/* Dates */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div>
+              <p style={{ margin: '0 0 4px 0', fontSize: '14px', color: '#6b7280' }}>Created</p>
+              <p style={{ margin: 0, fontSize: '14px', color: '#1f2937' }}>
+                📅 {formatDate(booking.createdAt)}
+              </p>
+            </div>
+            <div>
+              <p style={{ margin: '0 0 4px 0', fontSize: '14px', color: '#6b7280' }}>Updated</p>
+              <p style={{ margin: 0, fontSize: '14px', color: '#1f2937' }}>
+                🕐 {formatDate(booking.updatedAt || booking.createdAt)}
+              </p>
+            </div>
+          </div>
+
+          {/* Booking ID */}
+          <div>
+            <p style={{ margin: '0 0 4px 0', fontSize: '14px', color: '#6b7280' }}>Booking ID</p>
+            <p style={{
+              margin: 0,
+              fontSize: '12px',
+              fontFamily: 'monospace',
+              color: '#6b7280',
+              background: '#f3f4f6',
+              padding: '4px 8px',
+              borderRadius: '4px'
+            }}>
+              {booking.id}
+            </p>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div style={{
+          marginTop: '24px',
+          paddingTop: '16px',
+          borderTop: '1px solid #e5e7eb',
+          display: 'flex',
+          justifyContent: 'flex-end'
+        }}>
+          <button
+            onClick={onClose}
+            style={{
+              background: '#4f46e5',
+              color: 'white',
+              border: 'none',
+              padding: '8px 16px',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: '500'
+            }}
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Notification Bell Component
 function NotificationBell() {
   const { getStoredNotificationCount, storedNotifications, clearAllStoredNotifications, removeStoredNotification } = useNotifications();
@@ -248,6 +512,8 @@ const Overview = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [serviceData, setServiceData] = useState(null);
   const [deliveryZoneInfo, setDeliveryZoneInfo] = useState(null);
+  const [selectedBooking, setSelectedBooking] = useState(null); // New state for modal
+  const [showBookingModal, setShowBookingModal] = useState(false); // New state for modal
   const [stats, setStats] = useState({
     totalServices: 0,
     totalWorkers: 0,
@@ -354,6 +620,8 @@ const Overview = () => {
     });
 
     const unsubBookings = onSnapshot(bookingsQ, (snap) => {
+      console.log('📊 Bookings snapshot received:', snap.size, 'bookings');
+      
       const totalBookings = snap.size;
       const completedBookings = snap.docs.filter(d => d.data().status === 'completed').length;
       
@@ -368,6 +636,13 @@ const Overview = () => {
 
       // Calculate completion rate
       const completionRate = totalBookings > 0 ? (completedBookings / totalBookings) * 100 : 0;
+
+      console.log('📈 Calculated stats:', {
+        totalBookings,
+        completedBookings,
+        totalRevenue,
+        completionRate
+      });
 
       setStats(prev => ({ 
         ...prev, 
@@ -410,6 +685,8 @@ const Overview = () => {
   }, []);
 
   const processWeeklyData = (bookingDocs) => {
+    console.log('📊 Processing weekly data for', bookingDocs.length, 'bookings');
+    
     const weekData = [
       { day: "Mon", bookings: 0, revenue: 0 },
       { day: "Tue", bookings: 0, revenue: 0 },
@@ -420,22 +697,45 @@ const Overview = () => {
       { day: "Sun", bookings: 0, revenue: 0 },
     ];
 
+    // Fix: Show last 7 days instead of current calendar week
     const today = new Date();
-    const weekStart = new Date(today.setDate(today.getDate() - today.getDay()));
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(today.getDate() - 6); // Last 7 days including today
+    sevenDaysAgo.setHours(0, 0, 0, 0); // Start of day
+
+    console.log('📅 Showing data from:', sevenDaysAgo.toLocaleDateString(), 'to', today.toLocaleDateString());
 
     bookingDocs.forEach(doc => {
       const booking = doc.data();
       const bookingDate = booking.createdAt?.toDate();
       
-      if (bookingDate && bookingDate >= weekStart) {
-        const dayIndex = bookingDate.getDay();
+      console.log('📋 Processing booking:', {
+        id: doc.id,
+        date: bookingDate?.toLocaleDateString(),
+        status: booking.status,
+        amount: booking.totalPrice || booking.price || booking.amount,
+        isInLast7Days: bookingDate && bookingDate >= sevenDaysAgo
+      });
+      
+      if (bookingDate && bookingDate >= sevenDaysAgo) {
+        // Fix day index mapping: getDay() returns 0=Sunday, 1=Monday, etc.
+        // Our array is [Mon, Tue, Wed, Thu, Fri, Sat, Sun]
+        let dayIndex = bookingDate.getDay();
+        if (dayIndex === 0) dayIndex = 6; // Sunday -> index 6
+        else dayIndex = dayIndex - 1; // Monday=1 -> index 0, Tuesday=2 -> index 1, etc.
+        
         weekData[dayIndex].bookings += 1;
-        if (booking.status === 'completed') {
-          weekData[dayIndex].revenue += (booking.totalPrice || booking.price || booking.amount || 0);
+        
+        // Add revenue for all bookings, not just completed ones
+        const amount = booking.totalPrice || booking.price || booking.amount || 0;
+        if (amount > 0) {
+          weekData[dayIndex].revenue += amount;
+          console.log(`💰 Added ₹${amount} to ${weekData[dayIndex].day} (${bookingDate.toLocaleDateString()})`);
         }
       }
     });
 
+    console.log('📈 Final weekly data:', weekData);
     return weekData;
   };
 
@@ -799,7 +1099,16 @@ const Overview = () => {
                             <span className="price-amount-small">{(booking.totalPrice || booking.price || booking.amount || 0).toLocaleString()}</span>
                           </span>
                         </div>
-                        <button className="modern-booking-view">👁</button>
+                        <button 
+                          className="modern-booking-view"
+                          onClick={() => {
+                            setSelectedBooking(booking);
+                            setShowBookingModal(true);
+                          }}
+                          title="View booking details"
+                        >
+                          👁
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -878,6 +1187,17 @@ const Overview = () => {
         </>
       ) : (
         <BannerManagement onBack={() => setActiveTab('dashboard')} />
+      )}
+
+      {/* Booking Details Modal */}
+      {showBookingModal && (
+        <BookingDetailsModal 
+          booking={selectedBooking} 
+          onClose={() => {
+            setShowBookingModal(false);
+            setSelectedBooking(null);
+          }} 
+        />
       )}
     </div>
   );
