@@ -38,10 +38,10 @@ import { useLocation } from "react-router-dom";
 import { useUser } from "./context/adminContext";
 import ProtectedRoute from "./ProtectedRoute";
 import { logAdminActivity } from "./utils/activityLogger";
-import ServiceDashboard from "./pages/ServiceDashboard";
-import ServiceManagement from "./pages/service/ServiceManagement";
-import ServiceBookings from "./pages/service/ServiceBookings";
-import ServiceSlots from "./pages/service/ServiceSlots";
+// import ServiceDashboard from "./pages/ServiceDashboard";
+// import ServiceManagement from "./pages/service/ServiceManagement";
+// import ServiceBookings from "./pages/service/ServiceBookings";
+// import ServiceSlots from "./pages/service/ServiceSlots";
 
 
 function App() {
@@ -339,7 +339,7 @@ useEffect(() => {
           }
         />
       )}
-      <Route path="/service-dashboard" element={<ServiceDashboard />} />
+      {/* <Route path="/service-dashboard" element={<ServiceDashboard />} />
 <Route
   path="/service-dashboard/services"
   element={<ServiceManagement />}
@@ -351,7 +351,7 @@ useEffect(() => {
 <Route
   path="/service-dashboard/slots"
   element={<ServiceSlots />}
-/>
+/> */}
 
         </Routes>
     </div>
