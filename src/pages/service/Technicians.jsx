@@ -306,11 +306,13 @@ const Technicians = () => {
         const companyCategory = categories.find(cat => cat.id === companyCategoryId);
         console.log(`Company category ${companyCategoryId}:`, companyCategory);
         
-        // Company category should have masterCategoryId field
+        // Company category should have masterCategoryId field that matches service's categoryMasterId
         const masterCategoryId = companyCategory?.masterCategoryId;
         console.log(`Master category ID: ${masterCategoryId}, Service master ID: ${serviceCategoryMasterId}`);
         
-        return masterCategoryId === serviceCategoryMasterId;
+        const isMatch = masterCategoryId === serviceCategoryMasterId;
+        console.log(`Match result: ${isMatch}`);
+        return isMatch;
       });
       
       console.log(`Service "${service.name}": matches=${matches}`);
