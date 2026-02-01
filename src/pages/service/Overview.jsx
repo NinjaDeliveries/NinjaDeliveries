@@ -837,9 +837,9 @@ const Overview = () => {
                 </p>
               </div>
               <div className="modern-welcome-status">
-                <div className="modern-status-badge-compact online">
+                <div className={`modern-status-badge-compact ${serviceData?.isActive !== false ? 'online' : 'offline'}`}>
                   <span className="modern-status-dot-small"></span>
-                  Business Online
+                  {serviceData?.isActive !== false ? 'Business Online' : 'Business Offline'}
                 </div>
                 <div className="modern-time-badge-compact">
                   🕐 Last updated: Just now
@@ -863,7 +863,7 @@ const Overview = () => {
                     <span className="modern-owner-text">Owner: {serviceData?.name || (loading ? 'Loading...' : 'User')}</span>
                     <div className="modern-status-compact">
                       <div className="modern-status-dot-compact"></div>
-                      <span>Business Active</span>
+                      <span>{serviceData?.isActive !== false ? 'Business Active' : 'Business Inactive'}</span>
                     </div>
                   </div>
                 </div>

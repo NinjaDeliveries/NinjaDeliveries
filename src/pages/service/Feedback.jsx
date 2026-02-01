@@ -31,35 +31,114 @@ const Feedback = () => {
     try {
       const user = auth.currentUser;
       if (!user) {
+        console.log("No authenticated user found");
         setLoading(false);
         return;
       }
 
-      // Get service company document
+      console.log("Fetching feedback for user:", user.uid);
+
+      // Try multiple approaches to find the correct company ID
+      let companyId = user.uid; // Default to user ID
+
+      // Get service company document to check if it exists
       const companyRef = doc(db, "service_company", user.uid);
       const companySnap = await getDoc(companyRef);
 
-      if (!companySnap.exists()) {
-        setLoading(false);
-        return;
+      if (companySnap.exists()) {
+        const companyData = companySnap.data();
+        console.log("Company data found:", companyData);
+        // Use the document ID as company ID
+        companyId = companySnap.id;
+      } else {
+        console.log("No service_company document found, using user.uid as companyId");
       }
 
-      // Use service_company ID
-      const companyId = companySnap.id;
+      console.log("Using companyId for feedback query:", companyId);
 
-      // Fetch feedback from serviceRatings collection
-      const q = query(
-        collection(db, "serviceRatings"),
-        where("companyId", "==", companyId),
-        orderBy("createdAt", "desc")
-      );
+      // Try different query approaches
+      const queries = [
+        // Query 1: Using companyId field
+        query(
+          collection(db, "serviceRatings"),
+          where("companyId", "==", companyId)
+        ),
+        // Query 2: Using serviceCompanyId field (alternative field name)
+        query(
+          collection(db, "serviceRatings"),
+          where("serviceCompanyId", "==", companyId)
+        ),
+        // Query 3: Using company field (another alternative)
+        query(
+          collection(db, "serviceRatings"),
+          where("company", "==", companyId)
+        )
+      ];
 
-      const snap = await getDocs(q);
-      const feedbackList = snap.docs.map((d) => ({
-        id: d.id,
-        ...d.data(),
-        createdAt: d.data().createdAt?.toDate() || new Date(d.data().createdAt),
-      }));
+      let feedbackList = [];
+      let queryWorked = false;
+
+      // Try each query until one works
+      for (let i = 0; i < queries.length; i++) {
+        try {
+          console.log(`Trying query ${i + 1}...`);
+          const snap = await getDocs(queries[i]);
+          console.log(`Query ${i + 1} returned ${snap.docs.length} documents`);
+          
+          if (snap.docs.length > 0) {
+            feedbackList = snap.docs.map((d) => {
+              const data = d.data();
+              console.log("Feedback document data:", data);
+              return {
+                id: d.id,
+                ...data,
+                createdAt: data.createdAt?.toDate() || new Date(data.createdAt) || new Date(),
+              };
+            });
+            queryWorked = true;
+            console.log("Successfully fetched feedback:", feedbackList);
+            break;
+          }
+        } catch (queryError) {
+          console.error(`Query ${i + 1} failed:`, queryError);
+        }
+      }
+
+      if (!queryWorked) {
+        // If no queries worked, try to get all documents and filter manually
+        console.log("All queries failed, trying to fetch all serviceRatings documents...");
+        try {
+          const allDocsSnap = await getDocs(collection(db, "serviceRatings"));
+          console.log(`Found ${allDocsSnap.docs.length} total serviceRatings documents`);
+          
+          if (allDocsSnap.docs.length === 0) {
+            console.log("⚠️ No documents found in serviceRatings collection at all!");
+            console.log("This could mean:");
+            console.log("1. The collection name is different (check Firebase console)");
+            console.log("2. No ratings have been created yet");
+            console.log("3. Security rules are blocking access");
+          }
+          
+          const allDocs = allDocsSnap.docs.map(d => ({
+            id: d.id,
+            ...d.data()
+          }));
+          
+          console.log("All serviceRatings documents:", allDocs);
+          
+          // Filter manually for this company
+          feedbackList = allDocs.filter(doc => 
+            doc.companyId === companyId || 
+            doc.serviceCompanyId === companyId || 
+            doc.company === companyId
+          );
+          
+          console.log("Filtered feedback for this company:", feedbackList);
+        } catch (allDocsError) {
+          console.error("Failed to fetch all documents:", allDocsError);
+          console.log("This might be a security rules issue or the collection doesn't exist");
+        }
+      }
 
       setRatings(feedbackList);
       calculateStats(feedbackList);
@@ -185,6 +264,18 @@ const Feedback = () => {
         <div>
           <h1>Customer Feedback</h1>
           <p>View and analyze customer reviews and ratings for your services</p>
+        </div>
+        <div className="feedback-header-actions">
+          <button 
+            className="feedback-refresh-btn"
+            onClick={() => {
+              setLoading(true);
+              fetchRatings();
+            }}
+            disabled={loading}
+          >
+            🔄 Refresh
+          </button>
         </div>
       </div>
 
@@ -315,6 +406,21 @@ const Feedback = () => {
                 ? "Try adjusting your filters"
                 : "Customer feedback will appear here when they rate your services"}
             </p>
+            {/* Debug info */}
+            <div className="feedback-debug-info" style={{ 
+              marginTop: '20px', 
+              padding: '15px', 
+              background: '#f8f9fa', 
+              borderRadius: '8px', 
+              fontSize: '12px', 
+              color: '#666',
+              textAlign: 'left'
+            }}>
+              <strong>Debug Info:</strong><br/>
+              Total ratings fetched: {ratings.length}<br/>
+              Current user ID: {auth.currentUser?.uid}<br/>
+              Check browser console for detailed logs
+            </div>
           </div>
         ) : (
           filteredRatings.map((rating) => (

@@ -22,6 +22,7 @@ const Bookings = () => {
   const [otpInput, setOtpInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState(""); // New date filter state
 
   const statusConfig = {
     pending: {
@@ -101,7 +102,9 @@ const Bookings = () => {
       );
 
       const snap = await getDocs(q);
-      const today = new Date().toISOString().split("T")[0];
+      const now = new Date();
+      const today = now.toISOString().split("T")[0];
+      const currentTime = now.getHours() * 60 + now.getMinutes(); // Current time in minutes
 
       const list = [];
       const expiredUpdates = [];
@@ -110,10 +113,33 @@ const Bookings = () => {
         const data = docSnap.data();
 
         // Auto-expire logic - check if booking should be expired
+        let shouldExpire = false;
+        
+        // 1. Past date bookings that are not completed/rejected/expired
         if (
           data.date < today &&
           !["completed", "rejected", "expired"].includes(data.status)
         ) {
+          shouldExpire = true;
+        }
+        
+        // 2. Same day bookings that are 1 hour past their time and still pending
+        if (
+          data.date === today &&
+          data.time &&
+          data.status === "pending"
+        ) {
+          const [hours, minutes] = data.time.split(':').map(Number);
+          const bookingTime = hours * 60 + minutes; // Booking time in minutes
+          const timeDiff = currentTime - bookingTime; // Difference in minutes
+          
+          // If more than 60 minutes past the booking time, expire it
+          if (timeDiff > 60) {
+            shouldExpire = true;
+          }
+        }
+
+        if (shouldExpire) {
           // Add to expired updates batch
           expiredUpdates.push({
             id: docSnap.id,
@@ -257,7 +283,7 @@ const Bookings = () => {
     }
   };
 
-  // Filter bookings based on status filter and search
+  // Filter and sort bookings based on status filter and search
   const filteredBookings = bookings.filter((booking) => {
     // Search filter - include more fields for better search
     const matchesSearch = !searchQuery || 
@@ -269,15 +295,92 @@ const Bookings = () => {
 
     if (!matchesSearch) return false;
 
+    // Date filter
+    if (dateFilter && booking.date !== dateFilter) return false;
+
     // Status filters
-    if (statusFilter === "all") return true;
+    if (statusFilter === "all") {
+      // Exclude completed bookings from "All" tab - they should only show in "Completed" tab
+      return booking.status !== "completed";
+    }
     if (statusFilter === "expired") return booking.status === "expired";
     return booking.status === statusFilter;
+  }).sort((a, b) => {
+    // Sort by date first (oldest first), then by time
+    if (a.date !== b.date) {
+      return new Date(a.date) - new Date(b.date);
+    }
+    // If same date, sort by time
+    return (a.time || '').localeCompare(b.time || '');
   });
+
+  // Group bookings by date for better organization
+  const groupedBookings = filteredBookings.reduce((groups, booking) => {
+    const date = booking.date;
+    if (!groups[date]) {
+      groups[date] = [];
+    }
+    groups[date].push(booking);
+    return groups;
+  }, {});
+
+  // Helper function to format date with day name
+  const formatDateWithDay = (dateString) => {
+    if (!dateString) return 'Unknown Date';
+    
+    try {
+      const date = new Date(dateString + 'T00:00:00'); // Add time to avoid timezone issues
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(today.getDate() + 1);
+      const yesterday = new Date(today);
+      yesterday.setDate(today.getDate() - 1);
+      
+      // Format date string for comparison (YYYY-MM-DD)
+      const todayStr = today.toISOString().split('T')[0];
+      const tomorrowStr = tomorrow.toISOString().split('T')[0];
+      const yesterdayStr = yesterday.toISOString().split('T')[0];
+      
+      if (dateString === todayStr) {
+        return `Today, ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+      } else if (dateString === tomorrowStr) {
+        return `Tomorrow, ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+      } else if (dateString === yesterdayStr) {
+        return `Yesterday, ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+      } else {
+        return date.toLocaleDateString('en-US', { 
+          weekday: 'long', 
+          month: 'short', 
+          day: 'numeric',
+          year: date.getFullYear() !== today.getFullYear() ? 'numeric' : undefined
+        });
+      }
+    } catch (error) {
+      console.error('Date formatting error:', error);
+      return dateString;
+    }
+  };
+
+  // Helper function to format time in 12-hour format
+  const formatTime = (timeString) => {
+    if (!timeString) return '';
+    try {
+      const [hours, minutes] = timeString.split(':');
+      const hour = parseInt(hours);
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      const hour12 = hour % 12 || 12;
+      return `${hour12}:${minutes} ${ampm}`;
+    } catch (error) {
+      return timeString;
+    }
+  };
 
   // Get status counts
   const getStatusCount = (status) => {
-    if (status === "all") return bookings.length;
+    if (status === "all") {
+      // Exclude completed bookings from "All" count
+      return bookings.filter(b => b.status !== "completed").length;
+    }
     return bookings.filter(b => b.status === status).length;
   };
 
@@ -319,6 +422,18 @@ const Bookings = () => {
           <div className="bookings-stat-content">
             <p className="bookings-stat-label">Total</p>
             <p className="bookings-stat-value">{bookings.length}</p>
+          </div>
+        </div>
+
+        <div className="bookings-stat-card">
+          <div className="bookings-stat-icon active">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/>
+            </svg>
+          </div>
+          <div className="bookings-stat-content">
+            <p className="bookings-stat-label">Active</p>
+            <p className="bookings-stat-value">{bookings.filter(b => b.status !== "completed").length}</p>
           </div>
         </div>
 
@@ -391,6 +506,32 @@ const Bookings = () => {
             className="bookings-search-input"
           />
         </div>
+        
+        {/* Date Filter */}
+        <div className="bookings-date-filter">
+          <svg className="bookings-date-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
+            <line x1="16" x2="16" y1="2" y2="6"/>
+            <line x1="8" x2="8" y1="2" y2="6"/>
+            <line x1="3" x2="21" y1="10" y2="10"/>
+          </svg>
+          <input
+            type="date"
+            value={dateFilter}
+            onChange={(e) => setDateFilter(e.target.value)}
+            className="bookings-date-input"
+            placeholder="Filter by date"
+          />
+          {dateFilter && (
+            <button
+              className="bookings-clear-date"
+              onClick={() => setDateFilter("")}
+              title="Clear date filter"
+            >
+              ✕
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Status Tabs */}
@@ -399,7 +540,7 @@ const Bookings = () => {
           className={`bookings-tab ${statusFilter === 'all' ? 'active' : ''}`}
           onClick={() => setStatusFilter('all')}
         >
-          All ({getStatusCount("all")})
+          Active ({getStatusCount("all")})
         </button>
         <button 
           className={`bookings-tab ${statusFilter === 'pending' ? 'active' : ''}`}
@@ -466,203 +607,228 @@ const Bookings = () => {
         </button>
       </div>
 
-      {/* Bookings List */}
+      {/* Bookings List - Grouped by Date */}
       <div className="bookings-list">
-        {filteredBookings.map((booking) => {
-          const status = statusConfig[booking.status] || statusConfig.pending;
-          
-          return (
-            <div key={booking.id} className="bookings-card">
-              <div className="bookings-card-content">
-                <div className="bookings-main-section">
-                  <div className="bookings-avatar">
-                    {booking.customerName ? booking.customerName.split(" ").map(n => n[0]).join("").toUpperCase() : "U"}
+        {Object.keys(groupedBookings).length === 0 ? (
+          /* Empty State */
+          <div className="bookings-empty-state">
+            <div className="bookings-empty-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
+                <line x1="16" x2="16" y1="2" y2="6"/>
+                <line x1="8" x2="8" y1="2" y2="6"/>
+                <line x1="3" x2="21" y1="10" y2="10"/>
+              </svg>
+            </div>
+            <h3>No bookings found</h3>
+            <p>
+              {searchQuery || statusFilter !== "all" || dateFilter
+                ? "Try adjusting your filters"
+                : "Bookings will appear here when customers make them through the app"}
+            </p>
+          </div>
+        ) : (
+          /* Grouped Bookings */
+          Object.entries(groupedBookings)
+            .sort(([dateA], [dateB]) => new Date(dateA) - new Date(dateB)) // Sort dates oldest first
+            .map(([date, dateBookings]) => (
+              <div key={date} className="bookings-date-group">
+                {/* Date Header */}
+                <div className="bookings-date-header">
+                  <div className="bookings-date-info">
+                    <h3 className="bookings-date-title">{formatDateWithDay(date)}</h3>
+                    <span className="bookings-date-count">
+                      {dateBookings.length} booking{dateBookings.length !== 1 ? 's' : ''}
+                    </span>
                   </div>
-                  
-                  <div className="bookings-info">
-                    <div className="bookings-header">
-                      <div className="bookings-badges">
-                        <span className="bookings-id-badge">
-                          #{booking.id.slice(-12)}
-                        </span>
-                        <span className={`bookings-status-badge ${status.className}`}>
-                          {status.icon}
-                          <span>{status.label}</span>
-                        </span>
-                      </div>
-                      <h3 className="bookings-service-name">
-                        {booking.workName || booking.serviceName || "Service Request"}
-                      </h3>
-                      {booking.serviceName && booking.workName && booking.serviceName !== booking.workName && (
-                        <p className="bookings-main-service">Category: {booking.serviceName}</p>
-                      )}
-                    </div>
-
-                    <div className="bookings-details">
-                      <div className="bookings-detail-item">
-                        <svg className="bookings-detail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                          <circle cx="12" cy="7" r="4"/>
-                        </svg>
-                        <span>{booking.customerName}</span>
-                      </div>
-                      <div className="bookings-detail-item">
-                        <svg className="bookings-detail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                          <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
-                          <line x1="16" x2="16" y1="2" y2="6"/>
-                          <line x1="8" x2="8" y1="2" y2="6"/>
-                          <line x1="3" x2="21" y1="10" y2="10"/>
-                        </svg>
-                        <span>{booking.date}</span>
-                      </div>
-                      <div className="bookings-detail-item">
-                        <svg className="bookings-detail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                          <circle cx="12" cy="12" r="10"/>
-                          <polyline points="12,6 12,12 16,14"/>
-                        </svg>
-                        <span>{booking.time}</span>
-                      </div>
-                    </div>
-
-                    {booking.technicianName && (
-                      <div className="bookings-technician-badge">
-                        <svg className="bookings-technician-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-                          <circle cx="10" cy="7" r="4"/>
-                          <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
-                          <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                        </svg>
-                        Assigned to: {booking.technicianName}
-                      </div>
-                    )}
-                  </div>
+                  <div className="bookings-date-line"></div>
                 </div>
 
-                <div className="bookings-actions-section">
-                  <div className="bookings-amount">
-                    <div className="bookings-price">
-                      <span className="price-display">
-                        <span className="rupee-symbol">₹</span>
-                        <span className="price-amount">{(booking.totalPrice || booking.price || booking.amount || 0).toLocaleString()}</span>
-                      </span>
-                    </div>
-                    <p className="bookings-category">{booking.categoryName || "Service"}</p>
-                  </div>
+                {/* Bookings for this date */}
+                <div className="bookings-date-items">
+                  {dateBookings.map((booking) => {
+                    const status = statusConfig[booking.status] || statusConfig.pending;
+                    
+                    return (
+                      <div key={booking.id} className="bookings-card">
+                        <div className="bookings-card-content">
+                          <div className="bookings-main-section">
+                            <div className="bookings-avatar">
+                              {booking.customerName ? booking.customerName.split(" ").map(n => n[0]).join("").toUpperCase() : "U"}
+                            </div>
+                            
+                            <div className="bookings-info">
+                              <div className="bookings-header">
+                                <div className="bookings-badges">
+                                  <span className="bookings-time-badge">
+                                    🕐 {formatTime(booking.time)}
+                                  </span>
+                                  <span className="bookings-id-badge">
+                                    #{booking.id.slice(-8)}
+                                  </span>
+                                  <span className={`bookings-status-badge ${status.className}`}>
+                                    {status.icon}
+                                    <span>{status.label}</span>
+                                  </span>
+                                </div>
+                                <h3 className="bookings-service-name">
+                                  {booking.workName || booking.serviceName || "Service Request"}
+                                </h3>
+                                {booking.serviceName && booking.workName && booking.serviceName !== booking.workName && (
+                                  <p className="bookings-main-service">Category: {booking.serviceName}</p>
+                                )}
+                              </div>
 
-                  <div className="bookings-actions">
-                    <button
-                      className="bookings-view-btn"
-                      onClick={() => {
-                        setSelectedBooking(booking);
-                        setShowDetailsModal(true);
-                      }}
-                    >
-                      <svg className="bookings-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                        <circle cx="12" cy="12" r="3"/>
-                      </svg>
-                      View
-                    </button>
+                              <div className="bookings-details">
+                                <div className="bookings-detail-item">
+                                  <svg className="bookings-detail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                    <circle cx="12" cy="7" r="4"/>
+                                  </svg>
+                                  <span>{booking.customerName}</span>
+                                </div>
+                                {booking.customerPhone && (
+                                  <div className="bookings-detail-item">
+                                    <svg className="bookings-detail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                                    </svg>
+                                    <span>{booking.customerPhone}</span>
+                                  </div>
+                                )}
+                                {booking.address && (
+                                  <div className="bookings-detail-item">
+                                    <svg className="bookings-detail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                                      <circle cx="12" cy="10" r="3"/>
+                                    </svg>
+                                    <span>{booking.address}</span>
+                                  </div>
+                                )}
+                              </div>
 
-                    {/* Action buttons based on status */}
-                    {booking.status === "pending" && (
-                      <>
-                        <button
-                          className="bookings-action-btn assign"
-                          onClick={() => {
-                            setSelectedBooking(booking);
-                            setOpenAssign(true);
-                          }}
-                        >
-                          <svg className="bookings-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-                            <circle cx="10" cy="7" r="4"/>
-                            <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
-                            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                          </svg>
-                          Assign Technician
-                        </button>
-                        <button
-                          className="bookings-action-btn reject"
-                          onClick={() => handleRejectBooking(booking)}
-                        >
-                          <svg className="bookings-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <circle cx="12" cy="12" r="10"/>
-                            <line x1="15" y1="9" x2="9" y2="15"/>
-                            <line x1="9" y1="9" x2="15" y2="15"/>
-                          </svg>
-                          Reject
-                        </button>
-                      </>
-                    )}
+                              {booking.technicianName && (
+                                <div className="bookings-technician-badge">
+                                  <svg className="bookings-technician-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                                    <circle cx="10" cy="7" r="4"/>
+                                    <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                                  </svg>
+                                  Assigned to: {booking.technicianName}
+                                </div>
+                              )}
+                            </div>
+                          </div>
 
-                    {booking.status === "assigned" && (
-                      <>
-                        <button
-                          className="bookings-action-btn start"
-                          onClick={() => handleStartWork(booking)}
-                        >
-                          <svg className="bookings-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/>
-                          </svg>
-                          Mark as Started
-                        </button>
-                        <button
-                          className="bookings-action-btn reject"
-                          onClick={() => handleRejectBooking(booking)}
-                        >
-                          <svg className="bookings-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <circle cx="12" cy="12" r="10"/>
-                            <line x1="15" y1="9" x2="9" y2="15"/>
-                            <line x1="9" y1="9" x2="15" y2="15"/>
-                          </svg>
-                          Reject
-                        </button>
-                      </>
-                    )}
+                          <div className="bookings-actions-section">
+                            <div className="bookings-amount">
+                              <div className="bookings-price">
+                                <span className="price-display">
+                                  <span className="rupee-symbol">₹</span>
+                                  <span className="price-amount">{(booking.totalPrice || booking.price || booking.amount || 0).toLocaleString()}</span>
+                                </span>
+                              </div>
+                              <p className="bookings-category">{booking.categoryName || "Service"}</p>
+                            </div>
 
-                    {booking.status === "started" && (
-                      <button
-                        className="bookings-action-btn complete"
-                        onClick={() => {
-                          setSelectedBooking(booking);
-                          setShowOtpModal(true);
-                        }}
-                      >
-                        <svg className="bookings-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                          <polyline points="22,4 12,14.01 9,11.01"/>
-                        </svg>
-                        Mark as Completed
-                      </button>
-                    )}
-                  </div>
+                            <div className="bookings-actions">
+                              <button
+                                className="bookings-view-btn"
+                                onClick={() => {
+                                  setSelectedBooking(booking);
+                                  setShowDetailsModal(true);
+                                }}
+                              >
+                                <svg className="bookings-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                  <circle cx="12" cy="12" r="3"/>
+                                </svg>
+                                View
+                              </button>
+
+                              {/* Action buttons based on status */}
+                              {booking.status === "pending" && (
+                                <>
+                                  <button
+                                    className="bookings-action-btn assign"
+                                    onClick={() => {
+                                      setSelectedBooking(booking);
+                                      setOpenAssign(true);
+                                    }}
+                                  >
+                                    <svg className="bookings-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                                      <circle cx="10" cy="7" r="4"/>
+                                      <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                                      <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                                    </svg>
+                                    Assign
+                                  </button>
+                                  <button
+                                    className="bookings-action-btn reject"
+                                    onClick={() => handleRejectBooking(booking)}
+                                  >
+                                    <svg className="bookings-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                      <circle cx="12" cy="12" r="10"/>
+                                      <line x1="15" y1="9" x2="9" y2="15"/>
+                                      <line x1="9" y1="9" x2="15" y2="15"/>
+                                    </svg>
+                                    Reject
+                                  </button>
+                                </>
+                              )}
+
+                              {booking.status === "assigned" && (
+                                <>
+                                  <button
+                                    className="bookings-action-btn start"
+                                    onClick={() => handleStartWork(booking)}
+                                  >
+                                    <svg className="bookings-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                      <polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/>
+                                    </svg>
+                                    Start Work
+                                  </button>
+                                  <button
+                                    className="bookings-action-btn reject"
+                                    onClick={() => handleRejectBooking(booking)}
+                                  >
+                                    <svg className="bookings-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                      <circle cx="12" cy="12" r="10"/>
+                                      <line x1="15" y1="9" x2="9" y2="15"/>
+                                      <line x1="9" y1="9" x2="15" y2="15"/>
+                                    </svg>
+                                    Reject
+                                  </button>
+                                </>
+                              )}
+
+                              {booking.status === "started" && (
+                                <button
+                                  className="bookings-action-btn complete"
+                                  onClick={() => {
+                                    setSelectedBooking(booking);
+                                    setShowOtpModal(true);
+                                  }}
+                                >
+                                  <svg className="bookings-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                                    <polyline points="22,4 12,14.01 9,11.01"/>
+                                  </svg>
+                                  Complete
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
-            </div>
-          );
-        })}
+            ))
+        )}
       </div>
-
-      {/* Empty State */}
-      {filteredBookings.length === 0 && (
-        <div className="bookings-empty-state">
-          <div className="bookings-empty-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
-              <line x1="16" x2="16" y1="2" y2="6"/>
-              <line x1="8" x2="8" y1="2" y2="6"/>
-              <line x1="3" x2="21" y1="10" y2="10"/>
-            </svg>
-          </div>
-          <h3>No bookings found</h3>
-          <p>
-            {searchQuery || statusFilter !== "all"
-              ? "Try adjusting your filters"
-              : "Bookings will appear here when customers make them through the app"}
-          </p>
-        </div>
-      )}
 
       {/* Assign Worker Modal */}
       {openAssign && (
@@ -788,7 +954,7 @@ const Bookings = () => {
                     <svg className="contact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                       <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
                     </svg>
-                    <span>{selectedBooking.phone || "Not provided"}</span>
+                    <span>{selectedBooking.customerPhone || "Not provided"}</span>
                   </div>
                   <div className="contact-item">
                     <svg className="contact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
