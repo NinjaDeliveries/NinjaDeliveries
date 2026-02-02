@@ -695,13 +695,13 @@ const Bookings = () => {
                                     <span>{booking.customerPhone}</span>
                                   </div>
                                 )}
-                                {booking.address && (
+                                {(booking.customerAddress || booking.address || booking.location) && (
                                   <div className="bookings-detail-item">
                                     <svg className="bookings-detail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                       <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
                                       <circle cx="12" cy="10" r="3"/>
                                     </svg>
-                                    <span>{booking.address}</span>
+                                    <span>{booking.customerAddress || booking.address || booking.location}</span>
                                   </div>
                                 )}
                               </div>
@@ -961,7 +961,7 @@ const Bookings = () => {
                       <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
                       <circle cx="12" cy="10" r="3"/>
                     </svg>
-                    <span>{selectedBooking.address || "Not provided"}</span>
+                    <span>{selectedBooking.customerAddress || selectedBooking.address || selectedBooking.location || "No location provided"}</span>
                   </div>
                 </div>
               </div>

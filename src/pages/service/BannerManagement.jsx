@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { auth, db } from "../../context/Firebase";
-import { collection, query, where, getDocs, addDoc, deleteDoc, doc, serverTimestamp } from "firebase/firestore";
+import { collection, query, where, getDocs, addDoc, deleteDoc, doc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "../../context/Firebase";
 import "../../style/ServiceDashboard.css";
@@ -61,15 +61,38 @@ function BannerManagement({ onBack }) {
   const fetchBanners = async (uid) => {
     try {
       console.log('🎯 Fetching banners for company:', uid);
-      const q = query(
+      
+      // Try both collections - sliderBanner and service_banners
+      const sliderQuery = query(
+        collection(db, "sliderBanner"),
+        where("companyId", "==", uid)
+      );
+      
+      const serviceQuery = query(
         collection(db, "service_banners"),
         where("companyId", "==", uid)
       );
 
-      const snap = await getDocs(q);
-      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      console.log('🎯 Banners found:', list.length, list);
-      setBanners(list);
+      const [sliderSnap, serviceSnap] = await Promise.all([
+        getDocs(sliderQuery),
+        getDocs(serviceQuery)
+      ]);
+
+      const sliderBanners = sliderSnap.docs.map(d => ({ 
+        id: d.id, 
+        ...d.data(),
+        source: 'sliderBanner'
+      }));
+      
+      const serviceBanners = serviceSnap.docs.map(d => ({ 
+        id: d.id, 
+        ...d.data(),
+        source: 'service_banners'
+      }));
+
+      const allBanners = [...sliderBanners, ...serviceBanners];
+      console.log('🎯 Banners found:', allBanners.length, allBanners);
+      setBanners(allBanners);
     } catch (err) {
       console.error("❌ Banner fetch error:", err);
     }
@@ -176,7 +199,8 @@ function BannerManagement({ onBack }) {
       const selectedService = services.find(s => s.id === selectedServiceId);
       const selectedCategory = categories.find(c => c.masterCategoryId === selectedCategoryMasterId);
 
-      await addDoc(collection(db, "service_banners"), {
+      // Create banner data
+      const bannerData = {
         companyId: userId,
         serviceId: selectedServiceId,
         serviceName: selectedService?.name || "",
@@ -185,12 +209,26 @@ function BannerManagement({ onBack }) {
         originalPrice: parseFloat(originalPrice),
         offerPrice: parseFloat(offerPrice),
         discount: Math.round(((originalPrice - offerPrice) / originalPrice) * 100),
-        description: description.trim(), // Add description to Firebase
+        description: description.trim(),
         imageUrl: imageUrl,
         isActive: true,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
-      });
+      };
+
+      // Save to both collections for compatibility
+      await Promise.all([
+        addDoc(collection(db, "service_banners"), bannerData),
+        addDoc(collection(db, "sliderBanner"), {
+          ...bannerData,
+          // Additional fields for sliderBanner collection
+          title: `${selectedService?.name || ""} - ${Math.round(((originalPrice - offerPrice) / originalPrice) * 100)}% OFF`,
+          subtitle: description.trim(),
+          buttonText: "Book Now",
+          type: "service_offer",
+          priority: 1
+        })
+      ]);
 
       console.log('✅ Banner created successfully!');
       console.log('📊 Banner data:', {
@@ -228,11 +266,33 @@ function BannerManagement({ onBack }) {
     }
   };
 
-  const handleDeleteBanner = async (bannerId) => {
+  const handleToggleBanner = async (banner) => {
+    try {
+      const collection_name = banner.source === 'sliderBanner' ? 'sliderBanner' : 'service_banners';
+      await updateDoc(doc(db, collection_name, banner.id), {
+        isActive: !banner.isActive,
+        updatedAt: serverTimestamp()
+      });
+      
+      fetchBanners(userId);
+      alert(`Banner ${banner.isActive ? 'disabled' : 'enabled'} successfully!`);
+    } catch (error) {
+      console.error("Error toggling banner:", error);
+      alert("Error updating banner. Please try again.");
+    }
+  };
+
+  const handleDeleteBanner = async (banner) => {
     if (!window.confirm("Are you sure you want to delete this banner?")) return;
 
     try {
-      await deleteDoc(doc(db, "service_banners", bannerId));
+      // Delete from the appropriate collection based on source
+      if (banner.source === 'sliderBanner') {
+        await deleteDoc(doc(db, "sliderBanner", banner.id));
+      } else {
+        await deleteDoc(doc(db, "service_banners", banner.id));
+      }
+      
       fetchBanners(userId);
       alert("Banner deleted successfully!");
     } catch (error) {
@@ -262,6 +322,32 @@ function BannerManagement({ onBack }) {
           Back to Dashboard
         </button>
         <h2>Banner Management</h2>
+      </div>
+
+      {/* Banner Statistics */}
+      <div className="banner-stats-section">
+        <div className="banner-form-header">
+          <h3>Banner Statistics</h3>
+          <p>Overview of your promotional banners</p>
+        </div>
+        <div className="banner-stats-grid">
+          <div className="banner-stat-item">
+            <div className="banner-stat-number">{banners.length}</div>
+            <div className="banner-stat-label">Total Banners</div>
+          </div>
+          <div className="banner-stat-item">
+            <div className="banner-stat-number">{banners.filter(b => b.source === 'sliderBanner').length}</div>
+            <div className="banner-stat-label">App Banners</div>
+          </div>
+          <div className="banner-stat-item">
+            <div className="banner-stat-number">{banners.filter(b => b.source === 'service_banners').length}</div>
+            <div className="banner-stat-label">Service Banners</div>
+          </div>
+          <div className="banner-stat-item">
+            <div className="banner-stat-number">{banners.filter(b => b.isActive).length}</div>
+            <div className="banner-stat-label">Active Banners</div>
+          </div>
+        </div>
       </div>
 
       {/* Create Banner Form */}
@@ -451,7 +537,7 @@ function BannerManagement({ onBack }) {
         ) : (
           <div className="banner-grid">
             {banners.map(banner => (
-              <div key={banner.id} className="banner-item">
+              <div key={banner.id} className={`banner-item ${banner.isActive ? 'active' : 'inactive'}`}>
                 {banner.imageUrl && (
                   <div className="banner-item-image">
                     <img src={banner.imageUrl} alt={banner.serviceName} />
@@ -461,7 +547,12 @@ function BannerManagement({ onBack }) {
                 <div className="banner-item-content">
                   <div className="banner-item-header">
                     <h4>{banner.serviceName}</h4>
-                    <span className="banner-item-category">{banner.categoryName}</span>
+                    <div className="banner-item-badges">
+                      <span className="banner-item-category">{banner.categoryName}</span>
+                      <span className={`banner-source-badge ${banner.source === 'sliderBanner' ? 'slider' : 'service'}`}>
+                        {banner.source === 'sliderBanner' ? '📱 App Banner' : '🛠️ Service Banner'}
+                      </span>
+                    </div>
                   </div>
 
                   {/* Banner Description */}
@@ -477,16 +568,25 @@ function BannerManagement({ onBack }) {
                     <span className="banner-discount">{banner.discount}% OFF</span>
                   </div>
 
-                  <button
-                    className="banner-delete-btn"
-                    onClick={() => handleDeleteBanner(banner.id)}
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                      <polyline points="3,6 5,6 21,6"/>
-                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                    </svg>
-                    Delete
-                  </button>
+                  <div className="banner-item-actions">
+                    <button
+                      className={`banner-toggle-btn ${banner.isActive ? 'active' : 'inactive'}`}
+                      onClick={() => handleToggleBanner(banner)}
+                      title={banner.isActive ? 'Disable banner' : 'Enable banner'}
+                    >
+                      {banner.isActive ? '🟢 Active' : '🔴 Inactive'}
+                    </button>
+                    <button
+                      className="banner-delete-btn"
+                      onClick={() => handleDeleteBanner(banner)}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <polyline points="3,6 5,6 21,6"/>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                      </svg>
+                      Delete
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

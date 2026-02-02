@@ -170,9 +170,14 @@ function BookingDetailsModal({ booking, onClose }) {
               <p style={{ margin: '0 0 4px 0', fontSize: '16px', fontWeight: '500', color: '#1f2937' }}>
                 👤 {booking.customerName || 'Unknown Customer'}
               </p>
-              <p style={{ margin: 0, fontSize: '14px', color: '#6b7280' }}>
+              <p style={{ margin: '0 0 4px 0', fontSize: '14px', color: '#6b7280' }}>
                 📞 {booking.customerPhone || 'No phone number'}
               </p>
+              {(booking.customerAddress || booking.address || booking.location) && (
+                <p style={{ margin: 0, fontSize: '14px', color: '#6b7280' }}>
+                  📍 {booking.customerAddress || booking.address || booking.location}
+                </p>
+              )}
             </div>
           </div>
 
