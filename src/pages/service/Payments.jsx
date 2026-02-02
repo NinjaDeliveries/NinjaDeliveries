@@ -625,66 +625,86 @@ const Payments = () => {
         )}
       </div>
 
-      {/* Payments List */}
-      <div className="payments-list">
+      {/* Payments Table */}
+      <div className="payments-table-container">
+        <div className="payments-table-header">
+          <h3>Recent Transactions</h3>
+          <p>All payment transactions</p>
+        </div>
+        
         {filteredPayments.length === 0 ? (
           <div className="sd-empty-state">
             <p>No payments found</p>
             <small>Payments will appear here once services are completed</small>
           </div>
         ) : (
-          filteredPayments.map((payment) => (
-            <div key={payment.id} className="payment-card">
-              <div className="payment-header">
-                <div className="payment-customer">
-                  <div className="payment-avatar">
-                    {payment.customerName.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="payment-customer-info">
-                    <h4>{payment.customerName}</h4>
-                    <p>{payment.customerPhone}</p>
-                  </div>
-                </div>
-                <div className="payment-amount">
-                  <span className="price-display-right">
-                    <span className="rupee-symbol-large">₹</span>
-                    <span className="price-amount-large">{payment.amount.toLocaleString('en-IN')}</span>
-                  </span>
-                </div>
-              </div>
-              
-              <div className="payment-details">
-                <div className="payment-service">
-                  <span className="payment-label">Category:</span>
-                  <span className="payment-value">{payment.categoryName}</span>
-                </div>
-                <div className="payment-service">
-                  <span className="payment-label">Service:</span>
-                  <span className="payment-value">{payment.serviceName}</span>
-                </div>
-                <div className="payment-method">
-                  <span className="payment-label">Method:</span>
-                  <span className={`payment-method-badge ${payment.paymentGateway || payment.paymentMethod}`}>
-                    {(payment.paymentGateway === 'cash' || payment.paymentMethod === 'cash') ? '💵 Cash' : '💳 Online'}
-                  </span>
-                </div>
-                <div className="payment-worker">
-                  <span className="payment-label">Worker:</span>
-                  <span className="payment-value">{payment.workerName}</span>
-                </div>
-                <div className="payment-date">
-                  <span className="payment-label">Date:</span>
-                  <span className="payment-value">{formatDate(payment.date)}</span>
-                </div>
-              </div>
-
-              <div className="payment-status">
-                <span className={`payment-status-badge ${getStatusClass(payment.status)}`}>
-                  {getStatusIcon(payment.status)} {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
-                </span>
-              </div>
-            </div>
-          ))
+          <div className="payments-table-wrapper">
+            <table className="payments-table">
+              <thead>
+                <tr>
+                  <th>Transaction ID</th>
+                  <th>Customer</th>
+                  <th>Category</th>
+                  <th>Service</th>
+                  <th>Worker</th>
+                  <th>Amount</th>
+                  <th>Method</th>
+                  <th>Status</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredPayments.map((payment) => (
+                  <tr key={payment.id} className="payments-table-row">
+                    <td className="transaction-id">
+                      <span className="transaction-id-text">PAY-{payment.id.slice(-6).toUpperCase()}</span>
+                    </td>
+                    <td className="customer-cell">
+                      <div className="customer-info">
+                        <div className="customer-avatar">
+                          {payment.customerName.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="customer-details">
+                          <span className="customer-name">{payment.customerName}</span>
+                          <span className="customer-phone">{payment.customerPhone}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="category-cell">
+                      <span className="category-badge">{payment.categoryName}</span>
+                    </td>
+                    <td className="service-cell">
+                      <span className="service-name" title={payment.serviceName}>
+                        {payment.serviceName}
+                      </span>
+                    </td>
+                    <td className="worker-cell">
+                      <span className="worker-name">{payment.workerName}</span>
+                    </td>
+                    <td className="amount-cell">
+                      <span className="amount-value">
+                        <span className="rupee-symbol">₹</span>
+                        <span className="amount-number">{payment.amount.toLocaleString('en-IN')}</span>
+                      </span>
+                    </td>
+                    <td className="method-cell">
+                      <span className={`method-badge ${(payment.paymentGateway === 'cash' || payment.paymentMethod === 'cash') ? 'cash' : 'online'}`}>
+                        {(payment.paymentGateway === 'cash' || payment.paymentMethod === 'cash') ? '💵 Cash' : '💳 Online'}
+                      </span>
+                    </td>
+                    <td className="status-cell">
+                      <span className={`status-badge ${getStatusClass(payment.status)}`}>
+                        {getStatusIcon(payment.status)} {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
+                      </span>
+                    </td>
+                    <td className="date-cell">
+                      <span className="date-value">{formatDate(payment.date)}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>

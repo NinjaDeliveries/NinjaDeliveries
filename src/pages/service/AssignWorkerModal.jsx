@@ -13,7 +13,6 @@ import "../../style/ServiceDashboard.css";
 
 const AssignWorkerModal = ({ booking, categories = [], onClose, onAssigned }) => {
   const [workers, setWorkers] = useState([]);
-  const [services, setServices] = useState([]);
   const [selectedWorker, setSelectedWorker] = useState("");
   const [loading, setLoading] = useState(true);
   
@@ -39,7 +38,6 @@ const AssignWorkerModal = ({ booking, categories = [], onClose, onAssigned }) =>
         ...d.data(),
       }));
 
-      setServices(servicesList);
       console.log("All services:", servicesList);
       return servicesList;
     } catch (err) {
@@ -91,15 +89,6 @@ const AssignWorkerModal = ({ booking, categories = [], onClose, onAssigned }) =>
       console.error("Error checking worker availability:", error);
       return { available: false, reason: "error" };
     }
-  };
-
-  // Get worker availability status for display
-  const getWorkerStatus = async (worker) => {
-    const availability = await checkWorkerAvailability(worker.id, booking.date, booking.time);
-    return {
-      ...worker,
-      availability: availability
-    };
   };
   // 🔹 Fetch workers - filter by booking service category
   const fetchWorkers = async () => {

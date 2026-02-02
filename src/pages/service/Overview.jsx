@@ -1161,31 +1161,58 @@ const Overview = () => {
           </div>
 
           {/* Quick Actions */}
-          <div className="modern-actions-card" style={{ animationDelay: '1s' }}>
-            <div className="modern-actions-header">
-              <div className="modern-actions-icon">⚡</div>
-              <h3 className="modern-actions-title">Quick Actions</h3>
+          <div className="overview-quick-actions-card" style={{ animationDelay: '1s' }}>
+            <div className="overview-actions-header">
+              <div className="overview-actions-title-section">
+                <div className="overview-actions-icon">⚡</div>
+                <div className="overview-actions-text">
+                  <h3 className="overview-actions-title">Quick Actions</h3>
+                  <p className="overview-actions-subtitle">Manage your service operations efficiently</p>
+                </div>
+              </div>
             </div>
-            <div className="modern-actions-grid">
-              <button className="modern-action-btn" onClick={() => setActiveTab('banner')}>
-                <div className="modern-action-icon bookings">📅</div>
-                <span>Banner Management</span>
+            <div className="overview-actions-grid">
+              <button className="overview-action-btn banner-action" onClick={() => setActiveTab('banner')}>
+                <div className="overview-action-icon-wrapper">
+                  <div className="overview-action-icon">🎯</div>
+                </div>
+                <div className="overview-action-content">
+                  <span className="overview-action-title">Banner Management</span>
+                  <span className="overview-action-desc">Create and manage promotional banners</span>
+                </div>
+                <div className="overview-action-arrow">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M9 18l6-6-6-6"/>
+                  </svg>
+                </div>
               </button>
-              <button className="modern-action-btn" onClick={() => window.location.href = '/admin.html#/service-dashboard/technicians'}>
-                <div className="modern-action-icon technicians">👥</div>
-                <span>Add Technician</span>
+              <button className="overview-action-btn technician-action" onClick={() => window.location.href = '/admin.html#/service-dashboard/technicians'}>
+                <div className="overview-action-icon-wrapper">
+                  <div className="overview-action-icon">👨‍🔧</div>
+                </div>
+                <div className="overview-action-content">
+                  <span className="overview-action-title">Add Technician</span>
+                  <span className="overview-action-desc">Manage your service team</span>
+                </div>
+                <div className="overview-action-arrow">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M9 18l6-6-6-6"/>
+                  </svg>
+                </div>
               </button>
-              <button className="modern-action-btn" onClick={() => window.location.href = '/admin.html#/service-dashboard/payments'}>
-                <div className="modern-action-icon payments">💰</div>
-                <span>View Payments</span>
-              </button>
-              <button className="modern-action-btn" onClick={() => alert('Goals feature coming soon!')}>
-                <div className="modern-action-icon goals">🎯</div>
-                <span>Set Goals</span>
-              </button>
-              <button className="modern-action-btn" onClick={() => alert('Reports feature coming soon!')}>
-                <div className="modern-action-icon reports">📊</div>
-                <span>View Reports</span>
+              <button className="overview-action-btn payment-action" onClick={() => window.location.href = '/admin.html#/service-dashboard/payments'}>
+                <div className="overview-action-icon-wrapper">
+                  <div className="overview-action-icon">💰</div>
+                </div>
+                <div className="overview-action-content">
+                  <span className="overview-action-title">View Payments</span>
+                  <span className="overview-action-desc">Track earnings and transactions</span>
+                </div>
+                <div className="overview-action-arrow">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M9 18l6-6-6-6"/>
+                  </svg>
+                </div>
               </button>
             </div>
           </div>
