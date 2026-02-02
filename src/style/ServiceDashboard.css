@@ -12521,6 +12521,7 @@ input:checked + .settings-toggle-slider:before {
 .modern-shimmer {
   background: linear-gradient(90deg, #4f46e5, #7c3aed, #ec4899, #4f46e5);
   background-size: 200% 100%;
+  background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   animation: shimmer 3s ease-in-out infinite;
@@ -16869,7 +16870,6 @@ input:checked + .settings-toggle-slider:before {
   letter-spacing: 1px;
   z-index: 1;
 }
-<<<<<<< HEAD
 /* ========== PACKAGE AVAILABILITY STYLES ========== */
 .sd-package-basic-info {
   display: flex;
@@ -16889,7 +16889,6 @@ input:checked + .settings-toggle-slider:before {
 }
 
 .sd-availability-section {
-=======
 
 /* ========== WORKER AVAILABILITY STYLING ========== */
 .sd-select {
@@ -16944,12 +16943,10 @@ input:checked + .settings-toggle-slider:before {
 }
 
 .sd-info-box {
->>>>>>> 43a8e81726165e44f59ec1dfc3fc8333419e7943
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   padding: 16px;
-<<<<<<< HEAD
   margin-top: 8px;
 }
 
@@ -17413,7 +17410,6 @@ input:checked + .settings-toggle-slider:before {
   font-size: 13px;
   color: #92400e;
   font-weight: 500;
-=======
   margin-bottom: 16px;
 }
 
@@ -17480,7 +17476,6 @@ input:checked + .settings-toggle-slider:before {
   margin-top: 24px;
   padding-top: 16px;
   border-top: 1px solid #e5e7eb;
->>>>>>> 43a8e81726165e44f59ec1dfc3fc8333419e7943
 }
 /* ========== NO SERVICES MESSAGE ========== */
 .sd-no-services-message {
@@ -17489,6 +17484,7 @@ input:checked + .settings-toggle-slider:before {
   border-radius: 6px;
   padding: 12px;
   margin-top: 8px;
+}
 }
 
 .sd-no-services-message p {
