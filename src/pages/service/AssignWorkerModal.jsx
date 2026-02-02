@@ -32,7 +32,7 @@ const AssignWorkerModal = ({ booking, categories = [], onClose, onAssigned }) =>
         collection(db, "service_services"),
         where("companyId", "==", user.uid)
       );
-
+//he he
       const snap = await getDocs(q);
       const servicesList = snap.docs.map((d) => ({
         id: d.id,
