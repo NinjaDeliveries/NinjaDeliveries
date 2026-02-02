@@ -62,27 +62,13 @@ function BannerManagement({ onBack }) {
     try {
       console.log('🎯 Fetching banners for company:', uid);
       
-      // Try both collections - sliderBanner and service_banners
-      const sliderQuery = query(
-        collection(db, "sliderBanner"),
-        where("companyId", "==", uid)
-      );
-      
+      // Only fetch service_banners collection (not sliderBanner)
       const serviceQuery = query(
         collection(db, "service_banners"),
         where("companyId", "==", uid)
       );
 
-      const [sliderSnap, serviceSnap] = await Promise.all([
-        getDocs(sliderQuery),
-        getDocs(serviceQuery)
-      ]);
-
-      const sliderBanners = sliderSnap.docs.map(d => ({ 
-        id: d.id, 
-        ...d.data(),
-        source: 'sliderBanner'
-      }));
+      const serviceSnap = await getDocs(serviceQuery);
       
       const serviceBanners = serviceSnap.docs.map(d => ({ 
         id: d.id, 
@@ -90,9 +76,8 @@ function BannerManagement({ onBack }) {
         source: 'service_banners'
       }));
 
-      const allBanners = [...sliderBanners, ...serviceBanners];
-      console.log('🎯 Banners found:', allBanners.length, allBanners);
-      setBanners(allBanners);
+      console.log('🎯 Service banners found:', serviceBanners.length, serviceBanners);
+      setBanners(serviceBanners);
     } catch (err) {
       console.error("❌ Banner fetch error:", err);
     }
@@ -216,19 +201,8 @@ function BannerManagement({ onBack }) {
         updatedAt: serverTimestamp()
       };
 
-      // Save to both collections for compatibility
-      await Promise.all([
-        addDoc(collection(db, "service_banners"), bannerData),
-        addDoc(collection(db, "sliderBanner"), {
-          ...bannerData,
-          // Additional fields for sliderBanner collection
-          title: `${selectedService?.name || ""} - ${Math.round(((originalPrice - offerPrice) / originalPrice) * 100)}% OFF`,
-          subtitle: description.trim(),
-          buttonText: "Book Now",
-          type: "service_offer",
-          priority: 1
-        })
-      ]);
+      // Save only to service_banners collection
+      await addDoc(collection(db, "service_banners"), bannerData);
 
       console.log('✅ Banner created successfully!');
       console.log('📊 Banner data:', {
@@ -268,8 +242,7 @@ function BannerManagement({ onBack }) {
 
   const handleToggleBanner = async (banner) => {
     try {
-      const collection_name = banner.source === 'sliderBanner' ? 'sliderBanner' : 'service_banners';
-      await updateDoc(doc(db, collection_name, banner.id), {
+      await updateDoc(doc(db, "service_banners", banner.id), {
         isActive: !banner.isActive,
         updatedAt: serverTimestamp()
       });
@@ -286,13 +259,7 @@ function BannerManagement({ onBack }) {
     if (!window.confirm("Are you sure you want to delete this banner?")) return;
 
     try {
-      // Delete from the appropriate collection based on source
-      if (banner.source === 'sliderBanner') {
-        await deleteDoc(doc(db, "sliderBanner", banner.id));
-      } else {
-        await deleteDoc(doc(db, "service_banners", banner.id));
-      }
-      
+      await deleteDoc(doc(db, "service_banners", banner.id));
       fetchBanners(userId);
       alert("Banner deleted successfully!");
     } catch (error) {
@@ -336,16 +303,16 @@ function BannerManagement({ onBack }) {
             <div className="banner-stat-label">Total Banners</div>
           </div>
           <div className="banner-stat-item">
-            <div className="banner-stat-number">{banners.filter(b => b.source === 'sliderBanner').length}</div>
-            <div className="banner-stat-label">App Banners</div>
-          </div>
-          <div className="banner-stat-item">
-            <div className="banner-stat-number">{banners.filter(b => b.source === 'service_banners').length}</div>
-            <div className="banner-stat-label">Service Banners</div>
-          </div>
-          <div className="banner-stat-item">
             <div className="banner-stat-number">{banners.filter(b => b.isActive).length}</div>
             <div className="banner-stat-label">Active Banners</div>
+          </div>
+          <div className="banner-stat-item">
+            <div className="banner-stat-number">{banners.filter(b => !b.isActive).length}</div>
+            <div className="banner-stat-label">Inactive Banners</div>
+          </div>
+          <div className="banner-stat-item">
+            <div className="banner-stat-number">{banners.filter(b => b.imageUrl).length}</div>
+            <div className="banner-stat-label">With Images</div>
           </div>
         </div>
       </div>
@@ -521,8 +488,8 @@ function BannerManagement({ onBack }) {
       {/* Existing Banners */}
       <div className="banner-list-card">
         <div className="banner-list-header">
-          <h3>Active Banners ({banners.length})</h3>
-          <p>Manage your promotional banners</p>
+          <h3>Service Banners ({banners.length})</h3>
+          <p>Manage your service promotional banners</p>
         </div>
 
         {banners.length === 0 ? (
@@ -549,9 +516,6 @@ function BannerManagement({ onBack }) {
                     <h4>{banner.serviceName}</h4>
                     <div className="banner-item-badges">
                       <span className="banner-item-category">{banner.categoryName}</span>
-                      <span className={`banner-source-badge ${banner.source === 'sliderBanner' ? 'slider' : 'service'}`}>
-                        {banner.source === 'sliderBanner' ? '📱 App Banner' : '🛠️ Service Banner'}
-                      </span>
                     </div>
                   </div>
 
