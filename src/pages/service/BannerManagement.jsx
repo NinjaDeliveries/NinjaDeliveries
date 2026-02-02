@@ -17,23 +17,29 @@ function BannerManagement({ onBack }) {
   const [selectedServiceId, setSelectedServiceId] = useState("");
   const [originalPrice, setOriginalPrice] = useState("");
   const [offerPrice, setOfferPrice] = useState("");
+  const [description, setDescription] = useState(""); // New description field
   const [bannerImage, setBannerImage] = useState(null);
   const [imagePreview, setImagePreview] = useState("");
   const [uploading, setUploading] = useState(false);
 
   // Get user and fetch data
   useEffect(() => {
+    console.log('🎯 BannerManagement component mounted');
     const u = auth.currentUser;
     if (u) {
+      console.log('👤 User found:', u.uid);
       setUserId(u.uid);
       fetchCompanyCategories(u.uid);
       fetchBanners(u.uid);
+    } else {
+      console.log('❌ No authenticated user found');
     }
   }, []);
 
   // Fetch company categories
   const fetchCompanyCategories = async (uid) => {
     try {
+      console.log('📂 Fetching categories for company:', uid);
       const q = query(
         collection(db, "service_categories"),
         where("companyId", "==", uid),
@@ -42,10 +48,11 @@ function BannerManagement({ onBack }) {
 
       const snap = await getDocs(q);
       const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      console.log('📂 Categories found:', list.length, list);
       setCategories(list);
       setLoading(false);
     } catch (err) {
-      console.error("Category fetch error:", err);
+      console.error("❌ Category fetch error:", err);
       setLoading(false);
     }
   };
@@ -53,6 +60,7 @@ function BannerManagement({ onBack }) {
   // Fetch existing banners
   const fetchBanners = async (uid) => {
     try {
+      console.log('🎯 Fetching banners for company:', uid);
       const q = query(
         collection(db, "service_banners"),
         where("companyId", "==", uid)
@@ -60,9 +68,10 @@ function BannerManagement({ onBack }) {
 
       const snap = await getDocs(q);
       const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      console.log('🎯 Banners found:', list.length, list);
       setBanners(list);
     } catch (err) {
-      console.error("Banner fetch error:", err);
+      console.error("❌ Banner fetch error:", err);
     }
   };
 
@@ -136,13 +145,23 @@ function BannerManagement({ onBack }) {
   };
 
   const handleCreateBanner = async () => {
-    if (!selectedServiceId || !offerPrice) {
-      alert("Please fill all required fields");
+    if (!selectedServiceId || !offerPrice || !description.trim()) {
+      alert("Please fill all required fields including description");
       return;
     }
 
     if (parseFloat(offerPrice) >= parseFloat(originalPrice)) {
       alert("Offer price should be less than original price");
+      return;
+    }
+
+    if (description.trim().length < 10) {
+      alert("Description should be at least 10 characters long");
+      return;
+    }
+
+    if (description.trim().length > 200) {
+      alert("Description should not exceed 200 characters");
       return;
     }
 
@@ -166,10 +185,25 @@ function BannerManagement({ onBack }) {
         originalPrice: parseFloat(originalPrice),
         offerPrice: parseFloat(offerPrice),
         discount: Math.round(((originalPrice - offerPrice) / originalPrice) * 100),
+        description: description.trim(), // Add description to Firebase
         imageUrl: imageUrl,
         isActive: true,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
+      });
+
+      console.log('✅ Banner created successfully!');
+      console.log('📊 Banner data:', {
+        companyId: userId,
+        serviceId: selectedServiceId,
+        serviceName: selectedService?.name || "",
+        categoryId: selectedCategoryMasterId,
+        categoryName: selectedCategory?.name || "",
+        originalPrice: parseFloat(originalPrice),
+        offerPrice: parseFloat(offerPrice),
+        discount: Math.round(((originalPrice - offerPrice) / originalPrice) * 100),
+        imageUrl: imageUrl,
+        isActive: true
       });
 
       // Reset form
@@ -177,6 +211,7 @@ function BannerManagement({ onBack }) {
       setSelectedServiceId("");
       setOriginalPrice("");
       setOfferPrice("");
+      setDescription(""); // Reset description
       setBannerImage(null);
       setImagePreview("");
       setServices([]);
@@ -296,6 +331,29 @@ function BannerManagement({ onBack }) {
             </div>
           </div>
 
+          {/* Description Field */}
+          <div className="banner-form-group">
+            <label>
+              Banner Description <span className="required">*</span>
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Enter a compelling description for your banner offer (10-200 characters)"
+              className="banner-form-textarea"
+              rows="3"
+              maxLength="200"
+            />
+            <div className="banner-char-count">
+              <span className={description.length < 10 ? 'text-warning' : description.length > 180 ? 'text-danger' : 'text-success'}>
+                {description.length}/200 characters
+              </span>
+              {description.length < 10 && (
+                <small className="text-warning"> (Minimum 10 characters required)</small>
+              )}
+            </div>
+          </div>
+
           {originalPrice && offerPrice && (
             <div className="banner-discount-preview">
               <span className="banner-discount-badge">
@@ -354,7 +412,7 @@ function BannerManagement({ onBack }) {
           <button
             className="banner-create-btn"
             onClick={handleCreateBanner}
-            disabled={!selectedServiceId || !offerPrice || uploading}
+            disabled={!selectedServiceId || !offerPrice || !description.trim() || description.trim().length < 10 || uploading}
           >
             {uploading ? (
               <>
@@ -405,6 +463,13 @@ function BannerManagement({ onBack }) {
                     <h4>{banner.serviceName}</h4>
                     <span className="banner-item-category">{banner.categoryName}</span>
                   </div>
+
+                  {/* Banner Description */}
+                  {banner.description && (
+                    <div className="banner-item-description">
+                      <p>{banner.description}</p>
+                    </div>
+                  )}
 
                   <div className="banner-item-pricing">
                     <span className="banner-original-price">₹{banner.originalPrice}</span>
