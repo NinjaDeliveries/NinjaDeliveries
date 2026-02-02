@@ -313,6 +313,48 @@ const getServiceName = (service) => {
 
   return master ? master.name : service.name;
 };
+
+// Helper function to format availability information
+const formatAvailability = (availability, unit) => {
+  if (!availability || !availability.isAvailable) {
+    return "No specific hours set";
+  }
+  
+  const { days, timeSlots } = availability;
+  
+  // Format time slots
+  let timeRanges = "";
+  if (timeSlots && timeSlots.length > 0) {
+    timeRanges = timeSlots.map(slot => 
+      `${slot.startTime || '09:00'} - ${slot.endTime || '17:00'}`
+    ).join(', ');
+  } else {
+    // Fallback for old format
+    const startTime = availability.startTime || '09:00';
+    const endTime = availability.endTime || '17:00';
+    timeRanges = `${startTime} - ${endTime}`;
+  }
+  
+  // For monthly packages, only show time
+  if (unit === "month") {
+    return `Available ${timeRanges}`;
+  }
+  
+  // For day/week packages, show days and time
+  const dayNames = {
+    monday: 'Mon',
+    tuesday: 'Tue', 
+    wednesday: 'Wed',
+    thursday: 'Thu',
+    friday: 'Fri',
+    saturday: 'Sat',
+    sunday: 'Sun'
+  };
+  
+  const formattedDays = days?.length > 0 ? days.map(day => dayNames[day]).join(', ') : 'No days set';
+  
+  return `${formattedDays}, ${timeRanges}`;
+};
   // Filter services based on search, category, and status
   const filteredServices = services.filter((service) => {
     const serviceName = getServiceName(service);
@@ -559,9 +601,22 @@ const getServiceName = (service) => {
                           <p className="services-packages-label">Packages:</p>
                           <div className="services-packages-list">
                             {service.packages.map((pkg, index) => (
-                              <span key={index} className="services-package-item">
-                                {pkg.duration} {pkg.unit}(s) - <span className="rupee-symbol-small">₹</span>{pkg.price.toLocaleString()}
-                              </span>
+                              <div key={index} className="services-package-item-detailed">
+                                <span className="services-package-basic">
+                                  {pkg.duration} {pkg.unit}(s) - <span className="rupee-symbol-small">₹</span>{pkg.price.toLocaleString()}
+                                </span>
+                                {pkg.availability && (
+                                  <div className="services-availability-info">
+                                    <svg className="services-availability-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                      <circle cx="12" cy="12" r="10"/>
+                                      <polyline points="12,6 12,12 16,14"/>
+                                    </svg>
+                                    <span className="services-availability-text">
+                                      {formatAvailability(pkg.availability, pkg.unit)}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
                             ))}
                           </div>
                         </div>

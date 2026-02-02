@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { auth, db } from "../../context/Firebase";
-import { collection, addDoc, doc, updateDoc, query, where, getDocs } from "firebase/firestore";
+import { collection, addDoc, doc, updateDoc, query, where, getDocs, getDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "../../context/Firebase";
 
@@ -11,7 +11,16 @@ const AddServiceModal = ({ onClose, onSaved, editService }) => {
   const [categoryMasterId, setCategoryMasterId] = useState("");
   const [categories, setCategories] = useState([]);
   const [packages, setPackages] = useState([
-    { duration: 1, unit: "month", price: "" },
+    { 
+      duration: 1, 
+      unit: "month", 
+      price: "",
+      availability: {
+        days: [], // Empty for monthly packages
+        timeSlots: [{ startTime: "09:00", endTime: "17:00" }], // Array of time slots
+        isAvailable: true
+      }
+    },
   ]);
 
   const [serviceImage, setServiceImage] = useState(null);
@@ -87,28 +96,55 @@ const fetchAdminServices = async (catId) => {
     return;
   }
 
-  // First get the category name from the selected category ID
-  const selectedCategory = categories.find(cat => cat.id === catId);
-  if (!selectedCategory) {
-    console.log("Category not found for ID:", catId);
+  console.log("Fetching services for category ID:", catId);
+
+  try {
+    // Try different possible field names for category reference
+    let services = [];
+    
+    // First try: categoryMasterId
+    let q = query(
+      collection(db, "service_services_master"),
+      where("categoryMasterId", "==", catId),
+      where("isActive", "==", true)
+    );
+    
+    let snap = await getDocs(q);
+    services = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    
+    // If no results, try: masterCategoryId
+    if (services.length === 0) {
+      q = query(
+        collection(db, "service_services_master"),
+        where("masterCategoryId", "==", catId),
+        where("isActive", "==", true)
+      );
+      
+      snap = await getDocs(q);
+      services = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    }
+    
+    // If still no results, try by category name
+    if (services.length === 0) {
+      const selectedCategory = categories.find(cat => cat.id === catId);
+      if (selectedCategory) {
+        q = query(
+          collection(db, "service_services_master"),
+          where("categoryName", "==", selectedCategory.name),
+          where("isActive", "==", true)
+        );
+        
+        snap = await getDocs(q);
+        services = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      }
+    }
+    
+    console.log("Found services:", services);
+    setAdminServices(services);
+  } catch (error) {
+    console.error("Error fetching admin services:", error);
     setAdminServices([]);
-    return;
   }
-
-  console.log("Fetching services for category:", selectedCategory.name);
-
-  // Query services by categoryName instead of categoryMasterId
-  const q = query(
-    collection(db, "service_services_master"),
-    where("categoryName", "==", selectedCategory.name),
-    where("isActive", "==", true)
-  );
-
-  const snap = await getDocs(q);
-  const services = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  
-  console.log("Found services:", services);
-  setAdminServices(services);
 };
 
   // Load existing service data when in edit mode
@@ -120,7 +156,28 @@ const fetchAdminServices = async (catId) => {
 
   if (editService.serviceType === "custom") {
     setIsCustomService(true);
-    setPackages(editService.packages || []);
+    // Ensure packages have availability data with correct defaults based on unit
+    const packagesWithAvailability = (editService.packages || []).map(pkg => {
+      let availability = pkg.availability || {};
+      
+      // Convert old format to new format if needed
+      if (availability.startTime && availability.endTime && !availability.timeSlots) {
+        availability.timeSlots = [{ 
+          startTime: availability.startTime, 
+          endTime: availability.endTime 
+        }];
+      }
+      
+      return {
+        ...pkg,
+        availability: {
+          days: availability.days || (pkg.unit === "month" ? [] : ['monday', 'tuesday', 'wednesday', 'thursday', 'friday']),
+          timeSlots: availability.timeSlots || [{ startTime: "09:00", endTime: "17:00" }],
+          isAvailable: availability.isAvailable ?? true
+        }
+      };
+    });
+    setPackages(packagesWithAvailability);
   } else {
     setIsCustomService(false);
     setFixedPrice(editService.price?.toString() || "");
@@ -205,15 +262,62 @@ const fetchAdminServices = async (catId) => {
   //   }
   // };
 
-  const fetchCategories = async () => {
-  const snap = await getDocs(collection(db, "service_categories_master"));
-  setCategories(
-    snap.docs.map(d => ({ id: d.id, ...d.data() }))
-  );
-};
+    const fetchCategories = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      // Get all master categories first
+      const snap = await getDocs(collection(db, "service_categories_master"));
+      const allCategories = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      // Get company's selected categories from service_company document
+      const companyRef = doc(db, "service_company", user.uid);
+      const companySnap = await getDoc(companyRef);
+      
+      if (companySnap.exists()) {
+        const companyData = companySnap.data();
+        const selectedCategoryIds = companyData.selectedCategories || [];
+        
+        if (selectedCategoryIds.length > 0) {
+          // Filter to show only company's selected categories
+          const companyCategories = allCategories.filter(cat => 
+            selectedCategoryIds.includes(cat.id)
+          );
+          setCategories(companyCategories);
+        } else {
+          // If no categories selected, show all categories as fallback
+          setCategories(allCategories);
+        }
+      } else {
+        // If no company document, show all categories
+        setCategories(allCategories);
+      }
+    } catch (err) {
+      console.error("Fetch categories error:", err);
+      // On error, try to show all categories
+      try {
+        const snap = await getDocs(collection(db, "service_categories_master"));
+        const allCategories = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        setCategories(allCategories);
+      } catch (fallbackErr) {
+        console.error("Fallback fetch categories error:", fallbackErr);
+        setCategories([]);
+      }
+    }
+  };
 
   const addPackageRow = () => {
-    setPackages([...packages, { duration: 1, unit: "month", price: "" }]);
+    setPackages([...packages, { 
+      duration: 1, 
+      unit: "month", 
+      price: "",
+      availability: {
+        days: [], // Empty for monthly packages by default
+        timeSlots: [{ startTime: "09:00", endTime: "17:00" }], // Array of time slots
+        isAvailable: true
+      }
+    }]);
   };
 
   const removePackageRow = (index) => {
@@ -225,7 +329,57 @@ const fetchAdminServices = async (catId) => {
 
   const updatePackage = (index, field, value) => {
     const copy = [...packages];
-    copy[index][field] = value;
+    if (field.startsWith('availability.')) {
+      const availabilityField = field.split('.')[1];
+      if (!copy[index].availability) {
+        copy[index].availability = {
+          days: copy[index].unit === "month" ? [] : ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
+          timeSlots: [{ startTime: "09:00", endTime: "17:00" }],
+          isAvailable: true
+        };
+      }
+      copy[index].availability[availabilityField] = value;
+    } else {
+      copy[index][field] = value;
+      
+      // If unit changes, adjust availability days accordingly
+      if (field === 'unit') {
+        if (!copy[index].availability) {
+          copy[index].availability = {
+            days: value === "month" ? [] : ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
+            timeSlots: [{ startTime: "09:00", endTime: "17:00" }],
+            isAvailable: true
+          };
+        } else {
+          // Update days based on new unit
+          copy[index].availability.days = value === "month" ? [] : ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+        }
+      }
+    }
+    setPackages(copy);
+  };
+
+  // Helper functions for time slots
+  const addTimeSlot = (packageIndex) => {
+    const copy = [...packages];
+    if (!copy[packageIndex].availability.timeSlots) {
+      copy[packageIndex].availability.timeSlots = [];
+    }
+    copy[packageIndex].availability.timeSlots.push({ startTime: "09:00", endTime: "17:00" });
+    setPackages(copy);
+  };
+
+  const removeTimeSlot = (packageIndex, slotIndex) => {
+    const copy = [...packages];
+    if (copy[packageIndex].availability.timeSlots.length > 1) {
+      copy[packageIndex].availability.timeSlots.splice(slotIndex, 1);
+      setPackages(copy);
+    }
+  };
+
+  const updateTimeSlot = (packageIndex, slotIndex, field, value) => {
+    const copy = [...packages];
+    copy[packageIndex].availability.timeSlots[slotIndex][field] = value;
     setPackages(copy);
   };
 
@@ -321,12 +475,45 @@ if (isCustomService) {
       alert("Each package must have a valid price");
       return;
     }
+    
+    // Validate availability if enabled
+    if (p.availability?.isAvailable) {
+      const timeSlots = p.availability.timeSlots || [];
+      
+      if (timeSlots.length === 0) {
+        alert("Please add at least one time slot for all packages");
+        return;
+      }
+      
+      for (let slot of timeSlots) {
+        if (!slot.startTime || !slot.endTime) {
+          alert("Please set valid start and end times for all time slots");
+          return;
+        }
+        
+        if (slot.startTime >= slot.endTime) {
+          alert("End time must be after start time for all time slots");
+          return;
+        }
+      }
+      
+      // Only validate days for day/week packages, not monthly
+      if ((p.unit === "day" || p.unit === "week") && (!p.availability.days || p.availability.days.length === 0)) {
+        alert("Please select at least one available day for day/week packages");
+        return;
+      }
+    }
   }
 
   payload.packages = packages.map(p => ({
     duration: Number(p.duration),
     unit: p.unit,
     price: Number(p.price),
+    availability: p.availability || {
+      days: p.unit === "month" ? [] : ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'], // Empty days for monthly
+      timeSlots: [{ startTime: "09:00", endTime: "17:00" }],
+      isAvailable: true
+    }
   }));
 }
 
@@ -449,6 +636,12 @@ if (isCustomService) {
     </option>
   ))}
 </select>
+
+            {categories.length === 0 && (
+              <div className="sd-no-categories-message">
+                <p>No categories available. Please go to Settings → Categories to select your service categories first.</p>
+              </div>
+            )}
             
           </div>
         </div>
@@ -458,32 +651,40 @@ if (isCustomService) {
     <label>Service</label>
 
     {!isCustomService ? (
-      <select
-        value={selectedServiceId}
-        onChange={(e) => {
-          const val = e.target.value;
+      <>
+        <select
+          value={selectedServiceId}
+          onChange={(e) => {
+            const val = e.target.value;
 
-          if (val === "custom") {
-            setIsCustomService(true);
-            setSelectedServiceId("");
-            setName("");
-          } else {
-            setSelectedServiceId(val);
-            const svc = adminServices.find(s => s.id === val);
-            if (svc) setName(svc.name);
-          }
-        }}
-      >
-        <option value="">Select Service</option>
+            if (val === "custom") {
+              setIsCustomService(true);
+              setSelectedServiceId("");
+              setName("");
+            } else {
+              setSelectedServiceId(val);
+              const svc = adminServices.find(s => s.id === val);
+              if (svc) setName(svc.name);
+            }
+          }}
+        >
+          <option value="">Select Service</option>
 
-        {adminServices.map(svc => (
-          <option key={svc.id} value={svc.id}>
-            {svc.name}
-          </option>
-        ))}
+          {adminServices.map(svc => (
+            <option key={svc.id} value={svc.id}>
+              {svc.name}
+            </option>
+          ))}
 
-        <option value="custom">➕ Add Custom Service</option>
-      </select>
+          <option value="custom">➕ Add Custom Service</option>
+        </select>
+        
+        {adminServices.length === 0 && (
+          <div className="sd-no-services-message">
+            <p>No predefined services found for this category. You can add a custom service instead.</p>
+          </div>
+        )}
+      </>
     ) : (
       <>
         <input
@@ -635,37 +836,185 @@ if (isCustomService) {
 
     {packages.map((p, i) => (
       <div key={i} className="sd-package-row">
-        <input
-          type="number"
-          placeholder="Duration"
-          value={p.duration}
-          onChange={e => updatePackage(i, "duration", e.target.value)}
-        />
+        <div className="sd-package-basic-info">
+          <input
+            type="number"
+            placeholder="Duration"
+            value={p.duration}
+            onChange={e => updatePackage(i, "duration", e.target.value)}
+          />
 
-        <select
-          value={p.unit}
-          onChange={e => updatePackage(i, "unit", e.target.value)}
-        >
-          <option value="month">month(s)</option>
-          <option value="week">week(s)</option>
-          <option value="day">day(s)</option>
-        </select>
-
-        <input
-          type="number"
-          placeholder="Price"
-          value={p.price}
-          onChange={e => updatePackage(i, "price", e.target.value)}
-        />
-
-        {packages.length > 1 && (
-          <button
-            type="button"
-            className="sd-remove-btn"
-            onClick={() => removePackageRow(i)}
+          <select
+            value={p.unit}
+            onChange={e => updatePackage(i, "unit", e.target.value)}
           >
-            Remove
-          </button>
+            <option value="month">month(s)</option>
+            <option value="week">week(s)</option>
+            <option value="day">day(s)</option>
+          </select>
+
+          <input
+            type="number"
+            placeholder="Price"
+            value={p.price}
+            onChange={e => updatePackage(i, "price", e.target.value)}
+          />
+
+          {packages.length > 1 && (
+            <button
+              type="button"
+              className="sd-remove-btn"
+              onClick={() => removePackageRow(i)}
+            >
+              Remove
+            </button>
+          )}
+        </div>
+
+        {/* Availability Section - Only show for day/week packages */}
+        {(p.unit === "day" || p.unit === "week") && (
+          <div className="sd-availability-section">
+            <h4>Service Availability</h4>
+            
+            <div className="sd-availability-toggle">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={p.availability?.isAvailable ?? true}
+                  onChange={e => updatePackage(i, "availability.isAvailable", e.target.checked)}
+                />
+                Enable availability scheduling
+              </label>
+            </div>
+
+            {p.availability?.isAvailable && (
+              <>
+                <div className="sd-time-slots-section">
+                  <label>Service Hours:</label>
+                  {(p.availability.timeSlots || [{ startTime: "09:00", endTime: "17:00" }]).map((slot, slotIndex) => (
+                    <div key={slotIndex} className="sd-time-slot-row">
+                      <input
+                        type="time"
+                        value={slot.startTime || "09:00"}
+                        onChange={e => updateTimeSlot(i, slotIndex, "startTime", e.target.value)}
+                      />
+                      <span>to</span>
+                      <input
+                        type="time"
+                        value={slot.endTime || "17:00"}
+                        onChange={e => updateTimeSlot(i, slotIndex, "endTime", e.target.value)}
+                      />
+                      {(p.availability.timeSlots || []).length > 1 && (
+                        <button
+                          type="button"
+                          className="sd-remove-time-slot-btn"
+                          onClick={() => removeTimeSlot(i, slotIndex)}
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    className="sd-add-time-slot-btn"
+                    onClick={() => addTimeSlot(i)}
+                  >
+                    + Add Time Slot
+                  </button>
+                </div>
+
+                <div className="sd-days-selection">
+                  <label>Available Days:</label>
+                  <div className="sd-days-grid">
+                    {[
+                      { key: 'monday', label: 'Mon' },
+                      { key: 'tuesday', label: 'Tue' },
+                      { key: 'wednesday', label: 'Wed' },
+                      { key: 'thursday', label: 'Thu' },
+                      { key: 'friday', label: 'Fri' },
+                      { key: 'saturday', label: 'Sat' },
+                      { key: 'sunday', label: 'Sun' }
+                    ].map(day => (
+                      <label key={day.key} className="sd-day-checkbox">
+                        <input
+                          type="checkbox"
+                          checked={(p.availability?.days || []).includes(day.key)}
+                          onChange={e => {
+                            const currentDays = p.availability?.days || [];
+                            const newDays = e.target.checked
+                              ? [...currentDays, day.key]
+                              : currentDays.filter(d => d !== day.key);
+                            updatePackage(i, "availability.days", newDays);
+                          }}
+                        />
+                        {day.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Time-only availability for monthly packages */}
+        {p.unit === "month" && (
+          <div className="sd-availability-section">
+            <h4>Service Hours</h4>
+            
+            <div className="sd-availability-toggle">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={p.availability?.isAvailable ?? true}
+                  onChange={e => updatePackage(i, "availability.isAvailable", e.target.checked)}
+                />
+                Set specific service hours
+              </label>
+            </div>
+
+            {p.availability?.isAvailable && (
+              <div className="sd-time-slots-section">
+                <label>Available Hours:</label>
+                {(p.availability.timeSlots || [{ startTime: "09:00", endTime: "17:00" }]).map((slot, slotIndex) => (
+                  <div key={slotIndex} className="sd-time-slot-row">
+                    <input
+                      type="time"
+                      value={slot.startTime || "09:00"}
+                      onChange={e => updateTimeSlot(i, slotIndex, "startTime", e.target.value)}
+                    />
+                    <span>to</span>
+                    <input
+                      type="time"
+                      value={slot.endTime || "17:00"}
+                      onChange={e => updateTimeSlot(i, slotIndex, "endTime", e.target.value)}
+                    />
+                    {(p.availability.timeSlots || []).length > 1 && (
+                      <button
+                        type="button"
+                        className="sd-remove-time-slot-btn"
+                        onClick={() => removeTimeSlot(i, slotIndex)}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  className="sd-add-time-slot-btn"
+                  onClick={() => addTimeSlot(i)}
+                >
+                  + Add Time Slot
+                </button>
+              </div>
+            )}
+            
+            <div className="sd-monthly-note">
+              <p>Monthly packages are available all days. Only specify your working hours.</p>
+            </div>
+          </div>
         )}
       </div>
     ))}
