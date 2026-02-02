@@ -96,28 +96,55 @@ const fetchAdminServices = async (catId) => {
     return;
   }
 
-  // First get the category name from the selected category ID
-  const selectedCategory = categories.find(cat => cat.id === catId);
-  if (!selectedCategory) {
-    console.log("Category not found for ID:", catId);
+  console.log("Fetching services for category ID:", catId);
+
+  try {
+    // Try different possible field names for category reference
+    let services = [];
+    
+    // First try: categoryMasterId
+    let q = query(
+      collection(db, "service_services_master"),
+      where("categoryMasterId", "==", catId),
+      where("isActive", "==", true)
+    );
+    
+    let snap = await getDocs(q);
+    services = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    
+    // If no results, try: masterCategoryId
+    if (services.length === 0) {
+      q = query(
+        collection(db, "service_services_master"),
+        where("masterCategoryId", "==", catId),
+        where("isActive", "==", true)
+      );
+      
+      snap = await getDocs(q);
+      services = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    }
+    
+    // If still no results, try by category name
+    if (services.length === 0) {
+      const selectedCategory = categories.find(cat => cat.id === catId);
+      if (selectedCategory) {
+        q = query(
+          collection(db, "service_services_master"),
+          where("categoryName", "==", selectedCategory.name),
+          where("isActive", "==", true)
+        );
+        
+        snap = await getDocs(q);
+        services = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      }
+    }
+    
+    console.log("Found services:", services);
+    setAdminServices(services);
+  } catch (error) {
+    console.error("Error fetching admin services:", error);
     setAdminServices([]);
-    return;
   }
-
-  console.log("Fetching services for category:", selectedCategory.name);
-
-  // Query services by categoryName instead of categoryMasterId
-  const q = query(
-    collection(db, "service_services_master"),
-    where("categoryName", "==", selectedCategory.name),
-    where("isActive", "==", true)
-  );
-
-  const snap = await getDocs(q);
-  const services = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  
-  console.log("Found services:", services);
-  setAdminServices(services);
 };
 
   // Load existing service data when in edit mode
@@ -624,32 +651,40 @@ if (isCustomService) {
     <label>Service</label>
 
     {!isCustomService ? (
-      <select
-        value={selectedServiceId}
-        onChange={(e) => {
-          const val = e.target.value;
+      <>
+        <select
+          value={selectedServiceId}
+          onChange={(e) => {
+            const val = e.target.value;
 
-          if (val === "custom") {
-            setIsCustomService(true);
-            setSelectedServiceId("");
-            setName("");
-          } else {
-            setSelectedServiceId(val);
-            const svc = adminServices.find(s => s.id === val);
-            if (svc) setName(svc.name);
-          }
-        }}
-      >
-        <option value="">Select Service</option>
+            if (val === "custom") {
+              setIsCustomService(true);
+              setSelectedServiceId("");
+              setName("");
+            } else {
+              setSelectedServiceId(val);
+              const svc = adminServices.find(s => s.id === val);
+              if (svc) setName(svc.name);
+            }
+          }}
+        >
+          <option value="">Select Service</option>
 
-        {adminServices.map(svc => (
-          <option key={svc.id} value={svc.id}>
-            {svc.name}
-          </option>
-        ))}
+          {adminServices.map(svc => (
+            <option key={svc.id} value={svc.id}>
+              {svc.name}
+            </option>
+          ))}
 
-        <option value="custom">➕ Add Custom Service</option>
-      </select>
+          <option value="custom">➕ Add Custom Service</option>
+        </select>
+        
+        {adminServices.length === 0 && (
+          <div className="sd-no-services-message">
+            <p>No predefined services found for this category. You can add a custom service instead.</p>
+          </div>
+        )}
+      </>
     ) : (
       <>
         <input
