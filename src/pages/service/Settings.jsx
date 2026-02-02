@@ -50,9 +50,6 @@ export default function Settings() {
     emailNotifications: true,
   });
   
-  // Category Selection
-  const [availableCategories, setAvailableCategories] = useState([]);
-  const [selectedCategories, setSelectedCategories] = useState([]);
   // Password Change
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
@@ -102,17 +99,9 @@ export default function Settings() {
             smsNotifications: Boolean(notificationData.smsNotifications ?? false),
             emailNotifications: Boolean(notificationData.emailNotifications ?? true),
           });
-          
-          // Load selected categories
-          setSelectedCategories(data.selectedCategories || []);
         } else {
           console.log("No service company document found");
         }
-        
-        // Load available categories
-        const categoriesSnap = await getDocs(collection(db, "service_categories_master"));
-        const categories = categoriesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        setAvailableCategories(categories);
       } catch (error) {
         console.error("Error loading settings:", error);
         alert("Failed to load settings data");
@@ -159,9 +148,6 @@ export default function Settings() {
         
         // Notifications
         notifications: notifications,
-        
-        // Selected categories
-        selectedCategories: selectedCategories,
         
         // Update timestamp
         updatedAt: new Date(),
@@ -337,19 +323,6 @@ export default function Settings() {
           </button>
           
           <button 
-            className={`settings-tab ${activeTab === 'categories' ? 'active' : ''}`}
-            onClick={() => setActiveTab('categories')}
-          >
-            <div className="settings-tab-icon categories">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
-                <line x1="7" y1="7" x2="7.01" y2="7"/>
-              </svg>
-            </div>
-            <span>Categories</span>
-          </button>
-          
-          <button 
             className={`settings-tab ${activeTab === 'security' ? 'active' : ''}`}
             onClick={() => setActiveTab('security')}
           >
@@ -518,47 +491,6 @@ export default function Settings() {
                     </div>
                   ))}
                 </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'categories' && (
-            <div className="settings-tab-panel">
-              <div className="settings-section">
-                <h3>Service Categories</h3>
-                <p>Select the categories your business provides services for</p>
-                
-                <div className="settings-categories-grid">
-                  {availableCategories.map((category) => (
-                    <div key={category.id} className="settings-category-item">
-                      <label className="settings-category-checkbox">
-                        <input
-                          type="checkbox"
-                          checked={selectedCategories.includes(category.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedCategories([...selectedCategories, category.id]);
-                            } else {
-                              setSelectedCategories(selectedCategories.filter(id => id !== category.id));
-                            }
-                          }}
-                        />
-                        <div className="settings-category-content">
-                          <h4>{category.name}</h4>
-                          {category.description && (
-                            <p>{category.description}</p>
-                          )}
-                        </div>
-                      </label>
-                    </div>
-                  ))}
-                </div>
-                
-                {selectedCategories.length === 0 && (
-                  <div className="settings-no-categories">
-                    <p>Please select at least one category to offer services in.</p>
-                  </div>
-                )}
               </div>
             </div>
           )}
