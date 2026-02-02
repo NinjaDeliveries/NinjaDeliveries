@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { auth, db } from "../../context/Firebase";
-import { collection, addDoc, doc, updateDoc, query, where, getDocs, getDoc } from "firebase/firestore";
+import { collection, addDoc, doc, updateDoc, query, where, getDocs } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "../../context/Firebase";
 
@@ -9,7 +9,10 @@ const AddServiceModal = ({ onClose, onSaved, editService }) => {
   const [name, setName] = useState("");
   // const [categoryId, setCategoryId] = useState("");
   const [categoryMasterId, setCategoryMasterId] = useState("");
+  const [selectedCompanyCategoryId, setSelectedCompanyCategoryId] = useState(""); // New state for company category selection
   const [categories, setCategories] = useState([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [servicesLoading, setServicesLoading] = useState(false);
   const [packages, setPackages] = useState([
     { 
       duration: 1, 
@@ -55,6 +58,7 @@ const syncAppService = async (service) => {
 };
   // admin predefined services
 const [adminServices, setAdminServices] = useState([]);
+const [lastFetchedCategoryId, setLastFetchedCategoryId] = useState(null); // Cache to avoid refetching
 
 // service selection
 const [selectedServiceId, setSelectedServiceId] = useState("");
@@ -93,10 +97,23 @@ const [fixedPrice, setFixedPrice] = useState("");
 const fetchAdminServices = async (catId) => {
   if (!catId) {
     setAdminServices([]);
+    setServicesLoading(false);
+    setLastFetchedCategoryId(null);
     return;
   }
 
-  console.log("Fetching services for category ID:", catId);
+  // Skip if we already fetched services for this category
+  if (lastFetchedCategoryId === catId && adminServices.length > 0) {
+    if (process.env.NODE_ENV === 'development') {
+      console.log("Using cached services for category:", catId);
+    }
+    return;
+  }
+
+  if (process.env.NODE_ENV === 'development') {
+    console.log("Fetching services for category ID:", catId);
+  }
+  setServicesLoading(true);
 
   try {
     // Try different possible field names for category reference
@@ -126,7 +143,7 @@ const fetchAdminServices = async (catId) => {
     
     // If still no results, try by category name
     if (services.length === 0) {
-      const selectedCategory = categories.find(cat => cat.id === catId);
+      const selectedCategory = categories.find(cat => cat.masterCategoryId === catId);
       if (selectedCategory) {
         q = query(
           collection(db, "service_services_master"),
@@ -139,11 +156,17 @@ const fetchAdminServices = async (catId) => {
       }
     }
     
-    console.log("Found services:", services);
+    if (process.env.NODE_ENV === 'development') {
+      console.log("Found services:", services);
+    }
     setAdminServices(services);
+    setLastFetchedCategoryId(catId); // Cache the category ID
   } catch (error) {
     console.error("Error fetching admin services:", error);
     setAdminServices([]);
+    setLastFetchedCategoryId(null);
+  } finally {
+    setServicesLoading(false);
   }
 };
 
@@ -153,6 +176,14 @@ const fetchAdminServices = async (catId) => {
 
   setName(editService.name || "");
   setCategoryMasterId(editService.categoryMasterId || "");
+
+  // Find the company category that matches the master category
+  if (editService.categoryMasterId && categories.length > 0) {
+    const matchingCompanyCategory = categories.find(cat => cat.masterCategoryId === editService.categoryMasterId);
+    if (matchingCompanyCategory) {
+      setSelectedCompanyCategoryId(matchingCompanyCategory.id);
+    }
+  }
 
   if (editService.serviceType === "custom") {
     setIsCustomService(true);
@@ -182,7 +213,7 @@ const fetchAdminServices = async (catId) => {
     setIsCustomService(false);
     setFixedPrice(editService.price?.toString() || "");
   }
-}, [editService]);
+}, [editService, categories]); // Add categories as dependency
 
   // Handle image upload
   const handleImageChange = (e) => {
@@ -262,48 +293,46 @@ const fetchAdminServices = async (catId) => {
   //   }
   // };
 
-    const fetchCategories = async () => {
+  const fetchCategories = async () => {
     try {
+      setCategoriesLoading(true);
       const user = auth.currentUser;
-      if (!user) return;
+      if (!user) {
+        setCategoriesLoading(false);
+        return;
+      }
 
-      // Get all master categories first
-      const snap = await getDocs(collection(db, "service_categories_master"));
-      const allCategories = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      // Fetch only company-selected categories (same approach as Technicians.jsx)
+      const q = query(
+        collection(db, "service_categories"),
+        where("companyId", "==", user.uid),
+        where("isActive", "==", true)
+      );
 
-      // Get company's selected categories from service_company document
-      const companyRef = doc(db, "service_company", user.uid);
-      const companySnap = await getDoc(companyRef);
+      const snap = await getDocs(q);
+      const list = snap.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      if (process.env.NODE_ENV === 'development') {
+        console.log("Company categories:", list);
+        console.log("Number of company categories found:", list.length);
+      }
+      setCategories(list);
       
-      if (companySnap.exists()) {
-        const companyData = companySnap.data();
-        const selectedCategoryIds = companyData.selectedCategories || [];
-        
-        if (selectedCategoryIds.length > 0) {
-          // Filter to show only company's selected categories
-          const companyCategories = allCategories.filter(cat => 
-            selectedCategoryIds.includes(cat.id)
-          );
-          setCategories(companyCategories);
-        } else {
-          // If no categories selected, show all categories as fallback
-          setCategories(allCategories);
-        }
-      } else {
-        // If no company document, show all categories
-        setCategories(allCategories);
+      // Auto-select and preload services if there's only one category
+      if (list.length === 1 && !editService) {
+        const singleCategory = list[0];
+        setSelectedCompanyCategoryId(singleCategory.id);
+        setCategoryMasterId(singleCategory.masterCategoryId);
+        fetchAdminServices(singleCategory.masterCategoryId);
       }
     } catch (err) {
       console.error("Fetch categories error:", err);
-      // On error, try to show all categories
-      try {
-        const snap = await getDocs(collection(db, "service_categories_master"));
-        const allCategories = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        setCategories(allCategories);
-      } catch (fallbackErr) {
-        console.error("Fallback fetch categories error:", fallbackErr);
-        setCategories([]);
-      }
+      setCategories([]);
+    } finally {
+      setCategoriesLoading(false);
     }
   };
 
@@ -383,10 +412,10 @@ const fetchAdminServices = async (catId) => {
     setPackages(copy);
   };
 
-  // Fetch categories
+  // Fetch categories immediately when modal opens
   useEffect(() => {
     fetchCategories();
-  }, []);
+  }, []); // Remove dependency to load immediately
 
  
 
@@ -618,26 +647,46 @@ if (isCustomService) {
               ))}
             </select> */}
 
-           <select
-  value={categoryMasterId}
-  onChange={(e) => {
-    const val = e.target.value;
-    setCategoryMasterId(val);     // ✅ MASTER ID
-    setSelectedServiceId("");
-    setIsCustomService(false);
-    setName("");
-    fetchAdminServices(val);      // ✅ MASTER ID
-  }}
->
-  <option value="">Select Category</option>
-  {categories.map(cat => (
-    <option key={cat.id} value={cat.id}>
-      {cat.name}
-    </option>
-  ))}
-</select>
+           {categoriesLoading ? (
+             <div className="sd-loading-select">
+               <span>Loading categories...</span>
+             </div>
+           ) : (
+             <select
+               value={selectedCompanyCategoryId}
+               onChange={(e) => {
+                 const val = e.target.value;
+                 setSelectedCompanyCategoryId(val);
+                 
+                 // Find the selected company category
+                 const selectedCompanyCategory = categories.find(cat => cat.id === val);
+                 
+                 if (selectedCompanyCategory) {
+                   // Use the masterCategoryId from the company category for fetching admin services
+                   const masterCatId = selectedCompanyCategory.masterCategoryId;
+                   setCategoryMasterId(masterCatId);
+                   setSelectedServiceId("");
+                   setIsCustomService(false);
+                   setName("");
+                   fetchAdminServices(masterCatId);
+                 } else {
+                   setCategoryMasterId("");
+                   setSelectedServiceId("");
+                   setIsCustomService(false);
+                   setName("");
+                 }
+               }}
+             >
+               <option value="">Select Category</option>
+               {categories.map(cat => (
+                 <option key={cat.id} value={cat.id}>
+                   {cat.name}
+                 </option>
+               ))}
+             </select>
+           )}
 
-            {categories.length === 0 && (
+            {!categoriesLoading && categories.length === 0 && (
               <div className="sd-no-categories-message">
                 <p>No categories available. Please go to Settings → Categories to select your service categories first.</p>
               </div>
@@ -652,34 +701,40 @@ if (isCustomService) {
 
     {!isCustomService ? (
       <>
-        <select
-          value={selectedServiceId}
-          onChange={(e) => {
-            const val = e.target.value;
+        {servicesLoading ? (
+          <div className="sd-loading-select">
+            <span>Loading services...</span>
+          </div>
+        ) : (
+          <select
+            value={selectedServiceId}
+            onChange={(e) => {
+              const val = e.target.value;
 
-            if (val === "custom") {
-              setIsCustomService(true);
-              setSelectedServiceId("");
-              setName("");
-            } else {
-              setSelectedServiceId(val);
-              const svc = adminServices.find(s => s.id === val);
-              if (svc) setName(svc.name);
-            }
-          }}
-        >
-          <option value="">Select Service</option>
+              if (val === "custom") {
+                setIsCustomService(true);
+                setSelectedServiceId("");
+                setName("");
+              } else {
+                setSelectedServiceId(val);
+                const svc = adminServices.find(s => s.id === val);
+                if (svc) setName(svc.name);
+              }
+            }}
+          >
+            <option value="">Select Service</option>
 
-          {adminServices.map(svc => (
-            <option key={svc.id} value={svc.id}>
-              {svc.name}
-            </option>
-          ))}
+            {adminServices.map(svc => (
+              <option key={svc.id} value={svc.id}>
+                {svc.name}
+              </option>
+            ))}
 
-          <option value="custom">➕ Add Custom Service</option>
-        </select>
+            <option value="custom">➕ Add Custom Service</option>
+          </select>
+        )}
         
-        {adminServices.length === 0 && (
+        {!servicesLoading && adminServices.length === 0 && (
           <div className="sd-no-services-message">
             <p>No predefined services found for this category. You can add a custom service instead.</p>
           </div>
