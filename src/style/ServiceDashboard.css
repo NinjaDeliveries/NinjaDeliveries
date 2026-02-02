@@ -16869,3 +16869,128 @@ input:checked + .settings-toggle-slider:before {
   letter-spacing: 1px;
   z-index: 1;
 }
+
+/* ========== WORKER AVAILABILITY STYLING ========== */
+.sd-select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+.sd-select:focus {
+  outline: none;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.sd-select option:disabled {
+  color: #9ca3af !important;
+  background-color: #f9fafb !important;
+  font-style: italic !important;
+}
+
+.worker-availability-info {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: #f9fafb;
+  border-radius: 6px;
+  border-left: 4px solid #e5e7eb;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.worker-availability-info.available {
+  background: #f0fdf4;
+  border-left-color: #22c55e;
+  color: #15803d;
+}
+
+.worker-availability-info.busy {
+  background: #fef2f2;
+  border-left-color: #ef4444;
+  color: #dc2626;
+}
+
+.worker-availability-info.unavailable {
+  background: #f9fafb;
+  border-left-color: #9ca3af;
+  color: #6b7280;
+}
+
+.sd-info-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.sd-info-box p {
+  margin: 4px 0;
+  font-size: 14px;
+  color: #374151;
+}
+
+.sd-info-box strong {
+  color: #1f2937;
+  font-weight: 600;
+}
+
+.no-workers-message {
+  text-align: center;
+  padding: 20px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  color: #dc2626;
+}
+
+.worker-filter-info {
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: #eff6ff;
+  border-radius: 6px;
+  border-left: 4px solid #3b82f6;
+}
+
+.worker-filter-info small {
+  color: #1e40af;
+  font-weight: 500;
+  font-size: 12px;
+}
+
+.sd-primary-btn:disabled {
+  background: #9ca3af !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+}
+
+.sd-secondary-btn {
+  background: #f3f4f6;
+  color: #374151;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.sd-secondary-btn:hover {
+  background: #e5e7eb;
+}
+
+.sd-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+}

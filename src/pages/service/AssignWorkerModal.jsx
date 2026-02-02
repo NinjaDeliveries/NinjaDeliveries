@@ -49,6 +49,58 @@ const AssignWorkerModal = ({ booking, categories = [], onClose, onAssigned }) =>
   };
 
 
+  // Check worker availability for the booking time slot
+  const checkWorkerAvailability = async (workerId, bookingDate, bookingTime) => {
+    try {
+      const user = auth.currentUser;
+      if (!user) return { available: false, reason: "No user" };
+
+      console.log(`🔍 Checking availability for worker ${workerId} on ${bookingDate} at ${bookingTime}`);
+
+      // Query for bookings on the same date and time with the same worker
+      const q = query(
+        collection(db, "service_bookings"),
+        where("companyId", "==", user.uid),
+        where("workerId", "==", workerId),
+        where("date", "==", bookingDate),
+        where("time", "==", bookingTime),
+        where("status", "in", ["assigned", "started", "in-progress"]) // Only check active bookings
+      );
+
+      const snap = await getDocs(q);
+      
+      console.log(`📊 Found ${snap.size} conflicting bookings for worker ${workerId}`);
+      
+      if (snap.size > 0) {
+        // Worker is already assigned to another booking at this time
+        const conflictingBooking = snap.docs[0].data();
+        console.log(`⚠️ Worker ${workerId} is busy:`, conflictingBooking);
+        
+        return {
+          available: false,
+          reason: "busy",
+          conflictingService: conflictingBooking.workName || conflictingBooking.serviceName || "Unknown Service",
+          conflictingCustomer: conflictingBooking.customerName || "Unknown Customer",
+          conflictingBookingId: snap.docs[0].id
+        };
+      }
+
+      console.log(`✅ Worker ${workerId} is available`);
+      return { available: true, reason: "available" };
+    } catch (error) {
+      console.error("Error checking worker availability:", error);
+      return { available: false, reason: "error" };
+    }
+  };
+
+  // Get worker availability status for display
+  const getWorkerStatus = async (worker) => {
+    const availability = await checkWorkerAvailability(worker.id, booking.date, booking.time);
+    return {
+      ...worker,
+      availability: availability
+    };
+  };
   // 🔹 Fetch workers - filter by booking service category
   const fetchWorkers = async () => {
     try {
@@ -76,7 +128,9 @@ const AssignWorkerModal = ({ booking, categories = [], onClose, onAssigned }) =>
         workName: booking.workName,
         serviceId: booking.serviceId,
         workId: booking.workId,
-        subServiceId: booking.subServiceId
+        subServiceId: booking.subServiceId,
+        date: booking.date,
+        time: booking.time
       });
 
       // Try to find the service that matches the booking
@@ -150,7 +204,21 @@ const AssignWorkerModal = ({ booking, categories = [], onClose, onAssigned }) =>
         filteredWorkers = allWorkers;
       }
 
-      setWorkers(filteredWorkers);
+      // Check availability for each worker
+      console.log(`🔍 Checking availability for ${filteredWorkers.length} workers...`);
+      const workersWithAvailability = await Promise.all(
+        filteredWorkers.map(async (worker) => {
+          const availability = await checkWorkerAvailability(worker.id, booking.date, booking.time);
+          console.log(`👤 Worker ${worker.name} (${worker.id}):`, availability);
+          return {
+            ...worker,
+            availability: availability
+          };
+        })
+      );
+
+      console.log("Workers with availability:", workersWithAvailability);
+      setWorkers(workersWithAvailability);
     } catch (err) {
       console.error("Fetch workers error:", err);
     } finally {
@@ -171,6 +239,16 @@ const AssignWorkerModal = ({ booking, categories = [], onClose, onAssigned }) =>
 
     const worker = workers.find((w) => w.id === selectedWorker);
     if (!worker) return;
+
+    // Check if worker is available before assigning
+    if (!worker.availability?.available) {
+      if (worker.availability?.reason === 'busy') {
+        alert(`Worker is busy with another booking: ${worker.availability.conflictingService} for ${worker.availability.conflictingCustomer}`);
+      } else {
+        alert("Selected worker is not available for this time slot");
+      }
+      return;
+    }
 
     try {
       const ref = doc(db, "service_bookings", booking.id);
@@ -235,7 +313,7 @@ const AssignWorkerModal = ({ booking, categories = [], onClose, onAssigned }) =>
           <>
             <div className="worker-filter-info">
               <small>
-                Showing workers for: {booking.serviceName} - {booking.workName} ({workers.length} available)
+                Showing workers for: {booking.serviceName} - {booking.workName} ({workers.length} total, {workers.filter(w => w.availability?.available).length} available)
               </small>
             </div>
             <select
@@ -246,16 +324,63 @@ const AssignWorkerModal = ({ booking, categories = [], onClose, onAssigned }) =>
               <option value="">Select Worker</option>
               
                 {workers.map((w) => (
-                  <option key={w.id} value={w.id}>
+                  <option 
+                    key={w.id} 
+                    value={w.id}
+                    disabled={!w.availability?.available}
+                    style={{
+                      color: !w.availability?.available ? '#9ca3af' : 'inherit',
+                      fontStyle: !w.availability?.available ? 'italic' : 'normal'
+                    }}
+                  >
                     {w.name}
                     {(w.assignedCategories && w.assignedCategories.length > 0) ? 
                       ` (${w.assignedCategories.map(catId => getCategoryName(catId)).join(", ")})` :
                       w.role ? ` (${getCategoryName(w.role)})` : ""
                     }
                     {w.specialization ? ` - ${w.specialization}` : ""}
+                    {!w.availability?.available && w.availability?.reason === 'busy' ? 
+                      ` - BUSY (${w.availability.conflictingService})` : 
+                      !w.availability?.available ? ' - NOT AVAILABLE' : ' - AVAILABLE'
+                    }
                     </option>
               ))}
             </select>
+
+            {/* Worker Availability Status */}
+            {selectedWorker && (
+              <div className={`worker-availability-info ${
+                workers.find(w => w.id === selectedWorker)?.availability?.available ? 'available' : 
+                workers.find(w => w.id === selectedWorker)?.availability?.reason === 'busy' ? 'busy' : 'unavailable'
+              }`}>
+                {(() => {
+                  const worker = workers.find(w => w.id === selectedWorker);
+                  if (!worker) return null;
+                  
+                  if (worker.availability?.available) {
+                    return (
+                      <>
+                        ✅ <strong>{worker.name}</strong> is available for this time slot
+                      </>
+                    );
+                  } else if (worker.availability?.reason === 'busy') {
+                    return (
+                      <>
+                        ⚠️ <strong>{worker.name}</strong> is busy with another booking: 
+                        <br />
+                        📋 {worker.availability.conflictingService} for {worker.availability.conflictingCustomer}
+                      </>
+                    );
+                  } else {
+                    return (
+                      <>
+                        ❌ <strong>{worker.name}</strong> is not available for this time slot
+                      </>
+                    );
+                  }
+                })()}
+              </div>
+            )}
           </>
         )}
 
@@ -266,9 +391,13 @@ const AssignWorkerModal = ({ booking, categories = [], onClose, onAssigned }) =>
           <button 
           className="sd-primary-btn" 
           onClick={handleAssign}
-          disabled={!selectedWorker || booking.status === "assigned"}
+          disabled={!selectedWorker || booking.status === "assigned" || (selectedWorker && !workers.find(w => w.id === selectedWorker)?.availability?.available)}
           >
-            Assign
+            {!selectedWorker ? 'Select Worker' :
+             booking.status === "assigned" ? 'Already Assigned' :
+             selectedWorker && !workers.find(w => w.id === selectedWorker)?.availability?.available ? 'Worker Not Available' :
+             'Assign Worker'
+            }
           </button>
         </div>
       </div>
