@@ -4,10 +4,7 @@ import {
   collection,
   query,
   where,
-  getDocs,
-  orderBy,
-  doc,
-  getDoc,
+  onSnapshot,
 } from "firebase/firestore";
 import "../../style/ServiceDashboard.css";
 
@@ -27,127 +24,190 @@ const Feedback = () => {
     withComments: 0,
   });
 
-  const fetchRatings = useCallback(async () => {
-    try {
-      const user = auth.currentUser;
-      if (!user) {
-        console.log("No authenticated user found");
-        setLoading(false);
-        return;
-      }
-
-      console.log("Fetching feedback for user:", user.uid);
-
-      // Try multiple approaches to find the correct company ID
-      let companyId = user.uid; // Default to user ID
-
-      // Get service company document to check if it exists
-      const companyRef = doc(db, "service_company", user.uid);
-      const companySnap = await getDoc(companyRef);
-
-      if (companySnap.exists()) {
-        const companyData = companySnap.data();
-        console.log("Company data found:", companyData);
-        // Use the document ID as company ID
-        companyId = companySnap.id;
-      } else {
-        console.log("No service_company document found, using user.uid as companyId");
-      }
-
-      console.log("Using companyId for feedback query:", companyId);
-
-      // Try different query approaches
-      const queries = [
-        // Query 1: Using companyId field
-        query(
-          collection(db, "serviceRatings"),
-          where("companyId", "==", companyId)
-        ),
-        // Query 2: Using serviceCompanyId field (alternative field name)
-        query(
-          collection(db, "serviceRatings"),
-          where("serviceCompanyId", "==", companyId)
-        ),
-        // Query 3: Using company field (another alternative)
-        query(
-          collection(db, "serviceRatings"),
-          where("company", "==", companyId)
-        )
-      ];
-
-      let feedbackList = [];
-      let queryWorked = false;
-
-      // Try each query until one works
-      for (let i = 0; i < queries.length; i++) {
-        try {
-          console.log(`Trying query ${i + 1}...`);
-          const snap = await getDocs(queries[i]);
-          console.log(`Query ${i + 1} returned ${snap.docs.length} documents`);
-          
-          if (snap.docs.length > 0) {
-            feedbackList = snap.docs.map((d) => {
-              const data = d.data();
-              console.log("Feedback document data:", data);
-              return {
-                id: d.id,
-                ...data,
-                createdAt: data.createdAt?.toDate() || new Date(data.createdAt) || new Date(),
-              };
-            });
-            queryWorked = true;
-            console.log("Successfully fetched feedback:", feedbackList);
-            break;
-          }
-        } catch (queryError) {
-          console.error(`Query ${i + 1} failed:`, queryError);
-        }
-      }
-
-      if (!queryWorked) {
-        // If no queries worked, try to get all documents and filter manually
-        console.log("All queries failed, trying to fetch all serviceRatings documents...");
-        try {
-          const allDocsSnap = await getDocs(collection(db, "serviceRatings"));
-          console.log(`Found ${allDocsSnap.docs.length} total serviceRatings documents`);
-          
-          if (allDocsSnap.docs.length === 0) {
-            console.log("⚠️ No documents found in serviceRatings collection at all!");
-            console.log("This could mean:");
-            console.log("1. The collection name is different (check Firebase console)");
-            console.log("2. No ratings have been created yet");
-            console.log("3. Security rules are blocking access");
-          }
-          
-          const allDocs = allDocsSnap.docs.map(d => ({
-            id: d.id,
-            ...d.data()
-          }));
-          
-          console.log("All serviceRatings documents:", allDocs);
-          
-          // Filter manually for this company
-          feedbackList = allDocs.filter(doc => 
-            doc.companyId === companyId || 
-            doc.serviceCompanyId === companyId || 
-            doc.company === companyId
-          );
-          
-          console.log("Filtered feedback for this company:", feedbackList);
-        } catch (allDocsError) {
-          console.error("Failed to fetch all documents:", allDocsError);
-          console.log("This might be a security rules issue or the collection doesn't exist");
-        }
-      }
-
-      setRatings(feedbackList);
-      calculateStats(feedbackList);
-    } catch (error) {
-      console.error("Error fetching feedback:", error);
-    } finally {
+  const setupRealtimeFeedbackListener = useCallback(() => {
+    const user = auth.currentUser;
+    if (!user) {
+      console.log("❌ No authenticated user found");
       setLoading(false);
+      return;
     }
+
+    console.log("🔄 Setting up real-time feedback listener for user:", user.uid);
+
+    // Try multiple collection names and field combinations
+    const collectionNames = ["serviceRatings", "service_ratings", "ratings", "feedback"];
+    const fieldNames = ["companyId", "serviceCompanyId", "company", "providerId"];
+    
+    let unsubscribe = null;
+    let listenerActive = false;
+
+    const tryListener = async (collectionName, fieldName) => {
+      try {
+        console.log(`🔍 Trying listener: ${collectionName}.${fieldName} == ${user.uid}`);
+        
+        // Simple query without orderBy to avoid index requirement
+        const q = query(
+          collection(db, collectionName),
+          where(fieldName, "==", user.uid)
+        );
+
+        return onSnapshot(q, (snapshot) => {
+          console.log(`📊 ${collectionName} snapshot received:`, {
+            size: snapshot.size,
+            empty: snapshot.empty,
+            changes: snapshot.docChanges().length
+          });
+
+          if (!snapshot.empty || listenerActive) {
+            listenerActive = true;
+            
+            const feedbackList = [];
+            snapshot.docs.forEach(doc => {
+              const data = doc.data();
+              console.log("📝 Feedback document:", doc.id, data);
+              
+              // Handle different timestamp formats
+              let createdAt = new Date();
+              if (data.createdAt && typeof data.createdAt.toDate === 'function') {
+                createdAt = data.createdAt.toDate();
+              } else if (data.timestamp) {
+                createdAt = new Date(data.timestamp);
+              } else if (data.createdAt) {
+                createdAt = new Date(data.createdAt);
+              }
+              
+              feedbackList.push({
+                id: doc.id,
+                ...data,
+                createdAt: createdAt,
+              });
+            });
+
+            // Sort manually by date (newest first)
+            feedbackList.sort((a, b) => b.createdAt - a.createdAt);
+
+            console.log(`✅ Real-time feedback updated: ${feedbackList.length} items`);
+            setRatings(feedbackList);
+            calculateStats(feedbackList);
+            setLoading(false);
+          }
+        }, (error) => {
+          console.error(`❌ Listener error for ${collectionName}.${fieldName}:`, error);
+          throw error;
+        });
+
+      } catch (error) {
+        console.error(`❌ Failed to setup listener for ${collectionName}.${fieldName}:`, error);
+        return null;
+      }
+    };
+
+    // Try different combinations
+    const setupListener = async () => {
+      for (const collectionName of collectionNames) {
+        for (const fieldName of fieldNames) {
+          try {
+            const listener = await tryListener(collectionName, fieldName);
+            if (listener) {
+              unsubscribe = listener;
+              console.log(`✅ Successfully setup listener: ${collectionName}.${fieldName}`);
+              return;
+            }
+          } catch (error) {
+            console.log(`⚠️ Listener failed: ${collectionName}.${fieldName}`);
+            continue;
+          }
+        }
+      }
+
+      // If no specific listeners worked, try to get all documents as fallback
+      console.log("🔄 Trying fallback: fetch all documents and filter...");
+      try {
+        const allListener = onSnapshot(collection(db, "serviceRatings"), (snapshot) => {
+          console.log(`📊 All documents snapshot: ${snapshot.size} total`);
+          
+          const allDocs = [];
+          snapshot.docs.forEach(doc => {
+            const data = doc.data();
+            
+            // Handle different timestamp formats
+            let createdAt = new Date();
+            if (data.createdAt && typeof data.createdAt.toDate === 'function') {
+              createdAt = data.createdAt.toDate();
+            } else if (data.timestamp) {
+              createdAt = new Date(data.timestamp);
+            } else if (data.createdAt) {
+              createdAt = new Date(data.createdAt);
+            }
+            
+            allDocs.push({
+              id: doc.id,
+              ...data,
+              createdAt: createdAt,
+            });
+          });
+
+          // Filter for this company
+          const feedbackList = allDocs.filter(doc => 
+            doc.companyId === user.uid || 
+            doc.serviceCompanyId === user.uid || 
+            doc.company === user.uid ||
+            doc.providerId === user.uid
+          );
+
+          // Sort manually by date (newest first)
+          feedbackList.sort((a, b) => b.createdAt - a.createdAt);
+
+          console.log(`✅ Fallback filter result: ${feedbackList.length} items for company`);
+          setRatings(feedbackList);
+          calculateStats(feedbackList);
+          setLoading(false);
+        }, (error) => {
+          console.error("❌ Fallback listener error:", error);
+          // If even fallback fails, just show empty state
+          setRatings([]);
+          calculateStats([]);
+          setLoading(false);
+        });
+
+        unsubscribe = allListener;
+      } catch (error) {
+        console.error("❌ Fallback listener setup failed:", error);
+        setRatings([]);
+        calculateStats([]);
+        setLoading(false);
+      }
+    };
+
+    setupListener();
+
+    // Return cleanup function
+    return () => {
+      if (unsubscribe) {
+        console.log("🧹 Cleaning up feedback listener");
+        unsubscribe();
+      }
+    };
   }, []);
+
+  // Manual refresh function
+  const handleRefresh = () => {
+    console.log("🔄 Manual refresh triggered");
+    setLoading(true);
+    
+    // Re-setup the listener
+    const cleanup = setupRealtimeFeedbackListener();
+    
+    // Set a timeout to stop loading if no data comes
+    setTimeout(() => {
+      if (loading) {
+        console.log("⏰ Refresh timeout, stopping loading");
+        setLoading(false);
+      }
+    }, 10000); // 10 second timeout
+    
+    return cleanup;
+  };
 
   const calculateStats = (feedbackList) => {
     const stats = feedbackList.reduce((acc, feedback) => {
@@ -192,15 +252,19 @@ const Feedback = () => {
   };
 
   useEffect(() => {
-    fetchRatings();
-  }, [fetchRatings]);
+    console.log("🚀 Feedback component mounted, setting up real-time listener");
+    const cleanup = setupRealtimeFeedbackListener();
+    
+    // Cleanup on unmount
+    return cleanup;
+  }, [setupRealtimeFeedbackListener]);
 
   // Filter feedback based on search and rating
   const filteredRatings = ratings.filter((rating) => {
     const matchesSearch = !searchQuery || 
-      rating.serviceTitle?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      rating.customerName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       rating.feedback?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      rating.customerName?.toLowerCase().includes(searchQuery.toLowerCase());
+      rating.serviceName?.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesRating = ratingFilter === "all" || 
       parseInt(rating.rating) === parseInt(ratingFilter);
@@ -264,17 +328,27 @@ const Feedback = () => {
         <div>
           <h1>Customer Feedback</h1>
           <p>View and analyze customer reviews and ratings for your services</p>
+          <div className="feedback-live-indicator">
+            <div className="feedback-live-dot"></div>
+            Live Data
+          </div>
         </div>
         <div className="feedback-header-actions">
           <button 
             className="feedback-refresh-btn"
-            onClick={() => {
-              setLoading(true);
-              fetchRatings();
-            }}
+            onClick={handleRefresh}
             disabled={loading}
           >
-            🔄 Refresh
+            {loading ? (
+              <>
+                <div className="feedback-btn-spinner"></div>
+                Refreshing...
+              </>
+            ) : (
+              <>
+                🔄 Refresh
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -308,21 +382,7 @@ const Feedback = () => {
         <div className="feedback-stat-card positive">
           <div className="feedback-stat-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path d="M7 10v12"/>
-              <path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h0a3.13 3.13 0 0 1 3 3.88Z"/>
-            </svg>
-          </div>
-          <div className="feedback-stat-content">
-            <p className="feedback-stat-label">Positive (4-5★)</p>
-            <p className="feedback-stat-value">{stats.fiveStars + stats.fourStars}</p>
-          </div>
-        </div>
-
-        <div className="feedback-stat-card comments">
-          <div className="feedback-stat-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path d="M14 9a2 2 0 0 1-2 2H6l-4 4V4c0-1.1.9-2 2-2h8a2 2 0 0 1 2 2v5Z"/>
-              <path d="M18 9h2a2 2 0 0 1 2 2v11l-4-4h-6a2 2 0 0 1-2-2v-1"/>
+              <path d="M14 9V5a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2H9V5a3 3 0 0 1 6 0v4h2a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2"/>
             </svg>
           </div>
           <div className="feedback-stat-content">
@@ -335,26 +395,21 @@ const Feedback = () => {
       {/* Rating Distribution */}
       <div className="feedback-distribution-card">
         <h3>Rating Distribution</h3>
-        <div className="feedback-distribution">
+        <div className="feedback-distribution-bars">
           {[5, 4, 3, 2, 1].map(star => {
-            const count = stats[`${star === 1 ? 'one' : star === 2 ? 'two' : star === 3 ? 'three' : star === 4 ? 'four' : 'five'}Star${star === 1 ? '' : 's'}`];
+            const count = stats[`${['', 'one', 'two', 'three', 'four', 'five'][star]}Star${star === 1 ? '' : 's'}`] || 0;
             const percentage = stats.totalFeedback > 0 ? (count / stats.totalFeedback) * 100 : 0;
             
             return (
               <div key={star} className="feedback-distribution-row">
-                <div className="feedback-distribution-label">
-                  <span>{star}</span>
-                  <svg className="feedback-star filled" viewBox="0 0 24 24" fill="currentColor">
-                    <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
-                  </svg>
-                </div>
+                <span className="feedback-distribution-label">{star} ⭐</span>
                 <div className="feedback-distribution-bar">
                   <div 
                     className="feedback-distribution-fill"
                     style={{ width: `${percentage}%` }}
                   ></div>
                 </div>
-                <div className="feedback-distribution-count">{count}</div>
+                <span className="feedback-distribution-count">{count}</span>
               </div>
             );
           })}
@@ -377,10 +432,10 @@ const Feedback = () => {
           />
         </div>
 
-        <select 
-          className="feedback-filter-select"
-          value={ratingFilter} 
+        <select
+          value={ratingFilter}
           onChange={(e) => setRatingFilter(e.target.value)}
+          className="feedback-filter-select"
         >
           <option value="all">All Ratings</option>
           <option value="5">5 Stars</option>
@@ -403,64 +458,41 @@ const Feedback = () => {
             <h3>No feedback found</h3>
             <p>
               {searchQuery || ratingFilter !== "all"
-                ? "Try adjusting your filters"
-                : "Customer feedback will appear here when they rate your services"}
+                ? "Try adjusting your search or filters"
+                : "Customer feedback will appear here once services are completed and rated"}
             </p>
-            {/* Debug info */}
-            <div className="feedback-debug-info" style={{ 
-              marginTop: '20px', 
-              padding: '15px', 
-              background: '#f8f9fa', 
-              borderRadius: '8px', 
-              fontSize: '12px', 
-              color: '#666',
-              textAlign: 'left'
-            }}>
-              <strong>Debug Info:</strong><br/>
-              Total ratings fetched: {ratings.length}<br/>
-              Current user ID: {auth.currentUser?.uid}<br/>
-              Check browser console for detailed logs
-            </div>
           </div>
         ) : (
           filteredRatings.map((rating) => (
             <div key={rating.id} className="feedback-card">
-              <div className="feedback-card-content">
-                <div className="feedback-main-section">
+              <div className="feedback-header">
+                <div className="feedback-customer">
                   <div className="feedback-avatar">
-                    {rating.customerName ? rating.customerName.split(" ").map(n => n[0]).join("").toUpperCase() : "U"}
+                    {(rating.customerName || 'A').charAt(0).toUpperCase()}
                   </div>
-                  
-                  <div className="feedback-info">
-                    <div className="feedback-header">
-                      <div className="feedback-customer-info">
-                        <h3 className="feedback-customer-name">{rating.customerName || 'Anonymous Customer'}</h3>
-                        <p className="feedback-service-name">{rating.serviceTitle || 'Service'}</p>
-                      </div>
-                      <div className="feedback-date">
-                        {formatDate(rating.createdAt)}
-                      </div>
-                    </div>
-
-                    <div className="feedback-rating-section">
-                      <div className="feedback-stars">
-                        {renderStars(rating.rating)}
-                      </div>
-                      <span className={`feedback-rating-badge ${getRatingColor(rating.rating)}`}>
-                        {rating.rating}/5
-                      </span>
-                    </div>
-
-                    {rating.feedback && rating.feedback.trim() && (
-                      <div className="feedback-comment">
-                        <svg className="feedback-comment-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                        </svg>
-                        <p>"{rating.feedback}"</p>
-                      </div>
-                    )}
+                  <div className="feedback-customer-info">
+                    <h4>{rating.customerName || 'Anonymous'}</h4>
+                    <p>{rating.serviceName || 'Service'}</p>
                   </div>
                 </div>
+                <div className="feedback-rating">
+                  <div className={`feedback-rating-badge ${getRatingColor(rating.rating)}`}>
+                    {rating.rating || 0}
+                  </div>
+                  <div className="feedback-stars">
+                    {renderStars(rating.rating)}
+                  </div>
+                </div>
+              </div>
+
+              {rating.feedback && (
+                <div className="feedback-comment">
+                  <p>"{rating.feedback}"</p>
+                </div>
+              )}
+
+              <div className="feedback-footer">
+                <span className="feedback-date">{formatDate(rating.createdAt)}</span>
               </div>
             </div>
           ))

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { auth, db } from "../../context/Firebase";
-import { collection, query, where, getDocs, addDoc, doc, updateDoc, deleteDoc } from "firebase/firestore";
+import { collection, query, where, getDocs, addDoc, doc, updateDoc, deleteDoc, onSnapshot } from "firebase/firestore";
 import "../../style/ServiceDashboard.css";
 
 const Technicians = () => {
@@ -11,6 +11,10 @@ const Technicians = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editTechnician, setEditTechnician] = useState(null);
+  
+  // Live worker statistics
+  const [workerStats, setWorkerStats] = useState({});
+  const [loadingStats, setLoadingStats] = useState(true);
   
   // Search and filter states
   const [searchQuery, setSearchQuery] = useState("");
@@ -41,12 +45,173 @@ const Technicians = () => {
     return matchesSearch && matchesRole && matchesStatus;
   });
 
-  // Calculate stats
+  // Calculate stats with live data
   const activeCount = technicians.filter((t) => t.isActive ?? true).length;
-  const totalJobs = technicians.reduce((acc, t) => acc + (t.completedJobs || 0), 0);
-  const avgRating = technicians.length > 0 
-    ? (technicians.reduce((acc, t) => acc + (t.rating || 4.5), 0) / technicians.length).toFixed(1)
+  const totalJobs = Object.values(workerStats).reduce((acc, stats) => acc + (stats.completedJobs || 0), 0);
+  const avgRating = Object.keys(workerStats).length > 0 
+    ? (Object.values(workerStats).reduce((acc, stats) => acc + (stats.averageRating || 0), 0) / Object.keys(workerStats).length).toFixed(1)
     : "0.0";
+
+  // Fetch live worker statistics from bookings and ratings
+  const fetchWorkerStats = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      console.log("🔄 Fetching live worker statistics...");
+      setLoadingStats(true);
+
+      // Fetch all bookings for this company
+      const bookingsQuery = query(
+        collection(db, "service_bookings"),
+        where("companyId", "==", user.uid)
+      );
+
+      const bookingsSnap = await getDocs(bookingsQuery);
+      const bookings = bookingsSnap.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+
+      console.log(`📊 Found ${bookings.length} total bookings`);
+
+      // Fetch all ratings for this company (try multiple collection names)
+      const ratingCollections = ["serviceRatings", "service_ratings", "ratings", "feedback"];
+      let ratings = [];
+
+      for (const collectionName of ratingCollections) {
+        try {
+          const ratingsQuery = query(
+            collection(db, collectionName),
+            where("companyId", "==", user.uid)
+          );
+
+          const ratingsSnap = await getDocs(ratingsQuery);
+          if (!ratingsSnap.empty) {
+            ratings = ratingsSnap.docs.map(doc => ({
+              id: doc.id,
+              ...doc.data()
+            }));
+            console.log(`⭐ Found ${ratings.length} ratings in ${collectionName}`);
+            break; // Use the first collection that has data
+          }
+        } catch (error) {
+          console.log(`⚠️ Could not fetch from ${collectionName}:`, error.message);
+          continue;
+        }
+      }
+
+      if (ratings.length === 0) {
+        console.log("⚠️ No ratings found in any collection");
+      }
+
+      // Calculate statistics for each worker
+      const stats = {};
+
+      // Initialize stats for all workers
+      technicians.forEach(worker => {
+        stats[worker.id] = {
+          completedJobs: 0,
+          totalRatings: 0,
+          averageRating: 0,
+          ratingSum: 0,
+          ratingCount: 0
+        };
+      });
+
+      // Count completed jobs per worker
+      bookings.forEach(booking => {
+        const workerId = booking.assignedWorker || booking.workerId || booking.technicianId;
+        const status = booking.status || booking.bookingStatus;
+        
+        if (workerId && (status === 'completed' || status === 'Completed')) {
+          if (stats[workerId]) {
+            stats[workerId].completedJobs++;
+          }
+        }
+      });
+
+      // Calculate ratings per worker
+      ratings.forEach(rating => {
+        const workerId = rating.workerId || rating.technicianId || rating.assignedWorker;
+        const ratingValue = parseFloat(rating.rating || 0);
+        
+        if (workerId && ratingValue > 0) {
+          if (stats[workerId]) {
+            stats[workerId].ratingSum += ratingValue;
+            stats[workerId].ratingCount++;
+            stats[workerId].totalRatings++;
+          }
+        }
+      });
+
+      // Calculate average ratings
+      Object.keys(stats).forEach(workerId => {
+        if (stats[workerId].ratingCount > 0) {
+          stats[workerId].averageRating = (stats[workerId].ratingSum / stats[workerId].ratingCount);
+        }
+      });
+
+      console.log("📈 Worker statistics calculated:", stats);
+      setWorkerStats(stats);
+      setLoadingStats(false);
+
+    } catch (error) {
+      console.error("❌ Error fetching worker statistics:", error);
+      setLoadingStats(false);
+    }
+  };
+
+  // Setup real-time listener for worker statistics
+  const setupWorkerStatsListener = () => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    console.log("🔄 Setting up real-time worker stats listener...");
+
+    // Listen to bookings changes
+    const bookingsQuery = query(
+      collection(db, "service_bookings"),
+      where("companyId", "==", user.uid)
+    );
+
+    const unsubscribeBookings = onSnapshot(bookingsQuery, (snapshot) => {
+      console.log(`📊 Bookings updated: ${snapshot.size} total`);
+      fetchWorkerStats(); // Recalculate stats when bookings change
+    });
+
+    const ratingsCollections = ["serviceRatings", "service_ratings", "ratings", "feedback"];
+    let ratingsUnsubscribe = null;
+
+    // Try to set up listener for ratings from different collections
+    for (const collectionName of ratingsCollections) {
+      try {
+        const ratingsQuery = query(
+          collection(db, collectionName),
+          where("companyId", "==", user.uid)
+        );
+
+        ratingsUnsubscribe = onSnapshot(ratingsQuery, (snapshot) => {
+          console.log(`⭐ Ratings updated in ${collectionName}: ${snapshot.size} total`);
+          fetchWorkerStats(); // Recalculate stats when ratings change
+        });
+
+        console.log(`✅ Set up ratings listener for ${collectionName}`);
+        break; // Use the first collection that works
+      } catch (error) {
+        console.log(`⚠️ Could not set up listener for ${collectionName}:`, error.message);
+        continue;
+      }
+    }
+
+    // Return cleanup function
+    return () => {
+      unsubscribeBookings();
+      if (ratingsUnsubscribe) {
+        ratingsUnsubscribe();
+      }
+    };
+  };
 
   const fetchTechnicians = async () => {
     try {
@@ -183,13 +348,11 @@ const Technicians = () => {
         assignedCategories: assignedCategories, // New field for multiple categories
         assignedServices: assignedServices,
         isActive: isActive,
-        rating: editTechnician?.rating || 4.5,
-        completedJobs: editTechnician?.completedJobs || 0,
         updatedAt: new Date(),
       };
 
       if (editTechnician) {
-        // Update existing technician
+        // Update existing technician (don't override rating and completedJobs as they come from live data)
         await updateDoc(doc(db, "service_workers", editTechnician.id), payload);
       } else {
         // Create new technician
@@ -354,12 +517,21 @@ const Technicians = () => {
     fetchServices();
   }, []);
 
+  // Fetch worker stats when technicians are loaded
+  useEffect(() => {
+    if (technicians.length > 0) {
+      const cleanup = setupWorkerStatsListener();
+      return cleanup;
+    }
+  }, [technicians]);
+
   // Debug effect to log data when it changes
   useEffect(() => {
     console.log("=== DEBUG INFO ===");
     console.log("Categories loaded:", categories.length);
     console.log("Services loaded:", services.length);
     console.log("Category Masters loaded:", categoryMasters.length);
+    console.log("Worker Stats:", workerStats);
     
     if (categories.length > 0) {
       console.log("Sample category:", categories[0]);
@@ -367,7 +539,7 @@ const Technicians = () => {
     if (services.length > 0) {
       console.log("Sample service:", services[0]);
     }
-  }, [categories, services, categoryMasters]);
+  }, [categories, services, categoryMasters, workerStats]);
 
   return (
     <div className="sd-main">
@@ -615,7 +787,15 @@ const Technicians = () => {
                       </svg>
                     </div>
                     <div>
-                      <span className="technicians-stat-number">{technician.rating || 4.5}</span>
+                      <span className="technicians-stat-number">
+                        {loadingStats ? (
+                          <div className="technicians-stat-loading">...</div>
+                        ) : (
+                          workerStats[technician.id]?.averageRating 
+                            ? workerStats[technician.id].averageRating.toFixed(1)
+                            : "0.0"
+                        )}
+                      </span>
                       <p className="technicians-stat-text">Rating</p>
                     </div>
                   </div>
@@ -629,7 +809,13 @@ const Technicians = () => {
                       </svg>
                     </div>
                     <div>
-                      <span className="technicians-stat-number">{technician.completedJobs || 0}</span>
+                      <span className="technicians-stat-number">
+                        {loadingStats ? (
+                          <div className="technicians-stat-loading">...</div>
+                        ) : (
+                          workerStats[technician.id]?.completedJobs || 0
+                        )}
+                      </span>
                       <p className="technicians-stat-text">Jobs Done</p>
                     </div>
                   </div>
