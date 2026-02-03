@@ -334,7 +334,7 @@ const fetchAdminServices = async (catId) => {
     } finally {
       setCategoriesLoading(false);
     }
-  };
+  };//hcb
 
   const addPackageRow = () => {
     setPackages([...packages, { 
