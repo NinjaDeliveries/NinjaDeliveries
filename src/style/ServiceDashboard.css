@@ -15478,6 +15478,368 @@ input:checked + .settings-toggle-slider:before {
   }
 }
 
+/* ========== COMPANY AVAILABILITY WIDGET STYLES ========== */
+.company-availability-widget {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  border: 1px solid #f1f5f9;
+}
+
+.availability-header {
+  margin-bottom: 20px;
+}
+
+.availability-header h3 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 4px 0;
+}
+
+.availability-header p {
+  font-size: 14px;
+  color: #64748b;
+  margin: 0;
+}
+
+.availability-status-card {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  border: 2px solid transparent;
+  transition: all 0.3s ease;
+}
+
+.availability-status-card.available {
+  background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+  border-color: #86efac;
+}
+
+.availability-status-card.busy {
+  background: linear-gradient(135deg, #fee2e2, #fecaca);
+  border-color: #f87171;
+}
+
+.availability-status-card.loading {
+  background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+  border-color: #cbd5e1;
+}
+
+.availability-status-main {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.availability-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.availability-status-card.available .availability-icon {
+  background: #16a34a;
+  color: white;
+}
+
+.availability-status-card.busy .availability-icon {
+  background: #dc2626;
+  color: white;
+}
+
+.availability-status-card.loading .availability-icon {
+  background: #64748b;
+  color: white;
+}
+
+.availability-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.availability-loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-top: 3px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.availability-info {
+  flex: 1;
+}
+
+.availability-status-text {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 4px 0;
+}
+
+.availability-status-card.available .availability-status-text {
+  color: #166534;
+}
+
+.availability-status-card.busy .availability-status-text {
+  color: #991b1b;
+}
+
+.availability-status-card.loading .availability-status-text {
+  color: #475569;
+}
+
+.availability-details {
+  font-size: 14px;
+  margin: 0 0 8px 0;
+}
+
+.availability-status-card.available .availability-details {
+  color: #15803d;
+}
+
+.availability-status-card.busy .availability-details {
+  color: #b91c1c;
+}
+
+.availability-status-card.loading .availability-details {
+  color: #64748b;
+}
+
+.availability-last-updated {
+  font-size: 12px;
+  color: #64748b;
+  font-style: italic;
+}
+
+.availability-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.availability-refresh-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #4f46e5;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.availability-refresh-btn:hover {
+  background: #4338ca;
+  transform: translateY(-1px);
+}
+
+.availability-refresh-btn:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.availability-refresh-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* App Integration Info */
+.app-integration-info {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+  border-left: 4px solid #4f46e5;
+}
+
+.app-integration-info h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 12px 0;
+}
+
+.integration-status {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.integration-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.integration-label {
+  font-size: 14px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.integration-value {
+  font-size: 14px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.integration-value.active {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.integration-value.busy {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+/* Real-time Updates */
+.realtime-updates {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.realtime-updates h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 12px 0;
+}
+
+.updates-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.update-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.update-time {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+  min-width: 80px;
+}
+
+.update-message {
+  flex: 1;
+  font-size: 13px;
+  color: #374151;
+}
+
+.update-status {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.update-status.available {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.update-status.busy {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+/* Developer Instructions */
+.developer-instructions {
+  background: #1e293b;
+  color: white;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.developer-instructions h4 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 12px 0;
+  color: #f1f5f9;
+}
+
+.instruction-code {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
+.instruction-code p {
+  font-size: 13px;
+  color: #cbd5e1;
+  margin: 0 0 8px 0;
+}
+
+.instruction-code code {
+  display: block;
+  background: #0f172a;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #10b981;
+  margin: 8px 0;
+  border: 1px solid #334155;
+}
+
+.instruction-code ul {
+  margin: 8px 0 0 0;
+  padding-left: 20px;
+}
+
+.instruction-code li {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-bottom: 4px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .availability-status-main {
+    flex-direction: column;
+    text-align: center;
+    gap: 12px;
+  }
+  
+  .integration-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  
+  .update-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  
+  .update-time {
+    min-width: auto;
+  }
+}
+
 /* ========== FEEDBACK HEADER STYLES ========== */
 .feedback-live-indicator {
   display: inline-flex;
