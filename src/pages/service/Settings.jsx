@@ -374,8 +374,6 @@ export default function Settings() {
                       className="settings-input"
                     >
                       <option value="service">Service</option>
-                      <option value="restaurant">Restaurant</option>
-                      <option value="both">Both</option>
                     </select>
                   </div>
                   

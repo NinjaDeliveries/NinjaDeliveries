@@ -34,7 +34,6 @@ export const checkCompanyAvailability = async (companyId, startTime, endTime, se
         id: worker.id,
         name: worker.name,
         assignedServices: worker.assignedServices || [],
-        rating: worker.rating || 0,
         completedJobs: worker.completedJobs || 0
       })),
       checkedAt: new Date().toISOString(),
@@ -153,8 +152,7 @@ export const getAvailableCompanies = async (location = null, categoryId = null, 
           availableWorkers: availableWorkers.length,
           workers: availableWorkers.map(w => ({
             id: w.id,
-            name: w.name,
-            rating: w.rating || 0
+            name: w.name
           }))
         });
       }

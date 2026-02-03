@@ -15178,10 +15178,10 @@ input:checked + .settings-toggle-slider:before {
   border-color: #93c5fd;
 }
 
-.modern-feedback-worker-badge {
-  background: linear-gradient(135deg, #dcfce7, #bbf7d0);
-  color: #166534;
-  border-color: #86efac;
+.modern-feedback-category-badge {
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  color: #d97706;
+  border-color: #fbbf24;
 }
 
 /* Enhanced Rating Distribution */

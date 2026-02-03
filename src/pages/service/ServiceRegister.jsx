@@ -185,7 +185,7 @@ const handleRegister = async (e) => {
             />
           </Input>
 
-          {/* Type */}
+          {/* Type - Fixed to Service only */}
          <div className="segmented-radio">
   <div className="slider" />
 
@@ -195,22 +195,10 @@ const handleRegister = async (e) => {
       id="service"
       name="type"
       value="service"
-      checked={form.type === "service"}
-      onChange={handleChange}
+      checked={true}
+      readOnly
     />
     <label htmlFor="service">Service</label>
-  </div>
-
-  <div className="radio-option">
-    <input
-      type="radio"
-      id="restaurant"
-      name="type"
-      value="restaurant"
-      checked={form.type === "restaurant"}
-      onChange={handleChange}
-    />
-    <label htmlFor="restaurant">Restaurant</label>
   </div>
 </div>
 
@@ -360,7 +348,8 @@ const StyledWrapper = styled.div`
   position: absolute;
   top: 4px;
   bottom: 4px;
-  width: calc(50% - 4px);
+  left: 4px;
+  right: 4px;
   background: #ffffff;
   border-radius: 999px;
 
@@ -402,15 +391,6 @@ const StyledWrapper = styled.div`
 /* Active text color */
 .radio-option input:checked + label {
   color: #4f46e5;
-}
-
-/* Slider movement */
-.segmented-radio:has(#service:checked) .slider {
-  left: 4px;
-}
-
-.segmented-radio:has(#restaurant:checked) .slider {
-  left: calc(50% + 0px);
 }
 // logo
 .login-header {

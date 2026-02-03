@@ -45,14 +45,11 @@ const Technicians = () => {
     return matchesSearch && matchesRole && matchesStatus;
   });
 
-  // Calculate stats with live data
+  // Calculate stats with live data (removed rating calculation)
   const activeCount = technicians.filter((t) => t.isActive ?? true).length;
   const totalJobs = Object.values(workerStats).reduce((acc, stats) => acc + (stats.completedJobs || 0), 0);
-  const avgRating = Object.keys(workerStats).length > 0 
-    ? (Object.values(workerStats).reduce((acc, stats) => acc + (stats.averageRating || 0), 0) / Object.keys(workerStats).length).toFixed(1)
-    : "0.0";
 
-  // Fetch live worker statistics from bookings and ratings
+  // Fetch live worker statistics from bookings only (removed ratings)
   const fetchWorkerStats = async () => {
     try {
       const user = auth.currentUser;
@@ -75,47 +72,13 @@ const Technicians = () => {
 
       console.log(`📊 Found ${bookings.length} total bookings`);
 
-      // Fetch all ratings for this company (try multiple collection names)
-      const ratingCollections = ["serviceRatings", "service_ratings", "ratings", "feedback"];
-      let ratings = [];
-
-      for (const collectionName of ratingCollections) {
-        try {
-          const ratingsQuery = query(
-            collection(db, collectionName),
-            where("companyId", "==", user.uid)
-          );
-
-          const ratingsSnap = await getDocs(ratingsQuery);
-          if (!ratingsSnap.empty) {
-            ratings = ratingsSnap.docs.map(doc => ({
-              id: doc.id,
-              ...doc.data()
-            }));
-            console.log(`⭐ Found ${ratings.length} ratings in ${collectionName}`);
-            break; // Use the first collection that has data
-          }
-        } catch (error) {
-          console.log(`⚠️ Could not fetch from ${collectionName}:`, error.message);
-          continue;
-        }
-      }
-
-      if (ratings.length === 0) {
-        console.log("⚠️ No ratings found in any collection");
-      }
-
-      // Calculate statistics for each worker
+      // Calculate statistics for each worker (jobs only, no ratings)
       const stats = {};
 
       // Initialize stats for all workers
       technicians.forEach(worker => {
         stats[worker.id] = {
-          completedJobs: 0,
-          totalRatings: 0,
-          averageRating: 0,
-          ratingSum: 0,
-          ratingCount: 0
+          completedJobs: 0
         };
       });
 
@@ -131,27 +94,6 @@ const Technicians = () => {
         }
       });
 
-      // Calculate ratings per worker
-      ratings.forEach(rating => {
-        const workerId = rating.workerId || rating.technicianId || rating.assignedWorker;
-        const ratingValue = parseFloat(rating.rating || 0);
-        
-        if (workerId && ratingValue > 0) {
-          if (stats[workerId]) {
-            stats[workerId].ratingSum += ratingValue;
-            stats[workerId].ratingCount++;
-            stats[workerId].totalRatings++;
-          }
-        }
-      });
-
-      // Calculate average ratings
-      Object.keys(stats).forEach(workerId => {
-        if (stats[workerId].ratingCount > 0) {
-          stats[workerId].averageRating = (stats[workerId].ratingSum / stats[workerId].ratingCount);
-        }
-      });
-
       console.log("📈 Worker statistics calculated:", stats);
       setWorkerStats(stats);
       setLoadingStats(false);
@@ -162,14 +104,14 @@ const Technicians = () => {
     }
   };
 
-  // Setup real-time listener for worker statistics
+  // Setup real-time listener for worker statistics (bookings only)
   const setupWorkerStatsListener = () => {
     const user = auth.currentUser;
     if (!user) return;
 
     console.log("🔄 Setting up real-time worker stats listener...");
 
-    // Listen to bookings changes
+    // Listen to bookings changes only
     const bookingsQuery = query(
       collection(db, "service_bookings"),
       where("companyId", "==", user.uid)
@@ -180,36 +122,9 @@ const Technicians = () => {
       fetchWorkerStats(); // Recalculate stats when bookings change
     });
 
-    const ratingsCollections = ["serviceRatings", "service_ratings", "ratings", "feedback"];
-    let ratingsUnsubscribe = null;
-
-    // Try to set up listener for ratings from different collections
-    for (const collectionName of ratingsCollections) {
-      try {
-        const ratingsQuery = query(
-          collection(db, collectionName),
-          where("companyId", "==", user.uid)
-        );
-
-        ratingsUnsubscribe = onSnapshot(ratingsQuery, (snapshot) => {
-          console.log(`⭐ Ratings updated in ${collectionName}: ${snapshot.size} total`);
-          fetchWorkerStats(); // Recalculate stats when ratings change
-        });
-
-        console.log(`✅ Set up ratings listener for ${collectionName}`);
-        break; // Use the first collection that works
-      } catch (error) {
-        console.log(`⚠️ Could not set up listener for ${collectionName}:`, error.message);
-        continue;
-      }
-    }
-
     // Return cleanup function
     return () => {
       unsubscribeBookings();
-      if (ratingsUnsubscribe) {
-        ratingsUnsubscribe();
-      }
     };
   };
 
@@ -597,18 +512,6 @@ const Technicians = () => {
             <p className="technicians-stat-value">{totalJobs}</p>
           </div>
         </div>
-
-        <div className="technicians-stat-card">
-          <div className="technicians-stat-icon rating">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
-            </svg>
-          </div>
-          <div className="technicians-stat-content">
-            <p className="technicians-stat-label">Average Rating</p>
-            <p className="technicians-stat-value">{avgRating}</p>
-          </div>
-        </div>
       </div>
 
       {/* Filters */}
@@ -780,26 +683,6 @@ const Technicians = () => {
                 </div>
 
                 <div className="technicians-stats-section">
-                  <div className="technicians-stat-item">
-                    <div className="technicians-stat-icon-small">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
-                      </svg>
-                    </div>
-                    <div>
-                      <span className="technicians-stat-number">
-                        {loadingStats ? (
-                          <div className="technicians-stat-loading">...</div>
-                        ) : (
-                          workerStats[technician.id]?.averageRating 
-                            ? workerStats[technician.id].averageRating.toFixed(1)
-                            : "0.0"
-                        )}
-                      </span>
-                      <p className="technicians-stat-text">Rating</p>
-                    </div>
-                  </div>
-
                   <div className="technicians-stat-item">
                     <div className="technicians-stat-icon-small">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">

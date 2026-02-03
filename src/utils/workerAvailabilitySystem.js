@@ -273,6 +273,7 @@ class WorkerAvailabilitySystem {
     try {
       console.log(`🔍 Checking bulk availability for ${companyIds.length} companies`);
       
+      // Check availability for multiple companies (for app integration)
       const results = {};
       
       await Promise.all(

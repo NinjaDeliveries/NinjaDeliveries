@@ -5,11 +5,14 @@ import {
   query,
   where,
   onSnapshot,
+  getDocs,
 } from "firebase/firestore";
 import "../../style/ServiceDashboard.css";
 
 const Feedback = () => {
   const [ratings, setRatings] = useState([]);
+  const [services, setServices] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [ratingFilter, setRatingFilter] = useState("all");
@@ -23,6 +26,96 @@ const Feedback = () => {
     oneStar: 0,
     withComments: 0,
   });
+
+  // Fetch services and categories for mapping
+  const fetchServicesAndCategories = useCallback(async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      console.log("🔄 Fetching services and categories for mapping...");
+
+      // Fetch services
+      const servicesQuery = query(
+        collection(db, "service_services"),
+        where("companyId", "==", user.uid)
+      );
+      const servicesSnap = await getDocs(servicesQuery);
+      const servicesList = servicesSnap.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+
+      // Fetch categories
+      const categoriesQuery = query(
+        collection(db, "service_categories"),
+        where("companyId", "==", user.uid)
+      );
+      const categoriesSnap = await getDocs(categoriesQuery);
+      const categoriesList = categoriesSnap.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+
+      console.log(`📊 Fetched ${servicesList.length} services and ${categoriesList.length} categories`);
+      setServices(servicesList);
+      setCategories(categoriesList);
+
+    } catch (error) {
+      console.error("❌ Error fetching services and categories:", error);
+    }
+  }, []);
+
+  // Map service and category names to feedback
+  const enrichFeedbackData = useCallback((feedbackList) => {
+    return feedbackList.map(feedback => {
+      console.log("🔍 Processing feedback:", feedback);
+      
+      // Find service name - try multiple field names
+      let serviceName = feedback.serviceName || feedback.service || feedback.serviceTitle || 'Unknown Service';
+      let categoryName = feedback.categoryName || feedback.category || feedback.categoryTitle || null;
+
+      // Try to find service by ID if serviceName is not available or is generic
+      if (feedback.serviceId && services.length > 0) {
+        const service = services.find(s => s.id === feedback.serviceId);
+        if (service) {
+          serviceName = service.name || service.title || serviceName;
+          console.log(`✅ Found service by ID: ${serviceName}`);
+          
+          // Also get category from service
+          if (service.categoryId && !categoryName) {
+            const category = categories.find(c => c.id === service.categoryId);
+            if (category) {
+              categoryName = category.name || category.title;
+              console.log(`✅ Found category from service: ${categoryName}`);
+            }
+          }
+        }
+      }
+
+      // Try to find category by ID if categoryName is not available
+      if (feedback.categoryId && !categoryName && categories.length > 0) {
+        const category = categories.find(c => c.id === feedback.categoryId);
+        if (category) {
+          categoryName = category.name || category.title;
+          console.log(`✅ Found category by ID: ${categoryName}`);
+        }
+      }
+
+      // If still no service name, try to get it from category context
+      if (serviceName === 'Unknown Service' && categoryName) {
+        serviceName = `${categoryName} Service`;
+      }
+
+      console.log(`📝 Final mapping - Service: ${serviceName}, Category: ${categoryName}`);
+
+      return {
+        ...feedback,
+        serviceName,
+        categoryName
+      };
+    });
+  }, [services, categories]);
 
   const setupRealtimeFeedbackListener = useCallback(() => {
     const user = auth.currentUser;
@@ -86,9 +179,12 @@ const Feedback = () => {
             // Sort manually by date (newest first)
             feedbackList.sort((a, b) => b.createdAt - a.createdAt);
 
-            console.log(`✅ Real-time feedback updated: ${feedbackList.length} items`);
-            setRatings(feedbackList);
-            calculateStats(feedbackList);
+            // Enrich with service and category names
+            const enrichedFeedback = enrichFeedbackData(feedbackList);
+
+            console.log(`✅ Real-time feedback updated: ${enrichedFeedback.length} items`);
+            setRatings(enrichedFeedback);
+            calculateStats(enrichedFeedback);
             setLoading(false);
           }
         }, (error) => {
@@ -195,18 +291,20 @@ const Feedback = () => {
     console.log("🔄 Manual refresh triggered");
     setLoading(true);
     
-    // Re-setup the listener
-    const cleanup = setupRealtimeFeedbackListener();
-    
-    // Set a timeout to stop loading if no data comes
-    setTimeout(() => {
-      if (loading) {
-        console.log("⏰ Refresh timeout, stopping loading");
-        setLoading(false);
-      }
-    }, 10000); // 10 second timeout
-    
-    return cleanup;
+    // Re-fetch services and categories, then re-setup the listener
+    fetchServicesAndCategories().then(() => {
+      const cleanup = setupRealtimeFeedbackListener();
+      
+      // Set a timeout to stop loading if no data comes
+      setTimeout(() => {
+        if (loading) {
+          console.log("⏰ Refresh timeout, stopping loading");
+          setLoading(false);
+        }
+      }, 10000); // 10 second timeout
+      
+      return cleanup;
+    });
   };
 
   const calculateStats = (feedbackList) => {
@@ -252,19 +350,22 @@ const Feedback = () => {
   };
 
   useEffect(() => {
-    console.log("🚀 Feedback component mounted, setting up real-time listener");
-    const cleanup = setupRealtimeFeedbackListener();
+    console.log("🚀 Feedback component mounted, fetching data...");
     
-    // Cleanup on unmount
-    return cleanup;
-  }, [setupRealtimeFeedbackListener]);
+    // First fetch services and categories, then setup listener
+    fetchServicesAndCategories().then(() => {
+      const cleanup = setupRealtimeFeedbackListener();
+      return cleanup;
+    });
+  }, [fetchServicesAndCategories, setupRealtimeFeedbackListener]);
 
   // Filter feedback based on search and rating
   const filteredRatings = ratings.filter((rating) => {
     const matchesSearch = !searchQuery || 
       rating.customerName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       rating.feedback?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      rating.serviceName?.toLowerCase().includes(searchQuery.toLowerCase());
+      rating.serviceName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      rating.categoryName?.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesRating = ratingFilter === "all" || 
       parseInt(rating.rating) === parseInt(ratingFilter);
@@ -326,8 +427,8 @@ const Feedback = () => {
       {/* Page Header */}
       <div className="sd-header">
         <div>
-          <h1>Customer Feedback</h1>
-          <p>View and analyze customer reviews and ratings for your services</p>
+          <h1>Service & Category Feedback</h1>
+          <p>View customer reviews and ratings for your services and categories</p>
           <div className="feedback-live-indicator">
             <div className="feedback-live-dot"></div>
             Live Data
@@ -425,7 +526,7 @@ const Feedback = () => {
           </svg>
           <input
             type="text"
-            placeholder="Search feedback..."
+            placeholder="Search by service, category, or customer..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="feedback-search-input"
@@ -459,7 +560,7 @@ const Feedback = () => {
             <p>
               {searchQuery || ratingFilter !== "all"
                 ? "Try adjusting your search or filters"
-                : "Customer feedback will appear here once services are completed and rated"}
+                : "Service and category feedback will appear here once customers rate your services"}
             </p>
           </div>
         ) : (
@@ -472,7 +573,10 @@ const Feedback = () => {
                   </div>
                   <div className="modern-feedback-customer-info">
                     <h4 className="modern-feedback-customer-name">{rating.customerName || 'Anonymous'}</h4>
-                    <p className="modern-feedback-service-name">{rating.serviceName || 'Service'}</p>
+                    <p className="modern-feedback-service-name">
+                      {rating.serviceName || 'Service'}
+                      {rating.categoryName && ` • ${rating.categoryName}`}
+                    </p>
                     <span className="modern-feedback-date">{formatDate(rating.createdAt)}</span>
                   </div>
                 </div>
@@ -509,13 +613,13 @@ const Feedback = () => {
                   </svg>
                   {rating.serviceName || 'Service'}
                 </div>
-                {rating.workerName && (
-                  <div className="modern-feedback-worker-badge">
+                {rating.categoryName && (
+                  <div className="modern-feedback-category-badge">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                      <circle cx="12" cy="7" r="4"/>
+                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                      <polyline points="22,6 12,13 2,6"/>
                     </svg>
-                    {rating.workerName}
+                    {rating.categoryName}
                   </div>
                 )}
               </div>
