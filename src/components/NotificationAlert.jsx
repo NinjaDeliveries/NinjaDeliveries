@@ -3,7 +3,7 @@ import { useNotifications } from '../context/NotificationContext';
 import '../style/NotificationAlert.css';
 
 const NotificationAlert = () => {
-  const { notifications, removeNotification, clearAllNotifications } = useNotifications();
+  const { notifications, removeNotification, clearAllNotifications, formatTimestamp } = useNotifications();
 
   console.log('🔔 NotificationAlert render - notifications:', notifications.length);
 
@@ -64,7 +64,7 @@ const NotificationAlert = () => {
                 <div className="notification-title">{notification.title}</div>
                 <div className="notification-message">{notification.message}</div>
                 <div className="notification-time">
-                  {notification.timestamp.toLocaleTimeString()}
+                  {formatTimestamp(notification.timestamp)}
                 </div>
               </div>
             </div>

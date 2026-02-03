@@ -104,6 +104,7 @@ export default function BusinessRegistration() {
               <option value="Store">Store</option>
               <option value="Vegetable Store">Vegetable Store</option>
               <option value="Restaurant">Restaurant</option>
+              <option value="Service">Service</option>
             </select>
           </div>
 

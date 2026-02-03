@@ -9,13 +9,22 @@ import {
   getDoc,
   setDoc,
   updateDoc,
+  onSnapshot,
 } from "firebase/firestore";
 import "../../style/ServiceDashboard.css";
+import AssignWorkerModal from "./AssignWorkerModal";
 
 export default function Slots() {
   const [loading, setLoading] = useState(true);
   const [bookings, setBookings] = useState([]);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(() => {
+    // Ensure we get today's date in local timezone
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  });
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [viewMode, setViewMode] = useState('calendar'); // 'calendar' or 'list'
   
@@ -28,8 +37,74 @@ export default function Slots() {
   const [date, setDate] = useState("");
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
+  
+  // Booking details modal states
+  const [selectedBooking, setSelectedBooking] = useState(null);
+  const [showBookingDetails, setShowBookingDetails] = useState(false);
+  
+  // Assign worker modal states
+  const [showAssignWorker, setShowAssignWorker] = useState(false);
+  const [bookingToAssign, setBookingToAssign] = useState(null);
+  const [categories, setCategories] = useState([]);
 
-  // Fetch bookings from service_bookings collection
+  // Fetch bookings from service_bookings collection with real-time listener
+  const setupBookingsListener = () => {
+    const user = auth.currentUser;
+    if (!user) {
+      console.log("No user found for setting up bookings listener");
+      return null;
+    }
+
+    console.log("Setting up real-time bookings listener for slots:", user.uid);
+
+    const q = query(
+      collection(db, "service_bookings"),
+      where("companyId", "==", user.uid)
+    );
+
+    // Set up real-time listener
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      console.log("📡 Real-time update received - slots bookings changed");
+      console.log("📊 Snapshot info:", {
+        size: snapshot.size,
+        fromCache: snapshot.metadata.fromCache,
+        hasPendingWrites: snapshot.metadata.hasPendingWrites
+      });
+      
+      // Only update if this is not from cache (i.e., real server update)
+      if (!snapshot.metadata.fromCache) {
+        const bookingsList = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+
+        console.log("📊 Real-time slots update - bookings from server:", bookingsList.length);
+        
+        // Sort bookings by date (newest first) and then by time (earliest first)
+        bookingsList.sort((a, b) => {
+          // First sort by date (newest first)
+          const dateComparison = (b.date || '').localeCompare(a.date || '');
+          if (dateComparison !== 0) {
+            return dateComparison;
+          }
+          // If dates are same, sort by time (earliest first)
+          const timeA = a.time || '00:00';
+          const timeB = b.time || '00:00';
+          return timeA.localeCompare(timeB);
+        });
+
+        setBookings(bookingsList);
+      } else {
+        console.log("📊 Ignoring cached data in real-time listener");
+      }
+    }, (error) => {
+      console.error("❌ Real-time slots bookings listener error:", error);
+    });
+
+    return unsubscribe;
+  };
+
+  // Legacy fetch function for fallback
   const fetchBookings = async () => {
     try {
       const user = auth.currentUser;
@@ -54,18 +129,46 @@ export default function Slots() {
       console.log("Fetched bookings:", bookingsList);
       console.log("Total bookings found:", bookingsList.length);
       
-      // Sort bookings by date (newest first)
+      // Sort bookings by date (newest first) and then by time (earliest first)
       bookingsList.sort((a, b) => {
-        if (a.date === b.date) {
-          return (a.time || '').localeCompare(b.time || '');
+        // First sort by date (newest first)
+        const dateComparison = (b.date || '').localeCompare(a.date || '');
+        if (dateComparison !== 0) {
+          return dateComparison;
         }
-        return (b.date || '').localeCompare(a.date || '');
+        // If dates are same, sort by time (earliest first)
+        const timeA = a.time || '00:00';
+        const timeB = b.time || '00:00';
+        return timeA.localeCompare(timeB);
       });
 
       setBookings(bookingsList);
     } catch (error) {
       console.error("Error fetching bookings:", error);
       alert("Error loading bookings. Please refresh the page.");
+    }
+  };
+
+  // Fetch categories for worker assignment
+  const fetchCategories = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const q = query(
+        collection(db, "service_categories"),
+        where("companyId", "==", user.uid)
+      );
+
+      const snapshot = await getDocs(q);
+      const categoriesList = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      setCategories(categoriesList);
+    } catch (error) {
+      console.error("Error fetching categories:", error);
     }
   };
 
@@ -115,17 +218,55 @@ export default function Slots() {
   };
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (user) {
-        Promise.all([fetchBookings(), loadAvailability()]).finally(() => {
-          setLoading(false);
-        });
-      } else {
+    let bookingsUnsubscribe = null;
+
+    const initializeData = async () => {
+      try {
+        const user = auth.currentUser;
+        if (user) {
+          console.log("🔐 User authenticated:", user.uid);
+          
+          // First, try to fetch existing data immediately
+          console.log("📥 Fetching existing bookings data...");
+          await fetchBookings();
+          
+          // Then set up real-time listener for future updates
+          console.log("📡 Setting up real-time listener...");
+          bookingsUnsubscribe = setupBookingsListener();
+          
+          // Load other data
+          await Promise.all([loadAvailability(), fetchCategories()]);
+        } else {
+          console.log("❌ No user authenticated");
+        }
+      } catch (error) {
+        console.error("❌ Error initializing data:", error);
+        // Ensure we at least try to fetch data
+        await fetchBookings();
+      } finally {
         setLoading(false);
+      }
+    };
+
+    const authUnsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) {
+        console.log("🔐 Auth state changed - user logged in:", user.uid);
+        initializeData();
+      } else {
+        console.log("🔐 Auth state changed - user logged out");
+        setLoading(false);
+        setBookings([]);
       }
     });
 
-    return () => unsubscribe();
+    // Cleanup function
+    return () => {
+      authUnsubscribe();
+      if (bookingsUnsubscribe) {
+        console.log("🔌 Cleaning up real-time slots bookings listener");
+        bookingsUnsubscribe();
+      }
+    };
   }, []);
 
   // Auto status management based on offline windows
@@ -264,7 +405,7 @@ export default function Slots() {
     });
   };
 
-  // Get bookings for a specific date (fix timezone issue)
+  // Get bookings for a specific date (fix timezone issue) - sorted by time
   const getBookingsForDate = (date) => {
     // Create date string in local timezone to avoid timezone issues
     const year = date.getFullYear();
@@ -279,17 +420,32 @@ export default function Slots() {
       return bookingDateStr === dateStr;
     });
     
-    console.log(`Bookings for ${dateStr}:`, dayBookings);
+    // Sort by time in ascending order (earliest first)
+    dayBookings.sort((a, b) => {
+      const timeA = a.time || '00:00';
+      const timeB = b.time || '00:00';
+      return timeA.localeCompare(timeB);
+    });
+    
+    console.log(`Bookings for ${dateStr} (sorted by time):`, dayBookings);
     return dayBookings;
   };
 
-  // Get bookings for selected date (fix timezone issue)
+  // Get bookings for selected date (fix timezone issue) - sorted by time
   const getSelectedDateBookings = () => {
     const selectedBookings = bookings.filter(booking => {
       console.log(`Comparing booking date "${booking.date}" with selected date "${selectedDate}"`);
       return booking.date === selectedDate;
     });
-    console.log(`Selected date bookings for ${selectedDate}:`, selectedBookings);
+    
+    // Sort by time in ascending order (earliest first)
+    selectedBookings.sort((a, b) => {
+      const timeA = a.time || '00:00';
+      const timeB = b.time || '00:00';
+      return timeA.localeCompare(timeB);
+    });
+    
+    console.log(`Selected date bookings for ${selectedDate} (sorted by time):`, selectedBookings);
     return selectedBookings;
   };
 
@@ -304,6 +460,7 @@ export default function Slots() {
     
     const days = [];
     const currentDate = new Date(startDate);
+    const todayStr = getTodayDateString();
     
     for (let i = 0; i < 35; i++) { // Reduced from 42 to 35 for more compact view
       const dayBookings = getBookingsForDate(currentDate);
@@ -318,8 +475,9 @@ export default function Slots() {
         date: new Date(currentDate),
         bookings: dayBookings,
         isCurrentMonth: currentDate.getMonth() === month,
-        isToday: currentDate.toDateString() === new Date().toDateString(),
-        isSelected: dateStr === selectedDate
+        isToday: dateStr === todayStr,
+        isSelected: dateStr === selectedDate,
+        dateStr: dateStr
       });
       currentDate.setDate(currentDate.getDate() + 1);
     }
@@ -373,6 +531,81 @@ export default function Slots() {
     };
   };
 
+  // Handle booking view
+  const handleViewBooking = (booking) => {
+    setSelectedBooking(booking);
+    setShowBookingDetails(true);
+  };
+
+  // Close booking details modal
+  const closeBookingDetails = () => {
+    setShowBookingDetails(false);
+    setSelectedBooking(null);
+  };
+
+  // Format booking date for display
+  const formatBookingDate = (dateStr) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { 
+      weekday: 'long',
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+  };
+
+  // Handle assign worker
+  const handleAssignWorker = (booking) => {
+    setBookingToAssign(booking);
+    setShowAssignWorker(true);
+  };
+
+  // Close assign worker modal
+  const closeAssignWorker = () => {
+    setShowAssignWorker(false);
+    setBookingToAssign(null);
+  };
+
+  // Handle worker assigned successfully
+  const handleWorkerAssigned = () => {
+    // No need to call fetchBookings() - real-time listener will update automatically
+    closeAssignWorker();
+  };
+
+  // Check if booking can be assigned (not already assigned)
+  const canAssignWorker = (booking) => {
+    return !booking.workerId && !booking.workerName && booking.status !== 'assigned' && booking.status !== 'completed' && booking.status !== 'cancelled';
+  };
+
+  // Get today's date in local timezone
+  const getTodayDateString = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // Get today's bookings
+  const getTodaysBookings = () => {
+    const todayStr = getTodayDateString();
+    const todaysBookings = bookings.filter(booking => booking.date === todayStr);
+    
+    // Sort by time (earliest first)
+    todaysBookings.sort((a, b) => {
+      const timeA = a.time || '00:00';
+      const timeB = b.time || '00:00';
+      return timeA.localeCompare(timeB);
+    });
+    
+    return todaysBookings;
+  };
+
+  // Check if a date is today
+  const isToday = (dateStr) => {
+    return dateStr === getTodayDateString();
+  };
+
   if (loading) {
     return (
       <div className="sd-main">
@@ -387,6 +620,163 @@ export default function Slots() {
   const calendarDays = generateCalendarDays();
   const selectedDateBookings = getSelectedDateBookings();
   const monthStats = getMonthStats();
+
+  // Modern inline styles for the modal
+  const modalStyles = {
+    overlay: {
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 10000,
+      padding: '20px'
+    },
+    modal: {
+      backgroundColor: 'white',
+      borderRadius: '12px',
+      width: '100%',
+      maxWidth: '600px',
+      maxHeight: '90vh',
+      overflowY: 'auto',
+      boxShadow: '0 10px 40px rgba(0, 0, 0, 0.15)'
+    },
+    header: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: '20px 24px',
+      borderBottom: '1px solid #e5e7eb',
+      backgroundColor: '#f8fafc'
+    },
+    title: {
+      margin: 0,
+      fontSize: '20px',
+      fontWeight: '600',
+      color: '#1f2937'
+    },
+    closeBtn: {
+      background: 'none',
+      border: 'none',
+      fontSize: '20px',
+      cursor: 'pointer',
+      color: '#6b7280',
+      padding: '4px',
+      borderRadius: '4px',
+      transition: 'color 0.2s'
+    },
+    content: {
+      padding: '24px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '16px'
+    },
+    card: {
+      border: '1px solid #e5e7eb',
+      borderRadius: '8px',
+      overflow: 'hidden'
+    },
+    cardHeader: {
+      backgroundColor: '#f9fafb',
+      padding: '12px 16px',
+      borderBottom: '1px solid #e5e7eb',
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center'
+    },
+    cardTitle: {
+      fontSize: '14px',
+      fontWeight: '600',
+      color: '#374151'
+    },
+    statusBadge: {
+      padding: '4px 8px',
+      borderRadius: '12px',
+      color: 'white',
+      fontSize: '11px',
+      fontWeight: '600',
+      textTransform: 'uppercase'
+    },
+    cardBody: {
+      padding: '16px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '12px'
+    },
+    infoRow: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      gap: '12px'
+    },
+    label: {
+      fontSize: '14px',
+      fontWeight: '500',
+      color: '#6b7280',
+      minWidth: '80px',
+      flexShrink: 0
+    },
+    value: {
+      fontSize: '14px',
+      color: '#1f2937',
+      textAlign: 'right',
+      wordBreak: 'break-word'
+    },
+    link: {
+      fontSize: '14px',
+      color: '#3b82f6',
+      textDecoration: 'none'
+    },
+    footer: {
+      padding: '16px 24px',
+      borderTop: '1px solid #e5e7eb',
+      backgroundColor: '#f9fafb',
+      display: 'flex',
+      justifyContent: 'flex-end'
+    },
+    closeButton: {
+      backgroundColor: '#6b7280',
+      color: 'white',
+      border: 'none',
+      padding: '8px 16px',
+      borderRadius: '6px',
+      fontSize: '14px',
+      fontWeight: '500',
+      cursor: 'pointer',
+      transition: 'background-color 0.2s'
+    }
+  };
+
+  // View button styles
+  const viewButtonStyle = {
+    backgroundColor: '#3b82f6',
+    color: 'white',
+    border: 'none',
+    padding: '4px 8px',
+    borderRadius: '4px',
+    fontSize: '12px',
+    fontWeight: '500',
+    cursor: 'pointer',
+    transition: 'background-color 0.2s'
+  };
+
+  // Assign worker button styles
+  const assignButtonStyle = {
+    backgroundColor: '#10b981',
+    color: 'white',
+    border: 'none',
+    padding: '4px 8px',
+    borderRadius: '4px',
+    fontSize: '12px',
+    fontWeight: '500',
+    cursor: 'pointer',
+    transition: 'background-color 0.2s',
+    marginLeft: '4px'
+  };
 
   return (
     <div className="sd-main">
@@ -409,6 +799,62 @@ export default function Slots() {
             >
               📋 List
             </button>
+          </div>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <button
+              onClick={async () => {
+                setLoading(true);
+                try {
+                  await fetchBookings();
+                } catch (error) {
+                  console.error("Manual refresh failed:", error);
+                } finally {
+                  setLoading(false);
+                }
+              }}
+              style={{
+                backgroundColor: '#10b981',
+                color: 'white',
+                border: 'none',
+                padding: '8px 12px',
+                borderRadius: '6px',
+                fontSize: '12px',
+                fontWeight: '500',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <polyline points="23 4 23 10 17 10"/>
+                <polyline points="1 20 1 14 7 14"/>
+                <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
+              </svg>
+              Refresh
+            </button>
+            {!isToday(selectedDate) && (
+              <button 
+                style={{
+                  backgroundColor: '#3b82f6',
+                  color: 'white',
+                  border: 'none',
+                  padding: '8px 16px',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  marginLeft: '4px'
+                }}
+                onClick={() => {
+                  const todayStr = getTodayDateString();
+                  setSelectedDate(todayStr);
+                  setCurrentMonth(new Date());
+                }}
+              >
+                📅 Today
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -548,13 +994,8 @@ export default function Slots() {
                     key={index}
                     className={`compact-calendar-day ${!day.isCurrentMonth ? 'other-month' : ''} ${day.isToday ? 'today' : ''} ${day.isSelected ? 'selected' : ''} ${day.bookings.length > 0 ? 'has-bookings' : ''}`}
                     onClick={() => {
-                      // Create date string in local timezone to avoid timezone issues
-                      const year = day.date.getFullYear();
-                      const month = String(day.date.getMonth() + 1).padStart(2, '0');
-                      const dayNum = String(day.date.getDate()).padStart(2, '0');
-                      const dateStr = `${year}-${month}-${dayNum}`;
-                      console.log(`Calendar day clicked: ${dateStr}`);
-                      setSelectedDate(dateStr);
+                      console.log(`Calendar day clicked: ${day.dateStr}`);
+                      setSelectedDate(day.dateStr);
                     }}
                   >
                     <span className="compact-day-number">{day.date.getDate()}</span>
@@ -570,10 +1011,12 @@ export default function Slots() {
               {/* Selected Date Details */}
               <div className="compact-selected-details">
                 <h4>
-                  {new Date(selectedDate).toLocaleDateString('en-US', { 
-                    month: 'short', 
-                    day: 'numeric' 
-                  })} Bookings
+                  {isToday(selectedDate) ? "Today's Schedule" : 
+                   new Date(selectedDate).toLocaleDateString('en-US', { 
+                     month: 'short', 
+                     day: 'numeric' 
+                   }) + " Bookings"
+                  }
                 </h4>
                 
                 {selectedDateBookings.length > 0 ? (
@@ -587,16 +1030,36 @@ export default function Slots() {
                           <div className="compact-customer">{booking.customerName}</div>
                           <div className="compact-service">{booking.workName || booking.serviceName}</div>
                         </div>
-                        <div 
-                          className="compact-status-dot"
-                          style={{ backgroundColor: getStatusColor(booking.status) }}
-                          title={booking.status}
-                        />
+                        <div className="compact-booking-actions">
+                          <button 
+                            style={viewButtonStyle}
+                            onClick={() => handleViewBooking(booking)}
+                            title="View booking details"
+                          >
+                            View
+                          </button>
+                          {canAssignWorker(booking) && (
+                            <button 
+                              style={assignButtonStyle}
+                              onClick={() => handleAssignWorker(booking)}
+                              title="Assign worker to this booking"
+                            >
+                              Assign
+                            </button>
+                          )}
+                          <div 
+                            className="compact-status-dot"
+                            style={{ backgroundColor: getStatusColor(booking.status) }}
+                            title={booking.status}
+                          />
+                        </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="no-bookings-compact">No bookings</p>
+                  <p className="no-bookings-compact">
+                    {isToday(selectedDate) ? "No bookings scheduled for today" : "No bookings"}
+                  </p>
                 )}
               </div>
             </div>
@@ -618,11 +1081,28 @@ export default function Slots() {
                         <div className="list-booking-time">
                           🕐 {formatTime(booking.time)}
                         </div>
-                        <div 
-                          className="list-booking-status"
-                          style={{ backgroundColor: getStatusColor(booking.status) }}
-                        >
-                          {booking.status}
+                        <div className="list-booking-header-actions">
+                          <button 
+                            style={viewButtonStyle}
+                            onClick={() => handleViewBooking(booking)}
+                          >
+                            View
+                          </button>
+                          {canAssignWorker(booking) && (
+                            <button 
+                              style={assignButtonStyle}
+                              onClick={() => handleAssignWorker(booking)}
+                              title="Assign worker to this booking"
+                            >
+                              Assign
+                            </button>
+                          )}
+                          <div 
+                            className="list-booking-status"
+                            style={{ backgroundColor: getStatusColor(booking.status) }}
+                          >
+                            {booking.status}
+                          </div>
                         </div>
                       </div>
                       <div className="list-booking-details">
@@ -652,6 +1132,154 @@ export default function Slots() {
           )}
         </div>
       </div>
+
+      {/* Booking Details Modal */}
+      {showBookingDetails && selectedBooking && (
+        <div style={modalStyles.overlay} onClick={closeBookingDetails}>
+          <div style={modalStyles.modal} onClick={(e) => e.stopPropagation()}>
+            <div style={modalStyles.header}>
+              <h2 style={modalStyles.title}>Booking Details</h2>
+              <button style={modalStyles.closeBtn} onClick={closeBookingDetails}>
+                ✕
+              </button>
+            </div>
+            
+            <div style={modalStyles.content}>
+              {/* Booking Information */}
+              <div style={modalStyles.card}>
+                <div style={modalStyles.cardHeader}>
+                  <span style={modalStyles.cardTitle}>📋 Booking Information</span>
+                  <span 
+                    style={{
+                      ...modalStyles.statusBadge,
+                      backgroundColor: getStatusColor(selectedBooking.status)
+                    }}
+                  >
+                    {selectedBooking.status}
+                  </span>
+                </div>
+                <div style={modalStyles.cardBody}>
+                  <div style={modalStyles.infoRow}>
+                    <span style={modalStyles.label}>Date:</span>
+                    <span style={modalStyles.value}>{formatBookingDate(selectedBooking.date)}</span>
+                  </div>
+                  <div style={modalStyles.infoRow}>
+                    <span style={modalStyles.label}>Time:</span>
+                    <span style={modalStyles.value}>{formatTime(selectedBooking.time)}</span>
+                  </div>
+                  <div style={modalStyles.infoRow}>
+                    <span style={modalStyles.label}>Service:</span>
+                    <span style={modalStyles.value}>{selectedBooking.workName || selectedBooking.serviceName}</span>
+                  </div>
+                  {selectedBooking.workerName && (
+                    <div style={modalStyles.infoRow}>
+                      <span style={modalStyles.label}>Worker:</span>
+                      <span style={modalStyles.value}>{selectedBooking.workerName}</span>
+                    </div>
+                  )}
+                  {selectedBooking.price && (
+                    <div style={modalStyles.infoRow}>
+                      <span style={modalStyles.label}>Price:</span>
+                      <span style={modalStyles.value}>₹{selectedBooking.price}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Customer Information */}
+              <div style={modalStyles.card}>
+                <div style={modalStyles.cardHeader}>
+                  <span style={modalStyles.cardTitle}>👤 Customer Information</span>
+                </div>
+                <div style={modalStyles.cardBody}>
+                  <div style={modalStyles.infoRow}>
+                    <span style={modalStyles.label}>Name:</span>
+                    <span style={modalStyles.value}>{selectedBooking.customerName}</span>
+                  </div>
+                  {selectedBooking.customerPhone && (
+                    <div style={modalStyles.infoRow}>
+                      <span style={modalStyles.label}>Phone:</span>
+                      <a 
+                        href={`tel:${selectedBooking.customerPhone}`} 
+                        style={modalStyles.link}
+                      >
+                        {selectedBooking.customerPhone}
+                      </a>
+                    </div>
+                  )}
+                  {selectedBooking.customerEmail && (
+                    <div style={modalStyles.infoRow}>
+                      <span style={modalStyles.label}>Email:</span>
+                      <a 
+                        href={`mailto:${selectedBooking.customerEmail}`} 
+                        style={modalStyles.link}
+                      >
+                        {selectedBooking.customerEmail}
+                      </a>
+                    </div>
+                  )}
+                  {selectedBooking.address && (
+                    <div style={modalStyles.infoRow}>
+                      <span style={modalStyles.label}>Address:</span>
+                      <span style={modalStyles.value}>{selectedBooking.address}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Additional Details */}
+              {(selectedBooking.description || selectedBooking.notes || selectedBooking.createdAt) && (
+                <div style={modalStyles.card}>
+                  <div style={modalStyles.cardHeader}>
+                    <span style={modalStyles.cardTitle}>📝 Additional Details</span>
+                  </div>
+                  <div style={modalStyles.cardBody}>
+                    {selectedBooking.description && (
+                      <div style={modalStyles.infoRow}>
+                        <span style={modalStyles.label}>Description:</span>
+                        <span style={modalStyles.value}>{selectedBooking.description}</span>
+                      </div>
+                    )}
+                    {selectedBooking.notes && (
+                      <div style={modalStyles.infoRow}>
+                        <span style={modalStyles.label}>Notes:</span>
+                        <span style={modalStyles.value}>{selectedBooking.notes}</span>
+                      </div>
+                    )}
+                    {selectedBooking.createdAt && (
+                      <div style={modalStyles.infoRow}>
+                        <span style={modalStyles.label}>Booked On:</span>
+                        <span style={modalStyles.value}>
+                          {selectedBooking.createdAt.toDate ? 
+                            selectedBooking.createdAt.toDate().toLocaleString() : 
+                            new Date(selectedBooking.createdAt).toLocaleString()
+                          }
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div style={modalStyles.footer}>
+              <button style={modalStyles.closeButton} onClick={closeBookingDetails}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Assign Worker Modal */}
+      {showAssignWorker && bookingToAssign && (
+        <AssignWorkerModal
+          booking={bookingToAssign}
+          categories={categories}
+          onClose={closeAssignWorker}
+          onAssigned={handleWorkerAssigned}
+        />
+      )}
     </div>
   );
 }

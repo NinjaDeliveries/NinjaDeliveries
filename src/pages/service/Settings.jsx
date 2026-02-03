@@ -368,13 +368,18 @@ export default function Settings() {
                   
                   <div className="settings-field">
                     <label className="settings-label">Business Type</label>
-                    <select
-                      value={businessInfo.businessType || "service"}
-                      onChange={(e) => setBusinessInfo(prev => ({ ...prev, businessType: e.target.value }))}
-                      className="settings-input"
-                    >
-                      <option value="service">Service</option>
-                    </select>
+                    <div className="settings-input-with-icon">
+                      <svg className="settings-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                      </svg>
+                      <input
+                        type="text"
+                        value="Service"
+                        className="settings-input with-icon"
+                        readOnly
+                        style={{ backgroundColor: '#f8f9fa', cursor: 'not-allowed' }}
+                      />
+                    </div>
                   </div>
                   
                   <div className="settings-field">

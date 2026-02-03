@@ -95,16 +95,14 @@ const handleRegister = async (e) => {
 };
 
   return (
-    <Page>
-      <StyledWrapper>
+    <Page isRestaurant={form.type === "restaurant"}>
+      <StyledWrapper isRestaurant={form.type === "restaurant"}>
         <form className="modern-form" onSubmit={handleRegister}>
           {/* LOGO HEADER */}
 
 <div className="login-header">
-  <h2>Create Account</h2>
+  <h2>{form.type === "restaurant" ? "Restaurant Registration" : "Service Registration"}</h2>
 </div>
-
-          {/* <div className="form-title">Register Page</div> */}
 
           {/* Full Name */}
           <Input icon="user">
@@ -145,7 +143,7 @@ const handleRegister = async (e) => {
             <input
               required
               name="companyName"
-              placeholder="Company Name / Restaurant Name"
+              placeholder={form.type === "restaurant" ? "Restaurant Name" : "Company Name / Service Name"}
               className="form-input"
               onChange={handleChange}
             />
@@ -155,7 +153,7 @@ const handleRegister = async (e) => {
           <Input icon="location">
             <input
               name="address"
-              placeholder="Business Address (Optional)"
+              placeholder={form.type === "restaurant" ? "Restaurant Address (Optional)" : "Business Address (Optional)"}
               className="form-input"
               onChange={handleChange}
             />
@@ -185,7 +183,7 @@ const handleRegister = async (e) => {
             />
           </Input>
 
-          {/* Type - Fixed to Service only */}
+          {/* Type - Service and Restaurant options */}
          <div className="segmented-radio">
   <div className="slider" />
 
@@ -195,10 +193,22 @@ const handleRegister = async (e) => {
       id="service"
       name="type"
       value="service"
-      checked={true}
-      readOnly
+      checked={form.type === "service"}
+      onChange={handleChange}
     />
     <label htmlFor="service">Service</label>
+  </div>
+
+  <div className="radio-option">
+    <input
+      type="radio"
+      id="restaurant"
+      name="type"
+      value="restaurant"
+      checked={form.type === "restaurant"}
+      onChange={handleChange}
+    />
+    <label htmlFor="restaurant">Restaurant</label>
   </div>
 </div>
 
@@ -215,8 +225,11 @@ const Page = styled.div`
   min-height: 100vh;
   display: grid;
   place-items: center;
-  background: linear-gradient(180deg, #f5f7fb 0%, #eef1f7 100%);
+  background: ${props => props.isRestaurant 
+    ? 'linear-gradient(180deg, #fff7ed 0%, #fed7aa 100%)' 
+    : 'linear-gradient(180deg, #f5f7fb 0%, #eef1f7 100%)'};
   padding: 20px;
+  transition: all 0.5s ease;
 `;
 
 const StyledWrapper = styled.div`
@@ -225,11 +238,12 @@ const StyledWrapper = styled.div`
     padding: 32px 28px;
     background: #ffffff;
     border-radius: 20px;
-    box-shadow:
-      0 20px 50px rgba(0, 0, 0, 0.12),
-      0 0 0 1px rgba(148, 163, 184, 0.1);
+    box-shadow: ${props => props.isRestaurant
+      ? '0 20px 50px rgba(251, 146, 60, 0.15), 0 0 0 1px rgba(251, 146, 60, 0.1)'
+      : '0 20px 50px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(148, 163, 184, 0.1)'};
     font-family: 'Segoe UI', system-ui, sans-serif;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid ${props => props.isRestaurant ? 'rgba(251, 146, 60, 0.2)' : 'rgba(255, 255, 255, 0.2)'};
+    transition: all 0.5s ease;
   }
 
   .form-title {
@@ -258,8 +272,10 @@ const StyledWrapper = styled.div`
 
   .form-input:focus {
     outline: none;
-    border-color: #4f46e5;
-    box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.15);
+    border-color: ${props => props.isRestaurant ? '#fb923c' : '#4f46e5'};
+    box-shadow: ${props => props.isRestaurant 
+      ? '0 0 0 4px rgba(251, 146, 60, 0.15)' 
+      : '0 0 0 4px rgba(79, 70, 229, 0.15)'};
     background: #fff;
   }
 
@@ -303,17 +319,21 @@ const StyledWrapper = styled.div`
 /* Hover */
 .register-btn:hover {
   letter-spacing: 3px;
-  background-color: hsl(261deg 80% 48%);
+  background-color: ${props => props.isRestaurant ? '#fb923c' : 'hsl(261deg 80% 48%)'};
   color: #ffffff;
-  box-shadow: rgb(93 24 220) 0px 7px 29px 0px;
+  box-shadow: ${props => props.isRestaurant 
+    ? 'rgb(251 146 60) 0px 7px 29px 0px' 
+    : 'rgb(93 24 220) 0px 7px 29px 0px'};
 }
 
 /* Active / Click */
 .register-btn:active {
   letter-spacing: 3px;
-  background-color: hsl(261deg 80% 48%);
+  background-color: ${props => props.isRestaurant ? '#fb923c' : 'hsl(261deg 80% 48%)'};
   color: #ffffff;
-  box-shadow: rgb(93 24 220) 0px 0px 0px 0px;
+  box-shadow: ${props => props.isRestaurant 
+    ? 'rgb(251 146 60) 0px 0px 0px 0px' 
+    : 'rgb(93 24 220) 0px 0px 0px 0px'};
   transform: translateY(10px);
   transition: 100ms;
 }
@@ -337,6 +357,7 @@ const StyledWrapper = styled.div`
   width: 100%;
   height: 40px;
   padding: 4px;
+  margin-bottom: 16px;
 
   background: rgba(0, 0, 0, 0.05);
   border-radius: 999px;
@@ -348,17 +369,19 @@ const StyledWrapper = styled.div`
   position: absolute;
   top: 4px;
   bottom: 4px;
-  left: 4px;
-  right: 4px;
-  background: #ffffff;
+  width: calc(50% - 4px);
+  background: ${props => props.isRestaurant ? '#fb923c' : '#4f46e5'};
   border-radius: 999px;
 
   box-shadow:
-    0 3px 12px rgba(0, 0, 0, 0.15),
+    0 3px 12px ${props => props.isRestaurant ? 'rgba(251, 146, 60, 0.3)' : 'rgba(79, 70, 229, 0.3)'},
     0 1px 4px rgba(0, 0, 0, 0.1);
 
   transition: all 0.35s cubic-bezier(0.68, -0.55, 0.265, 1.55);
   z-index: 0;
+  
+  /* Default position for service */
+  left: ${props => props.isRestaurant ? 'calc(50% + 0px)' : '4px'};
 }
 
 .radio-option {
@@ -390,8 +413,9 @@ const StyledWrapper = styled.div`
 
 /* Active text color */
 .radio-option input:checked + label {
-  color: #4f46e5;
+  color: #ffffff;
 }
+
 // logo
 .login-header {
   text-align: center;
@@ -399,14 +423,17 @@ const StyledWrapper = styled.div`
 }
 
 .login-header h2 {
-  font-size: 32px;
+  font-size: 28px;
   font-weight: 700;
   color: #1f2937;
   margin: 0;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: ${props => props.isRestaurant 
+    ? 'linear-gradient(135deg, #fb923c 0%, #f97316 100%)' 
+    : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'};
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  transition: all 0.5s ease;
 }
 
 `;

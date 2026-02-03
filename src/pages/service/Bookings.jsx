@@ -7,6 +7,7 @@ import {
   getDocs,
   updateDoc,
   doc,
+  onSnapshot,
 } from "firebase/firestore";
 import AssignWorkerModal from "./AssignWorkerModal";
 import "../../style/ServiceDashboard.css";
@@ -100,8 +101,119 @@ const Bookings = () => {
       className: "bookings-status-cancelled",
     },
   };
-  //fetch booking
+  //fetch booking with real-time listener
+  const setupBookingsListener = () => {
+    const user = auth.currentUser;
+    if (!user) {
+      return null;
+    }
 
+    console.log("Setting up real-time bookings listener for company:", user.uid);
+
+    const q = query(
+      collection(db, "service_bookings"),
+      where("companyId", "==", user.uid)
+    );
+
+    // Set up real-time listener
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      console.log("📡 Real-time update received - bookings changed");
+      console.log("📊 Snapshot metadata:", {
+        hasPendingWrites: snapshot.metadata.hasPendingWrites,
+        fromCache: snapshot.metadata.fromCache,
+        size: snapshot.size
+      });
+      
+      // Only update if this is not from cache (i.e., real server update)
+      if (!snapshot.metadata.fromCache) {
+        const now = new Date();
+        const today = now.toISOString().split("T")[0];
+        const currentTime = now.getHours() * 60 + now.getMinutes(); // Current time in minutes
+
+        const list = [];
+        const expiredUpdates = [];
+
+        snapshot.docs.forEach((docSnap) => {
+          const data = docSnap.data();
+
+          // Auto-expire logic - check if booking should be expired
+          let shouldExpire = false;
+          
+          // 1. Past date bookings that are not completed/rejected/expired
+          if (
+            data.date < today &&
+            !["completed", "rejected", "expired"].includes(data.status)
+          ) {
+            shouldExpire = true;
+          }
+          
+          // 2. Same day bookings that are 1 hour past their time and still pending
+          if (
+            data.date === today &&
+            data.time &&
+            data.status === "pending"
+          ) {
+            const [hours, minutes] = data.time.split(':').map(Number);
+            const bookingTime = hours * 60 + minutes; // Booking time in minutes
+            const timeDiff = currentTime - bookingTime; // Difference in minutes
+            
+            // If more than 60 minutes past the booking time, expire it
+            if (timeDiff > 60) {
+              shouldExpire = true;
+            }
+          }
+
+          if (shouldExpire) {
+            // Add to expired updates batch
+            expiredUpdates.push({
+              id: docSnap.id,
+              ref: doc(db, "service_bookings", docSnap.id)
+            });
+
+            list.push({
+              id: docSnap.id,
+              ...data,
+              status: "expired",
+            });
+          } else {
+            list.push({
+              id: docSnap.id,
+              ...data,
+            });
+          }
+        });
+
+        // Update expired bookings in database
+        if (expiredUpdates.length > 0) {
+          console.log(`Auto-expiring ${expiredUpdates.length} bookings`);
+          expiredUpdates.forEach(async (update) => {
+            try {
+              await updateDoc(update.ref, {
+                status: "expired",
+                expiredAt: new Date(),
+              });
+            } catch (error) {
+              console.error(`Failed to expire booking ${update.id}:`, error);
+            }
+          });
+        }
+
+        console.log(`📊 Real-time update from server: ${list.length} bookings loaded`);
+        setBookings(list);
+      } else {
+        console.log("📊 Ignoring cached data in real-time listener");
+      }
+    }, (error) => {
+      console.error("❌ Real-time bookings listener error:", error);
+      console.log("🔄 Falling back to manual fetch due to listener error");
+      // Fallback to manual fetch on error
+      fetchBookings().finally(() => setLoading(false));
+    });
+
+    return unsubscribe;
+  };
+
+  // Legacy fetch function for fallback (not used in real-time mode)
   const fetchBookings = async () => {
     try {
       const user = auth.currentUser;
@@ -216,8 +328,62 @@ const Bookings = () => {
   };
 
   useEffect(() => {
-    fetchBookings();
-    fetchCategories();
+    let bookingsUnsubscribe = null;
+
+    const initializeData = async () => {
+      try {
+        const user = auth.currentUser;
+        if (user) {
+          console.log("🔐 User authenticated for bookings:", user.uid);
+          
+          // First, fetch existing data immediately
+          console.log("📥 Fetching existing bookings data...");
+          await fetchBookings();
+          
+          // Then set up real-time listener for future updates
+          console.log("📡 Setting up real-time listener...");
+          bookingsUnsubscribe = setupBookingsListener();
+          
+          // Fetch categories
+          await fetchCategories();
+        } else {
+          console.log("❌ No user authenticated for bookings");
+          setLoading(false);
+          setBookings([]);
+        }
+      } catch (error) {
+        console.error("❌ Error initializing bookings data:", error);
+        // Ensure we at least try to fetch data
+        try {
+          await fetchBookings();
+          await fetchCategories();
+        } catch (fallbackError) {
+          console.error("❌ Fallback fetch also failed:", fallbackError);
+        }
+        setLoading(false);
+      }
+    };
+
+    // Listen for auth state changes
+    const authUnsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) {
+        console.log("🔐 Auth state changed - user logged in:", user.uid);
+        initializeData();
+      } else {
+        console.log("🔐 Auth state changed - user logged out");
+        setLoading(false);
+        setBookings([]);
+      }
+    });
+
+    // Cleanup function
+    return () => {
+      authUnsubscribe();
+      if (bookingsUnsubscribe) {
+        console.log("🔌 Cleaning up real-time bookings listener");
+        bookingsUnsubscribe();
+      }
+    };
   }, []);
 
   const handleRejectBooking = async (booking) => {
@@ -232,7 +398,7 @@ const Bookings = () => {
         }
       );
 
-      fetchBookings();
+      // No need to call fetchBookings() - real-time listener will update automatically
       alert("Booking rejected successfully");
     } catch (err) {
       console.error("Reject booking failed:", err);
@@ -283,7 +449,7 @@ const Bookings = () => {
         });
         
         console.log("Service added successfully to booking:", bookingId);
-        fetchBookings(); // Refresh the bookings list
+        // No need to call fetchBookings() - real-time listener will update automatically
       }
     } catch (error) {
       console.error("Error adding service to booking:", error);
@@ -305,7 +471,7 @@ const Bookings = () => {
       );
 
       console.log("START WORK OTP:", otp);
-      fetchBookings();
+      // No need to call fetchBookings() - real-time listener will update automatically
     } catch (err) {
       console.error("Start work failed:", err);
     }
@@ -334,7 +500,7 @@ const Bookings = () => {
 
       setShowOtpModal(false);
       setOtpInput("");
-      fetchBookings();
+      // No need to call fetchBookings() - real-time listener will update automatically
     } catch (err) {
       console.error("Complete work failed:", err);
     }
@@ -472,6 +638,40 @@ const Bookings = () => {
         <div>
           <h1>Bookings</h1>
           <p>Bookings are created from the app only. Manage and track all customer bookings.</p>
+        </div>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <button
+            onClick={async () => {
+              setLoading(true);
+              try {
+                await fetchBookings();
+              } catch (error) {
+                console.error("Manual refresh failed:", error);
+              } finally {
+                setLoading(false);
+              }
+            }}
+            style={{
+              backgroundColor: '#3b82f6',
+              color: 'white',
+              border: 'none',
+              padding: '8px 16px',
+              borderRadius: '6px',
+              fontSize: '14px',
+              fontWeight: '500',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <polyline points="23 4 23 10 17 10"/>
+              <polyline points="1 20 1 14 7 14"/>
+              <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
+            </svg>
+            Refresh
+          </button>
         </div>
       </div>
 
@@ -964,7 +1164,10 @@ const Bookings = () => {
           booking={selectedBooking}
           categories={categories}
           onClose={() => setOpenAssign(false)}
-          onAssigned={fetchBookings}
+          onAssigned={() => {
+            // No need to call fetchBookings() - real-time listener will update automatically
+            setOpenAssign(false);
+          }}
         />
       )}
 

@@ -23,7 +23,16 @@ export const useNotifications = () => {
 
 export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
-  const [storedNotifications, setStoredNotifications] = useState([]); // New: Store all notifications
+  const [storedNotifications, setStoredNotifications] = useState(() => {
+    // Load stored notifications from localStorage on initialization
+    try {
+      const saved = localStorage.getItem('ninja-stored-notifications');
+      return saved ? JSON.parse(saved) : [];
+    } catch (error) {
+      console.error('Error loading stored notifications:', error);
+      return [];
+    }
+  });
   const [notificationSettings, setNotificationSettings] = useState({
     newBookingAlerts: true,
     paymentNotifications: true,
@@ -32,6 +41,27 @@ export const NotificationProvider = ({ children }) => {
   });
 
   console.log('🔔 NotificationProvider loaded, notifications count:', notifications.length, 'stored count:', storedNotifications.length);
+
+  // Helper function to safely format timestamps
+  const formatTimestamp = (timestamp) => {
+    try {
+      const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
+      return date.toLocaleTimeString();
+    } catch (error) {
+      console.error('Error formatting timestamp:', error);
+      return 'Just now';
+    }
+  };
+
+  // Save stored notifications to localStorage whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem('ninja-stored-notifications', JSON.stringify(storedNotifications));
+      console.log('💾 Saved stored notifications to localStorage:', storedNotifications.length);
+    } catch (error) {
+      console.error('Error saving stored notifications:', error);
+    }
+  }, [storedNotifications]);
 
   // Load notification settings
   useEffect(() => {
@@ -128,21 +158,45 @@ export const NotificationProvider = ({ children }) => {
             console.log('🔔 NEW BOOKING DETECTED:', {
               id: bookingId,
               serviceName: bookingData.serviceName,
+              workName: bookingData.workName,
               customerName: bookingData.customerName,
               createdAt: bookingData.createdAt?.toDate?.()?.toLocaleString()
             });
+
+            // Create detailed notification message
+            const serviceName = bookingData.workName || bookingData.serviceName || 'Service Request';
+            const categoryName = bookingData.serviceName && bookingData.workName ? bookingData.serviceName : '';
+            const customerName = bookingData.customerName || 'Customer';
+            const bookingTime = bookingData.time ? ` at ${bookingData.time}` : '';
+            const bookingDate = bookingData.date ? ` on ${bookingData.date}` : '';
+
+            // Create notification message with service and category details
+            let notificationMessage = `${serviceName}`;
+            if (categoryName && categoryName !== serviceName) {
+              notificationMessage = `${serviceName} (${categoryName})`;
+            }
+            notificationMessage += ` - ${customerName}`;
+            if (bookingTime) {
+              notificationMessage += bookingTime;
+            }
 
             // Show notification
             const notification = {
               id: `booking-${bookingId}-${Date.now()}`,
               type: 'booking',
-              title: '🔔 New Booking Received!',
-              message: `${bookingData.serviceName} - ${bookingData.customerName}`,
-              timestamp: new Date(),
-              data: bookingData
+              title: '🔔 New Slot Booking Received!',
+              message: notificationMessage,
+              timestamp: new Date().toISOString(), // Use ISO string for better serialization
+              data: {
+                ...bookingData,
+                bookingId: bookingId,
+                serviceName: serviceName,
+                categoryName: categoryName,
+                fullDetails: `${serviceName}${categoryName ? ` (Category: ${categoryName})` : ''} for ${customerName}${bookingDate}${bookingTime}`
+              }
             };
 
-            console.log('📢 Adding notification:', notification);
+            console.log('📢 Adding detailed notification:', notification);
             setNotifications(prev => {
               const newNotifications = [notification, ...prev.slice(0, 4)];
               console.log('📋 Updated notifications list:', newNotifications.length);
@@ -160,11 +214,14 @@ export const NotificationProvider = ({ children }) => {
             console.log('🔊 Playing notification sound...');
             playNotificationSound();
 
-            // Auto remove after 3 seconds
+            // Show enhanced browser notification
+            showBrowserNotification(bookingData);
+
+            // Auto remove after 5 seconds (increased for more detailed message)
             setTimeout(() => {
               console.log('⏰ Auto-removing notification:', notification.id);
               setNotifications(prev => prev.filter(n => n.id !== notification.id));
-            }, 3000);
+            }, 5000);
           } else if (change.type === 'added' && initialBookingIds.has(change.doc.id)) {
             console.log('⏭️ Skipping existing booking on refresh:', change.doc.id);
           }
@@ -228,8 +285,8 @@ export const NotificationProvider = ({ children }) => {
           
           // Show browser notification as alternative
           if ('Notification' in window && Notification.permission === 'granted') {
-            new Notification('🔔 New Booking Received!', {
-              body: 'You have a new service booking',
+            new Notification('🔔 New Slot Booking Received!', {
+              body: 'You have a new service booking with detailed information',
               icon: '/favicon.ico',
               tag: 'booking-notification',
               requireInteraction: false,
@@ -238,8 +295,8 @@ export const NotificationProvider = ({ children }) => {
           } else if ('Notification' in window && Notification.permission === 'default') {
             Notification.requestPermission().then(permission => {
               if (permission === 'granted') {
-                new Notification('🔔 New Booking Received!', {
-                  body: 'You have a new service booking',
+                new Notification('🔔 New Slot Booking Received!', {
+                  body: 'You have a new service booking with detailed information',
                   icon: '/favicon.ico',
                   tag: 'booking-notification'
                 });
@@ -253,16 +310,59 @@ export const NotificationProvider = ({ children }) => {
     }
   };
 
+  // Show enhanced browser notification with booking details
+  const showBrowserNotification = (bookingData) => {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      const serviceName = bookingData.workName || bookingData.serviceName || 'Service Request';
+      const categoryName = bookingData.serviceName && bookingData.workName ? bookingData.serviceName : '';
+      const customerName = bookingData.customerName || 'Customer';
+      const bookingTime = bookingData.time ? ` at ${bookingData.time}` : '';
+      const bookingDate = bookingData.date ? ` on ${bookingData.date}` : '';
+
+      let notificationBody = `${serviceName}`;
+      if (categoryName && categoryName !== serviceName) {
+        notificationBody += ` (${categoryName})`;
+      }
+      notificationBody += ` - ${customerName}`;
+      if (bookingDate) {
+        notificationBody += bookingDate;
+      }
+      if (bookingTime) {
+        notificationBody += bookingTime;
+      }
+
+      new Notification('🔔 New Slot Booking Received!', {
+        body: notificationBody,
+        icon: '/favicon.ico',
+        tag: 'booking-notification',
+        requireInteraction: true,
+        silent: false,
+        data: bookingData
+      });
+    }
+  };
+
   // Show notification manually
   const showNotification = (notification) => {
     console.log('📢 Manual notification:', notification);
-    setNotifications(prev => [notification, ...prev.slice(0, 4)]);
+    
+    // Ensure timestamp is properly formatted
+    const formattedNotification = {
+      ...notification,
+      timestamp: notification.timestamp instanceof Date ? notification.timestamp.toISOString() : notification.timestamp
+    };
+    
+    setNotifications(prev => [formattedNotification, ...prev.slice(0, 4)]);
     
     // Store notification permanently
-    setStoredNotifications(prev => [notification, ...prev]);
+    setStoredNotifications(prev => {
+      const newStored = [formattedNotification, ...prev];
+      console.log('💾 Manual notification stored, total count:', newStored.length);
+      return newStored;
+    });
     
     setTimeout(() => {
-      setNotifications(prev => prev.filter(n => n.id !== notification.id));
+      setNotifications(prev => prev.filter(n => n.id !== formattedNotification.id));
     }, 3000);
   };
 
@@ -280,14 +380,36 @@ export const NotificationProvider = ({ children }) => {
 
   // Remove notification from stored list
   const removeStoredNotification = (id) => {
-    console.log('🗑️ Removing stored notification:', id);
-    setStoredNotifications(prev => prev.filter(n => n.id !== id));
+    console.log('🗑️ removeStoredNotification called with id:', id);
+    console.log('📊 Before removal - stored notifications:', storedNotifications.length);
+    
+    try {
+      setStoredNotifications(prev => {
+        const filtered = prev.filter(n => n.id !== id);
+        console.log('📊 After removal - stored notifications:', filtered.length);
+        console.log('🔍 Removed notification with id:', id);
+        return filtered;
+      });
+    } catch (error) {
+      console.error('❌ Error removing notification:', error);
+    }
   };
 
   // Clear all stored notifications
   const clearAllStoredNotifications = () => {
-    console.log('🧹 Clearing all stored notifications');
-    setStoredNotifications([]);
+    console.log('🧹 clearAllStoredNotifications called');
+    console.log('📊 Before clear - stored notifications:', storedNotifications.length);
+    
+    try {
+      setStoredNotifications([]);
+      console.log('📊 After clear - stored notifications: 0');
+      
+      // Also clear from localStorage immediately
+      localStorage.removeItem('ninja-stored-notifications');
+      console.log('💾 Cleared localStorage');
+    } catch (error) {
+      console.error('❌ Error clearing notifications:', error);
+    }
   };
 
   // Get stored notification count
@@ -358,6 +480,8 @@ export const NotificationProvider = ({ children }) => {
     showPaymentNotification,
     showReviewNotification,
     getBookingNotificationCount,
+    showBrowserNotification,
+    formatTimestamp,
   };
 
   return (

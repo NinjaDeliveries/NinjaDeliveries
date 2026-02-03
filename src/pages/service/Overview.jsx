@@ -301,8 +301,14 @@ function NotificationBell() {
   // Close notification dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (showNotifications && !event.target.closest('.overview-notification-section')) {
-        setShowNotifications(false);
+      if (showNotifications) {
+        // Check if click is outside both the bell and the dropdown
+        const bellElement = event.target.closest('.overview-notification-section');
+        const dropdownElement = event.target.closest('[style*="position: fixed"][style*="top: 120px"]');
+        
+        if (!bellElement && !dropdownElement) {
+          setShowNotifications(false);
+        }
       }
     };
 
@@ -342,7 +348,12 @@ function NotificationBell() {
               zIndex: 999999,
               backdropFilter: 'blur(1px)'
             }}
-            onClick={() => setShowNotifications(false)}
+            onClick={(e) => {
+              // Only close if clicking directly on backdrop, not on child elements
+              if (e.target === e.currentTarget) {
+                setShowNotifications(false);
+              }
+            }}
           />
           {/* Notification dropdown */}
           <div 
@@ -360,6 +371,10 @@ function NotificationBell() {
               border: '3px solid #4f46e5',
               animation: 'slideDown 0.3s ease-out'
             }}
+            onClick={(e) => {
+              // Prevent clicks inside the dropdown from closing it
+              e.stopPropagation();
+            }}
           >
             <div style={{
               padding: '16px 20px',
@@ -372,23 +387,29 @@ function NotificationBell() {
               <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: '#1f2937' }}>
                 🔔 Notifications
               </h3>
-              {storedNotifications.length > 0 && (
-                <button 
-                  onClick={clearAllStoredNotifications}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: '#4f46e5',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    padding: '4px 8px',
-                    borderRadius: '4px'
-                  }}
-                >
-                  Clear All
-                </button>
-              )}
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                {storedNotifications.length > 0 && (
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      console.log('🧹 Clear All button clicked');
+                      clearAllStoredNotifications();
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#4f46e5',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      padding: '4px 8px',
+                      borderRadius: '4px'
+                    }}
+                  >
+                    Clear All
+                  </button>
+                )}
+              </div>
             </div>
             
             <div style={{ maxHeight: '320px', overflowY: 'auto' }}>
@@ -442,12 +463,23 @@ function NotificationBell() {
                         color: '#9ca3af',
                         fontWeight: 500
                       }}>
-                        {new Date(notification.timestamp).toLocaleTimeString()}
+                        {(() => {
+                          try {
+                            const timestamp = typeof notification.timestamp === 'string' 
+                              ? new Date(notification.timestamp) 
+                              : notification.timestamp;
+                            return timestamp.toLocaleTimeString();
+                          } catch (error) {
+                            console.error('Error formatting timestamp:', error);
+                            return 'Just now';
+                          }
+                        })()}
                       </div>
                     </div>
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
+                        console.log('🗑️ Remove button clicked for notification:', notification.id);
                         removeStoredNotification(notification.id);
                       }}
                       style={{
