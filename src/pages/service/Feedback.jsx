@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { auth, db } from "../../context/Firebase";
 import {
   collection,
@@ -464,35 +464,60 @@ const Feedback = () => {
           </div>
         ) : (
           filteredRatings.map((rating) => (
-            <div key={rating.id} className="feedback-card">
-              <div className="feedback-header">
-                <div className="feedback-customer">
-                  <div className="feedback-avatar">
+            <div key={rating.id} className="modern-feedback-card">
+              <div className="modern-feedback-header">
+                <div className="modern-feedback-customer">
+                  <div className="modern-feedback-avatar">
                     {(rating.customerName || 'A').charAt(0).toUpperCase()}
                   </div>
-                  <div className="feedback-customer-info">
-                    <h4>{rating.customerName || 'Anonymous'}</h4>
-                    <p>{rating.serviceName || 'Service'}</p>
+                  <div className="modern-feedback-customer-info">
+                    <h4 className="modern-feedback-customer-name">{rating.customerName || 'Anonymous'}</h4>
+                    <p className="modern-feedback-service-name">{rating.serviceName || 'Service'}</p>
+                    <span className="modern-feedback-date">{formatDate(rating.createdAt)}</span>
                   </div>
                 </div>
-                <div className="feedback-rating">
-                  <div className={`feedback-rating-badge ${getRatingColor(rating.rating)}`}>
-                    {rating.rating || 0}
+                <div className="modern-feedback-rating-section">
+                  <div className={`modern-feedback-rating-badge ${getRatingColor(rating.rating)}`}>
+                    <span className="modern-feedback-rating-number">{rating.rating || 0}</span>
+                    <svg className="modern-feedback-star-icon" viewBox="0 0 24 24" fill="currentColor">
+                      <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
+                    </svg>
                   </div>
-                  <div className="feedback-stars">
+                  <div className="modern-feedback-stars">
                     {renderStars(rating.rating)}
                   </div>
                 </div>
               </div>
 
               {rating.feedback && (
-                <div className="feedback-comment">
-                  <p>"{rating.feedback}"</p>
+                <div className="modern-feedback-comment">
+                  <div className="modern-feedback-quote-icon">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M14,17H17L19,13V7H13V13H16M6,17H9L11,13V7H5V13H8L6,17Z"/>
+                    </svg>
+                  </div>
+                  <p className="modern-feedback-comment-text">"{rating.feedback}"</p>
                 </div>
               )}
 
-              <div className="feedback-footer">
-                <span className="feedback-date">{formatDate(rating.createdAt)}</span>
+              <div className="modern-feedback-footer">
+                <div className="modern-feedback-service-badge">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                    <line x1="8" y1="21" x2="16" y2="21"/>
+                    <line x1="12" y1="17" x2="12" y2="21"/>
+                  </svg>
+                  {rating.serviceName || 'Service'}
+                </div>
+                {rating.workerName && (
+                  <div className="modern-feedback-worker-badge">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                      <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                    {rating.workerName}
+                  </div>
+                )}
               </div>
             </div>
           ))
