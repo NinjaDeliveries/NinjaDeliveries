@@ -78,6 +78,17 @@ const Bookings = () => {
       className: "bookings-status-expired",
     },
     rejected: {
+      label: "Rejected",
+      icon: (
+        <svg className="bookings-status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="15" y1="9" x2="9" y2="15"/>
+          <line x1="9" y1="9" x2="15" y2="15"/>
+        </svg>
+      ),
+      className: "bookings-status-rejected",
+    },
+    cancelled: {
       label: "Cancelled",
       icon: (
         <svg className="bookings-status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -300,8 +311,16 @@ const Bookings = () => {
 
     // Status filters
     if (statusFilter === "all") {
-      // Exclude completed bookings from "All" tab - they should only show in "Completed" tab
-      return booking.status !== "completed";
+      // Exclude completed, rejected, and cancelled bookings from "Active" tab
+      return booking.status !== "completed" && booking.status !== "rejected" && booking.status !== "cancelled";
+    }
+    if (statusFilter === "cancelled") {
+      // Show cancelled bookings (customer cancellations from app with status: "cancelled")
+      return booking.status === "cancelled";
+    }
+    if (statusFilter === "rejected") {
+      // Show rejected bookings (company rejections with status: "rejected")
+      return booking.status === "rejected";
     }
     if (statusFilter === "expired") return booking.status === "expired";
     return booking.status === statusFilter;
@@ -378,8 +397,8 @@ const Bookings = () => {
   // Get status counts
   const getStatusCount = (status) => {
     if (status === "all") {
-      // Exclude completed bookings from "All" count
-      return bookings.filter(b => b.status !== "completed").length;
+      // Exclude completed, rejected, and cancelled bookings from "Active" count
+      return bookings.filter(b => b.status !== "completed" && b.status !== "rejected" && b.status !== "cancelled").length;
     }
     return bookings.filter(b => b.status === status).length;
   };
@@ -433,7 +452,7 @@ const Bookings = () => {
           </div>
           <div className="bookings-stat-content">
             <p className="bookings-stat-label">Active</p>
-            <p className="bookings-stat-value">{bookings.filter(b => b.status !== "completed").length}</p>
+            <p className="bookings-stat-value">{bookings.filter(b => b.status !== "completed" && b.status !== "rejected" && b.status !== "cancelled").length}</p>
           </div>
         </div>
 
@@ -593,6 +612,17 @@ const Bookings = () => {
             <line x1="9" y1="9" x2="15" y2="15"/>
           </svg>
           Rejected ({getStatusCount("rejected")})
+        </button>
+        <button 
+          className={`bookings-tab ${statusFilter === 'cancelled' ? 'active' : ''}`}
+          onClick={() => setStatusFilter('cancelled')}
+        >
+          <svg className="bookings-tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="15" y1="9" x2="9" y2="15"/>
+            <line x1="9" y1="9" x2="15" y2="15"/>
+          </svg>
+          Cancelled ({getStatusCount("cancelled")})
         </button>
         <button 
           className={`bookings-tab ${statusFilter === 'expired' ? 'active' : ''}`}
