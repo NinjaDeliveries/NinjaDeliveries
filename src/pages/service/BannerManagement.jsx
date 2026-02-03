@@ -22,6 +22,8 @@ function BannerManagement({ onBack }) {
   const [originalPrice, setOriginalPrice] = useState("");
   const [offerPrice, setOfferPrice] = useState("");
   const [description, setDescription] = useState("");
+  const [clickable, setClickable] = useState(false);
+
   const [bannerImage, setBannerImage] = useState(null);
   const [imagePreview, setImagePreview] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -202,7 +204,8 @@ function BannerManagement({ onBack }) {
         description: description.trim(),
         imageUrl: imageUrl,
         isActive: true,
-        clickable: false, // Default to false for new banners
+       clickable: clickable,
+ // Default to false for new banners
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       };
@@ -222,6 +225,8 @@ function BannerManagement({ onBack }) {
       setImagePreview("");
       setServices([]);
       setIsAddDialogOpen(false);
+      setClickable(false);
+
 
       // Refresh banners
       fetchBanners(userId);
@@ -718,6 +723,25 @@ function BannerManagement({ onBack }) {
                   )}
                 </div>
               </div>
+              <div className="modern-form-group">
+  <label className="modern-switch-label">
+    <span>Clickable Banner</span>
+    <div className="modern-switch">
+      <input
+        type="checkbox"
+        checked={clickable}
+        onChange={(e) => setClickable(e.target.checked)}
+        className="modern-switch-input"
+      />
+      <span className="modern-switch-slider"></span>
+    </div>
+  </label>
+
+  <small className="modern-form-help">
+    Enable this to make the banner clickable in the app
+  </small>
+</div>
+
 
               <div className="modern-form-group">
                 <label>Banner Image (Optional)</label>
