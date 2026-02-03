@@ -244,6 +244,52 @@ const Bookings = () => {
     return Math.floor(100000 + Math.random() * 900000).toString();
   };
 
+  // Function to handle when additional services are added to an existing booking
+  // This function should be called when the mobile app adds services to an existing booking
+  // Example usage: handleServiceAddition(bookingId, { workName: "AC Cleaning", price: 200, notes: "Additional service" })
+  const handleServiceAddition = async (bookingId, newService) => {
+    try {
+      const bookingRef = doc(db, "service_bookings", bookingId);
+      const bookingSnap = await getDocs(query(collection(db, "service_bookings"), where("__name__", "==", bookingId)));
+      
+      if (!bookingSnap.empty) {
+        const currentBooking = bookingSnap.docs[0].data();
+        
+        // Create services array if it doesn't exist
+        const existingServices = currentBooking.services || [
+          {
+            workName: currentBooking.workName,
+            serviceName: currentBooking.serviceName,
+            price: currentBooking.totalPrice || currentBooking.price || currentBooking.amount || 0,
+            notes: currentBooking.notes
+          }
+        ];
+        
+        // Add the new service
+        const updatedServices = [...existingServices, newService];
+        
+        // Calculate total price
+        const totalPrice = updatedServices.reduce((total, service) => 
+          total + (service.price || service.totalPrice || service.amount || 0), 0
+        );
+        
+        // Update the booking
+        await updateDoc(bookingRef, {
+          services: updatedServices,
+          totalPrice: totalPrice,
+          status: "started", // Reset to started since new work is added
+          updatedAt: new Date(),
+          serviceAddedAt: new Date()
+        });
+        
+        console.log("Service added successfully to booking:", bookingId);
+        fetchBookings(); // Refresh the bookings list
+      }
+    } catch (error) {
+      console.error("Error adding service to booking:", error);
+    }
+  };
+
   const handleStartWork = async (booking) => {
     try {
       const otp = generateOtp();
@@ -296,13 +342,18 @@ const Bookings = () => {
 
   // Filter and sort bookings based on status filter and search
   const filteredBookings = bookings.filter((booking) => {
-    // Search filter - include more fields for better search
+    // Search filter - include more fields for better search, including addOns array
     const matchesSearch = !searchQuery || 
       booking.serviceName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       booking.workName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       booking.customerName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       booking.id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      booking.notes?.toLowerCase().includes(searchQuery.toLowerCase());
+      booking.notes?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      // Search within addOns array
+      (booking.addOns && booking.addOns.some(addon => 
+        addon.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        addon.notes?.toLowerCase().includes(searchQuery.toLowerCase())
+      ));
 
     if (!matchesSearch) return false;
 
@@ -683,10 +734,6 @@ const Bookings = () => {
                       <div key={booking.id} className="bookings-card">
                         <div className="bookings-card-content">
                           <div className="bookings-main-section">
-                            <div className="bookings-avatar">
-                              {booking.customerName ? booking.customerName.split(" ").map(n => n[0]).join("").toUpperCase() : "U"}
-                            </div>
-                            
                             <div className="bookings-info">
                               <div className="bookings-header">
                                 <div className="bookings-badges">
@@ -702,9 +749,16 @@ const Bookings = () => {
                                   </span>
                                 </div>
                                 <h3 className="bookings-service-name">
+                                  {/* Handle multiple services with addOns - show main service only */}
                                   {booking.workName || booking.serviceName || "Service Request"}
+                                  {/* Show addon indicator */}
+                                  {booking.addOns && booking.addOns.length > 0 && (
+                                    <span className="addon-indicator">
+                                      + {booking.addOns.map(addon => addon.name).join(', ')}
+                                    </span>
+                                  )}
                                 </h3>
-                                {booking.serviceName && booking.workName && booking.serviceName !== booking.workName && (
+                                {booking.serviceName && booking.workName && booking.serviceName !== booking.workName && !booking.services && (
                                   <p className="bookings-main-service">Category: {booking.serviceName}</p>
                                 )}
                               </div>
@@ -747,6 +801,18 @@ const Bookings = () => {
                                   Assigned to: {booking.technicianName}
                                 </div>
                               )}
+
+                              {/* Show indicator for add-on services - REMOVED LARGE ICON */}
+                              {booking.addOns && booking.addOns.length > 0 && (
+                                <div className="bookings-merged-indicator">
+                                  Add-on services added
+                                  {booking.serviceAddedAt && (
+                                    <span className="merge-time">
+                                      • Added {new Date(booking.serviceAddedAt.seconds * 1000).toLocaleTimeString()}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </div>
 
@@ -755,10 +821,42 @@ const Bookings = () => {
                               <div className="bookings-price">
                                 <span className="price-display">
                                   <span className="rupee-symbol">₹</span>
-                                  <span className="price-amount">{(booking.totalPrice || booking.price || booking.amount || 0).toLocaleString()}</span>
+                                  <span className="price-amount">
+                                    {/* Use totalPrice directly if it already includes addOns, otherwise calculate */}
+                                    {(() => {
+                                      // If totalPrice exists and addOns exist, assume totalPrice already includes addOns
+                                      if (booking.totalPrice && booking.addOns && booking.addOns.length > 0) {
+                                        console.log('Using existing totalPrice (includes addOns):', {
+                                          bookingId: booking.id,
+                                          totalPrice: booking.totalPrice,
+                                          addOns: booking.addOns
+                                        });
+                                        return booking.totalPrice.toLocaleString();
+                                      }
+                                      
+                                      // Otherwise calculate manually
+                                      const basePrice = booking.totalPrice || booking.price || booking.amount || 0;
+                                      const addOnsPrice = booking.addOns ? booking.addOns.reduce((total, addon) => total + (addon.price || 0), 0) : 0;
+                                      const totalPrice = basePrice + addOnsPrice;
+                                      
+                                      console.log('Calculating price manually:', {
+                                        bookingId: booking.id,
+                                        basePrice,
+                                        addOnsPrice,
+                                        totalPrice
+                                      });
+                                      
+                                      return totalPrice.toLocaleString();
+                                    })()}
+                                  </span>
                                 </span>
                               </div>
-                              <p className="bookings-category">{booking.categoryName || "Service"}</p>
+                              <p className="bookings-category">
+                                {booking.addOns && booking.addOns.length > 0 
+                                  ? `${booking.addOns.length + 1} Services` 
+                                  : (booking.categoryName || "Service")
+                                }
+                              </p>
                             </div>
 
                             <div className="bookings-actions">
@@ -926,6 +1024,99 @@ const Bookings = () => {
       {showDetailsModal && selectedBooking && (
         <div className="bookings-modal-backdrop" onClick={() => setShowDetailsModal(false)}>
           <div className="bookings-modal-content" onClick={(e) => e.stopPropagation()}>
+            <style jsx>{`
+              .multiple-services {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 4px;
+              }
+              .service-item {
+                font-weight: 500;
+              }
+              .service-count-badge {
+                background: #e0f2fe;
+                color: #0277bd;
+                padding: 2px 8px;
+                border-radius: 12px;
+                font-size: 12px;
+                font-weight: 500;
+                margin-left: 8px;
+              }
+              .multiple-services-details {
+                space-y: 12px;
+              }
+              .service-detail-item {
+                border: 1px solid #e5e7eb;
+                border-radius: 8px;
+                padding: 12px;
+                margin-bottom: 8px;
+              }
+              .service-info {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+              }
+              .service-info .service-name {
+                margin: 0;
+                font-weight: 500;
+              }
+              .service-info .service-price {
+                margin: 0;
+                font-weight: 600;
+                color: #059669;
+              }
+              .service-notes {
+                margin: 8px 0 0 0;
+                font-size: 14px;
+                color: #6b7280;
+              }
+              .total-services-summary {
+                border-top: 2px solid #e5e7eb;
+                padding-top: 12px;
+                margin-top: 12px;
+                text-align: right;
+                color: #059669;
+              }
+              .bookings-merged-indicator {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                background: #fef3c7;
+                color: #92400e;
+                padding: 4px 8px;
+                border-radius: 6px;
+                font-size: 12px;
+                font-weight: 500;
+                margin-top: 8px;
+              }
+              .bookings-merge-icon {
+                width: 14px;
+                height: 14px;
+              }
+              .merge-time {
+                color: #78716c;
+                font-weight: 400;
+              }
+              .addon-item {
+                background: #f8fafc;
+                border-left: 3px solid #3b82f6;
+              }
+              .addon-services-section {
+                margin-top: 16px;
+              }
+              .addon-indicator {
+                display: block;
+                font-size: 14px;
+                font-weight: 400;
+                color: #6b7280;
+                margin-top: 4px;
+                line-height: 1.4;
+              }
+              .bookings-service-name {
+                line-height: 1.3;
+              }
+            `}</style>
             <div className="bookings-modal-header">
               <div className="bookings-modal-title-section">
                 <h2 className="bookings-modal-title">Booking Details</h2>
@@ -952,16 +1143,56 @@ const Bookings = () => {
               {/* Service Info */}
               <div className="bookings-modal-section service-section">
                 <h4>Service Details</h4>
-                <p className="service-name">
-                  {selectedBooking.workName || selectedBooking.serviceName || "Service Request"}
-                </p>
-                {selectedBooking.serviceName && selectedBooking.workName && selectedBooking.serviceName !== selectedBooking.workName && (
-                  <p className="main-service">Category: {selectedBooking.serviceName}</p>
+                
+                {/* Original Service */}
+                <div className="service-detail-item">
+                  <div className="service-info">
+                    <p className="service-name">
+                      {selectedBooking.workName || selectedBooking.serviceName || "Service Request"}
+                    </p>
+                    <p className="service-price">
+                      ₹{(() => {
+                        // If addOns exist, calculate original price by subtracting addon prices from total
+                        if (selectedBooking.addOns && selectedBooking.addOns.length > 0 && selectedBooking.totalPrice) {
+                          const addOnsTotal = selectedBooking.addOns.reduce((total, addon) => total + (addon.price || 0), 0);
+                          const originalPrice = selectedBooking.totalPrice - addOnsTotal;
+                          return originalPrice.toLocaleString();
+                        }
+                        // Otherwise use the existing price
+                        return (selectedBooking.totalPrice || selectedBooking.price || selectedBooking.amount || 0).toLocaleString();
+                      })()}
+                    </p>
+                  </div>
+                  {selectedBooking.notes && (
+                    <p className="service-notes">{selectedBooking.notes}</p>
+                  )}
+                </div>
+
+                {/* Add-on Services */}
+                {selectedBooking.addOns && selectedBooking.addOns.length > 0 && (
+                  <div className="addon-services-section">
+                    <h5 style={{margin: '16px 0 8px 0', color: '#374151'}}>Add-on Services:</h5>
+                    {selectedBooking.addOns.map((addon, index) => (
+                      <div key={index} className="service-detail-item addon-item">
+                        <div className="service-info">
+                          <p className="service-name">{addon.name}</p>
+                          <p className="service-price">₹{(addon.price || 0).toLocaleString()}</p>
+                        </div>
+                        {addon.notes && (
+                          <p className="service-notes">{addon.notes}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 )}
-                {selectedBooking.notes && (
-                  <div className="problem-description">
-                    <h5>Additional Notes:</h5>
-                    <p>{selectedBooking.notes}</p>
+
+                {/* Total Summary */}
+                {selectedBooking.addOns && selectedBooking.addOns.length > 0 && (
+                  <div className="total-services-summary">
+                    <strong>
+                      Total: {selectedBooking.addOns.length + 1} services - ₹
+                      {(selectedBooking.totalPrice || selectedBooking.price || selectedBooking.amount || 0).toLocaleString()}
+                    </strong>
                   </div>
                 )}
               </div>
@@ -1013,7 +1244,18 @@ const Bookings = () => {
                   <div className="amount-display">
                     <span className="price-display">
                       <span className="rupee-symbol-large">₹</span>
-                      <span className="price-amount-large">{(selectedBooking.totalPrice || selectedBooking.price || selectedBooking.amount || 0).toLocaleString()}</span>
+                      <span className="price-amount-large">
+                        {/* Use totalPrice directly if it already includes addOns */}
+                        {(() => {
+                          if (selectedBooking.totalPrice && selectedBooking.addOns && selectedBooking.addOns.length > 0) {
+                            return selectedBooking.totalPrice.toLocaleString();
+                          }
+                          
+                          const basePrice = selectedBooking.totalPrice || selectedBooking.price || selectedBooking.amount || 0;
+                          const addOnsPrice = selectedBooking.addOns ? selectedBooking.addOns.reduce((total, addon) => total + (addon.price || 0), 0) : 0;
+                          return (basePrice + addOnsPrice).toLocaleString();
+                        })()}
+                      </span>
                     </span>
                   </div>
                 </div>
