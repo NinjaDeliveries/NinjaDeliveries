@@ -1163,42 +1163,30 @@ const Overview = () => {
           {/* Quick Actions */}
           <div className="overview-quick-actions-card" style={{ animationDelay: '1s' }}>
             <div className="overview-actions-header">
-              <div className="overview-actions-title-section">
-                <div className="overview-actions-icon">⚡</div>
-                <div className="overview-actions-text">
-                  <h3 className="overview-actions-title">Quick Actions</h3>
-                  <p className="overview-actions-subtitle">Manage your service operations efficiently</p>
-                </div>
-              </div>
+              <div className="overview-actions-icon">⚡</div>
+              <h3 className="overview-actions-title">Quick Actions</h3>
+              <p className="overview-actions-subtitle">Manage your service operations efficiently</p>
             </div>
             <div className="overview-actions-grid">
               <button className="overview-action-btn banner-action" onClick={() => setActiveTab('banner')}>
                 <div className="overview-action-icon-wrapper">
-                  <div className="overview-action-icon">🎯</div>
+                  <div className="overview-action-icon">📅</div>
                 </div>
                 <div className="overview-action-content">
                   <span className="overview-action-title">Banner Management</span>
                   <span className="overview-action-desc">Create and manage promotional banners</span>
                 </div>
-                <div className="overview-action-arrow">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="M9 18l6-6-6-6"/>
-                  </svg>
-                </div>
+                <div className="overview-action-arrow">→</div>
               </button>
               <button className="overview-action-btn technician-action" onClick={() => window.location.href = '/admin.html#/service-dashboard/technicians'}>
                 <div className="overview-action-icon-wrapper">
-                  <div className="overview-action-icon">👨‍🔧</div>
+                  <div className="overview-action-icon">👥</div>
                 </div>
                 <div className="overview-action-content">
                   <span className="overview-action-title">Add Technician</span>
                   <span className="overview-action-desc">Manage your service team</span>
                 </div>
-                <div className="overview-action-arrow">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="M9 18l6-6-6-6"/>
-                  </svg>
-                </div>
+                <div className="overview-action-arrow">→</div>
               </button>
               <button className="overview-action-btn payment-action" onClick={() => window.location.href = '/admin.html#/service-dashboard/payments'}>
                 <div className="overview-action-icon-wrapper">
@@ -1208,11 +1196,7 @@ const Overview = () => {
                   <span className="overview-action-title">View Payments</span>
                   <span className="overview-action-desc">Track earnings and transactions</span>
                 </div>
-                <div className="overview-action-arrow">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="M9 18l6-6-6-6"/>
-                  </svg>
-                </div>
+                <div className="overview-action-arrow">→</div>
               </button>
             </div>
           </div>

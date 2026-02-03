@@ -9,7 +9,6 @@ import {
   doc,
 } from "firebase/firestore";
 import AssignWorkerModal from "./AssignWorkerModal";
-import { checkWorkerAvailability } from "../../utils/workerAvailabilityChecker";
 import "../../style/ServiceDashboard.css";
 
 const Bookings = () => {
