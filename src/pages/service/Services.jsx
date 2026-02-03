@@ -145,6 +145,7 @@ const fetchServices = async () => {
       ...doc.data(),
     }));
 
+    // Show all categories in the filter dropdown, but mark inactive ones
     setCategories(list);
   } catch (err) {
     console.error("Fetch categories error:", err);
@@ -168,8 +169,9 @@ const fetchServices = async () => {
   const handleCloseModal = () => {
     setOpenModal(false);
     setEditService(null);
-    // Refresh categories in case new ones were created
+    // Refresh both categories and services
     fetchCategories();
+    fetchServices();
   };
 
   const handleCategoryChange = (e) => {
@@ -305,13 +307,15 @@ const fetchServiceMasters = async () => {
 };
 
 const getServiceName = (service) => {
-  if (service.serviceType === "custom") return service.name;
+  if (!service) return "Unknown Service";
+  
+  if (service.serviceType === "custom") return service.name || "Unnamed Service";
 
   const master = serviceMasters.find(
     s => s.id === service.adminServiceId
   );
 
-  return master ? master.name : service.name;
+  return master ? master.name : (service.name || "Unnamed Service");
 };
 
 // Helper function to format availability information
@@ -365,9 +369,10 @@ const formatAvailability = (availability, unit) => {
       service.categoryMasterId === selectedCategory || 
       service.masterCategoryId === selectedCategory;
     
+    const isServiceActive = service.isActive ?? true;
     const matchesStatus = activeFilter === "all" ||
-      (activeFilter === "active" && (service.isActive ?? true)) ||
-      (activeFilter === "inactive" && !(service.isActive ?? true));
+      (activeFilter === "active" && isServiceActive) ||
+      (activeFilter === "inactive" && !isServiceActive);
     
     return matchesSearch && matchesCategory && matchesStatus;
   });
@@ -473,6 +478,14 @@ const formatAvailability = (availability, unit) => {
               {cat.name}
             </option>
           ))}
+          {/* Also show company categories for debugging */}
+          <optgroup label="Company Categories">
+            {categories.map(cat => (
+              <option key={`company-${cat.id}`} value={cat.masterCategoryId || cat.id}>
+                {cat.name} {cat.isActive === false ? '(INACTIVE)' : ''}
+              </option>
+            ))}
+          </optgroup>
         </select>
       </div>
 
@@ -722,8 +735,12 @@ const formatAvailability = (availability, unit) => {
     onClose={handleCloseModal}
     onSaved={async (newService) => {
       await syncAppService(newService); // 🔥 THIS CREATES app_services
-      fetchServices();
-      fetchCategories();
+      // Small delay to ensure database write is completed
+      setTimeout(() => {
+        fetchServices();
+        fetchCategories();
+      }, 500);
+      setOpenModal(false); // Close modal after successful save
     }}
     editService={editService}
   />
@@ -733,8 +750,12 @@ const formatAvailability = (availability, unit) => {
   <AddGlobalServiceModal
     onClose={() => setOpenGlobalServiceModal(false)}
     onSaved={() => {
-      fetchServices();
-      fetchCategories();
+      // Small delay to ensure database write is completed
+      setTimeout(() => {
+        fetchServices();
+        fetchCategories();
+      }, 500);
+      setOpenGlobalServiceModal(false); // Close modal after successful save
     }}
   />
 )}

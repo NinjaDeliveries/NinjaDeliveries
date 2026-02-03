@@ -104,63 +104,59 @@ const fetchAdminServices = async (catId) => {
 
   // Skip if we already fetched services for this category
   if (lastFetchedCategoryId === catId && adminServices.length > 0) {
-    if (process.env.NODE_ENV === 'development') {
-      console.log("Using cached services for category:", catId);
-    }
     return;
   }
 
-  if (process.env.NODE_ENV === 'development') {
-    console.log("Fetching services for category ID:", catId);
-  }
+  console.log("🔍 Fetching services for category:", catId);
   setServicesLoading(true);
 
   try {
-    // Try different possible field names for category reference
-    let services = [];
+    // Get the selected category name
+    const selectedCategory = categories.find(cat => cat.masterCategoryId === catId);
+    const categoryName = selectedCategory?.name;
     
-    // First try: categoryMasterId
-    let q = query(
-      collection(db, "service_services_master"),
-      where("categoryMasterId", "==", catId),
-      where("isActive", "==", true)
-    );
+    console.log("🔍 Category name:", categoryName);
+
+    // Fetch all services from master collection
+    const snap = await getDocs(collection(db, "service_services_master"));
+    const allServices = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     
-    let snap = await getDocs(q);
-    services = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    console.log(`📋 Total services in master: ${allServices.length}`);
     
-    // If no results, try: masterCategoryId
-    if (services.length === 0) {
-      q = query(
-        collection(db, "service_services_master"),
-        where("masterCategoryId", "==", catId),
-        where("isActive", "==", true)
+    // Filter services by category name or category ID
+    const matchingServices = allServices.filter(service => {
+      const isActive = service.isActive !== false; // Default to true if not set
+      
+      // Try to match by category ID first
+      const matchesCategoryId = 
+        service.masterCategoryId === catId ||
+        service.categoryMasterId === catId ||
+        service.categoryId === catId ||
+        service.category === catId;
+      
+      // Try to match by category name
+      const matchesCategoryName = categoryName && (
+        service.categoryName === categoryName ||
+        service.category === categoryName ||
+        (service.name && service.name.toLowerCase().includes(categoryName.toLowerCase()))
       );
       
-      snap = await getDocs(q);
-      services = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const matches = matchesCategoryId || matchesCategoryName;
+      
+      console.log(`🔍 "${service.name}": active=${isActive}, categoryId match=${matchesCategoryId}, categoryName match=${matchesCategoryName}, overall match=${matches}`);
+      
+      return isActive && matches;
+    });
+    
+    console.log(`✅ Found ${matchingServices.length} matching services for category "${categoryName}" (${catId})`);
+    
+    if (matchingServices.length === 0) {
+      console.log("❌ No services match this category");
+      console.log("Available service categories:", [...new Set(allServices.map(s => s.categoryName || s.category).filter(Boolean))]);
     }
     
-    // If still no results, try by category name
-    if (services.length === 0) {
-      const selectedCategory = categories.find(cat => cat.masterCategoryId === catId);
-      if (selectedCategory) {
-        q = query(
-          collection(db, "service_services_master"),
-          where("categoryName", "==", selectedCategory.name),
-          where("isActive", "==", true)
-        );
-        
-        snap = await getDocs(q);
-        services = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      }
-    }
-    
-    if (process.env.NODE_ENV === 'development') {
-      console.log("Found services:", services);
-    }
-    setAdminServices(services);
-    setLastFetchedCategoryId(catId); // Cache the category ID
+    setAdminServices(matchingServices);
+    setLastFetchedCategoryId(catId);
   } catch (error) {
     console.error("Error fetching admin services:", error);
     setAdminServices([]);
@@ -302,7 +298,7 @@ const fetchAdminServices = async (catId) => {
         return;
       }
 
-      // Fetch only company-selected categories (same approach as Technicians.jsx)
+      // Fetch only company-selected categories that are active
       const q = query(
         collection(db, "service_categories"),
         where("companyId", "==", user.uid),
@@ -434,6 +430,11 @@ const fetchAdminServices = async (catId) => {
       return;
     }
 
+    if (!categoryMasterId) {
+      alert("Please select a category");
+      return;
+    }
+
     // if (priceType === "package") {
     //   for (let p of packages) {
     //     if (!p.price || Number(p.price) <= 0) {
@@ -549,6 +550,7 @@ if (isCustomService) {
     if (isEditMode) {
       // update service
       await updateDoc(doc(db, "service_services", editService.id), payload);
+      onSaved({ ...payload, id: editService.id });
     } else {
       // create service
       payload.createdAt = new Date();
@@ -559,9 +561,10 @@ if (isCustomService) {
         ...payload,
         id: docRef.id,
       });
+      
+      onSaved({ ...payload, id: docRef.id });
     }
 
-    onSaved(payload);
     onClose(); 
   } catch (error) {
     console.error("Error saving service:", error);

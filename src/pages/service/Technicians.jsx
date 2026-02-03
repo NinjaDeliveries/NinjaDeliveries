@@ -284,7 +284,8 @@ const Technicians = () => {
 
       const q = query(
         collection(db, "service_services"),
-        where("companyId", "==", user.uid)
+        where("companyId", "==", user.uid),
+        where("isActive", "==", true) // Only fetch active services
       );
 
       const snap = await getDocs(q);
@@ -293,8 +294,8 @@ const Technicians = () => {
         ...doc.data(),
       }));
 
-      console.log("Fetched services:", list);
-      console.log("Number of services:", list.length);
+      console.log("Fetched active services:", list);
+      console.log("Number of active services:", list.length);
       
       setServices(list);
     } catch (err) {
