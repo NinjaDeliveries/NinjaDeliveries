@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { auth, db } from "../../context/Firebase";
-import { collection, query, where, getDocs, addDoc, doc, updateDoc, deleteDoc } from "firebase/firestore";
+import { collection, query, where, getDocs, addDoc, doc, updateDoc, deleteDoc, onSnapshot } from "firebase/firestore";
 import "../../style/ServiceDashboard.css";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "../../context/Firebase";
@@ -48,6 +48,120 @@ const Categories = () => {
     setAdminCategories(list.filter(c => c.isActive));
   };
 
+  // Function to sync from master category status
+  const syncFromMasterCategory = async (masterCategoryId, isActive) => {
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+      
+      let totalCategoriesUpdated = 0;
+      let totalServicesUpdated = 0;
+
+      // Update all company categories that use this master category
+      const companyCatQ = query(
+        collection(db, "service_categories"),
+        where("companyId", "==", user.uid),
+        where("masterCategoryId", "==", masterCategoryId)
+      );
+
+      const companyCatSnap = await getDocs(companyCatQ);
+
+      for (const catDoc of companyCatSnap.docs) {
+        await updateDoc(catDoc.ref, {
+          isActive: isActive,
+          updatedAt: new Date(),
+          syncedFromMaster: true
+        });
+        
+        totalCategoriesUpdated++;
+
+        // Update all services under this company category
+        const serviceQ = query(
+          collection(db, "service_services"),
+          where("companyId", "==", user.uid),
+          where("masterCategoryId", "==", masterCategoryId)
+        );
+
+        const serviceSnap = await getDocs(serviceQ);
+
+        for (const svcDoc of serviceSnap.docs) {
+          await updateDoc(svcDoc.ref, {
+            isActive: isActive,
+            updatedAt: new Date(),
+            syncedFromMaster: true
+          });
+
+          totalServicesUpdated++;
+
+          const svcData = svcDoc.data();
+          // Sync app_services if it's an admin service
+          if (svcData.serviceType === "admin" && svcData.adminServiceId) {
+            await syncAppServiceVisibility(svcData.adminServiceId);
+          }
+        }
+      }
+
+      // Sync app category visibility
+      await syncAppCategoryVisibility(masterCategoryId);
+      
+      return {
+        categories: totalCategoriesUpdated,
+        services: totalServicesUpdated
+      };
+    } catch (error) {
+      console.error("Error syncing from master category:", error);
+      throw error;
+    }
+  };
+
+  // Function to check and sync all master categories
+  // Set up real-time listener for master category changes
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    // Listen to master categories changes
+    const unsubscribe = onSnapshot(
+      collection(db, "service_categories_master"),
+      (snapshot) => {
+        snapshot.docChanges().forEach(async (change) => {
+          if (change.type === "modified") {
+            const masterData = change.doc.data();
+            const masterId = change.doc.id;
+            const masterIsActive = masterData.isActive ?? true;
+            
+            // Check if we have any company categories using this master
+            const companyCatQ = query(
+              collection(db, "service_categories"),
+              where("companyId", "==", user.uid),
+              where("masterCategoryId", "==", masterId)
+            );
+
+            const companyCatSnap = await getDocs(companyCatQ);
+            
+            if (!companyCatSnap.empty) {
+              try {
+                await syncFromMasterCategory(masterId, masterIsActive);
+                // Refresh the display silently
+                fetchCategories();
+              } catch (error) {
+                console.error("Auto-sync failed:", error);
+              }
+            }
+          }
+        });
+      },
+      (error) => {
+        console.error("Master category listener error:", error);
+      }
+    );
+
+    // Cleanup listener on unmount
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
   useEffect(() => {
     fetchCategories();       // company categories
     fetchAdminCategories();  // admin categories
@@ -80,6 +194,34 @@ const syncAppCategoryVisibility = async (masterCategoryId) => {
   }
 };
 
+const syncAppServiceVisibility = async (adminServiceId) => {
+  // 1️⃣ Check if ANY active company still provides this service
+  const q = query(
+    collection(db, "service_services"),
+    where("adminServiceId", "==", adminServiceId),
+    where("isActive", "==", true)
+  );
+
+  const snap = await getDocs(q);
+
+  const isVisibleInApp = !snap.empty;
+
+  // 2️⃣ Update app_services visibility
+  const appQ = query(
+    collection(db, "app_services"),
+    where("masterServiceId", "==", adminServiceId)
+  );
+
+  const appSnap = await getDocs(appQ);
+
+  for (const d of appSnap.docs) {
+    await updateDoc(d.ref, {
+      isActive: isVisibleInApp,
+      updatedAt: new Date(),
+    });
+  }
+};
+
 const handleToggleCategoryStatus = async (categoryId, currentStatus) => {
   try {
     const user = auth.currentUser;
@@ -90,42 +232,93 @@ const handleToggleCategoryStatus = async (categoryId, currentStatus) => {
     const category = categories.find(c => c.id === categoryId);
     if (!category) return;
 
-    // 1️⃣ Update company category
+    // Update company category
     await updateDoc(doc(db, "service_categories", categoryId), {
       isActive: newStatus,
       updatedAt: new Date(),
     });
 
-    // 2️⃣ Update ALL company services under this category
-    const serviceQ = query(
+    // Find ALL services under this category (try multiple field combinations)
+    let totalServicesUpdated = 0;
+
+    // Query 1: masterCategoryId field
+    const serviceQ1 = query(
       collection(db, "service_services"),
       where("companyId", "==", user.uid),
       where("masterCategoryId", "==", category.masterCategoryId)
     );
 
-    const serviceSnap = await getDocs(serviceQ);
+    const serviceSnap1 = await getDocs(serviceQ1);
 
-    for (const d of serviceSnap.docs) {
+    for (const d of serviceSnap1.docs) {
       await updateDoc(d.ref, {
         isActive: newStatus,
         updatedAt: new Date(),
       });
 
-      const svc = d.data();
+      totalServicesUpdated++;
 
-      // 🔥 Sync app_services visibility
+      const svc = d.data();
+      // Sync app_services visibility for admin services
       if (svc.serviceType === "admin" && svc.adminServiceId) {
-        // await syncAppServiceVisibility(svc.adminServiceId);
+        await syncAppServiceVisibility(svc.adminServiceId);
       }
     }
 
-    // 🔥 3️⃣ Sync APP CATEGORY visibility (THIS WAS MISSING)
+    // Query 2: categoryMasterId field (alternative naming)
+    const serviceQ2 = query(
+      collection(db, "service_services"),
+      where("companyId", "==", user.uid),
+      where("categoryMasterId", "==", category.masterCategoryId)
+    );
+
+    const serviceSnap2 = await getDocs(serviceQ2);
+
+    for (const d of serviceSnap2.docs) {
+      await updateDoc(d.ref, {
+        isActive: newStatus,
+        updatedAt: new Date(),
+      });
+
+      totalServicesUpdated++;
+
+      const svc = d.data();
+      // Sync app_services visibility for admin services
+      if (svc.serviceType === "admin" && svc.adminServiceId) {
+        await syncAppServiceVisibility(svc.adminServiceId);
+      }
+    }
+
+    // Query 3: Try with category ID directly (in case services reference company category ID)
+    const serviceQ3 = query(
+      collection(db, "service_services"),
+      where("companyId", "==", user.uid),
+      where("categoryId", "==", categoryId)
+    );
+
+    const serviceSnap3 = await getDocs(serviceQ3);
+
+    for (const d of serviceSnap3.docs) {
+      await updateDoc(d.ref, {
+        isActive: newStatus,
+        updatedAt: new Date(),
+      });
+
+      totalServicesUpdated++;
+
+      const svc = d.data();
+      // Sync app_services visibility for admin services
+      if (svc.serviceType === "admin" && svc.adminServiceId) {
+        await syncAppServiceVisibility(svc.adminServiceId);
+      }
+    }
+
+    // Sync APP CATEGORY visibility
     await syncAppCategoryVisibility(category.masterCategoryId);
 
     fetchCategories();
   } catch (error) {
     console.error("Error toggling category:", error);
-    alert("Error updating category");
   }
 };
 
