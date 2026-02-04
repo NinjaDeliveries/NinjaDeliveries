@@ -10227,6 +10227,65 @@ input:checked + .settings-toggle-slider:before {
   color: #374151;
 }
 
+/* Today Only Toggle */
+.bookings-toggle-filter {
+  display: flex;
+  align-items: center;
+}
+
+.bookings-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #f9fafb;
+  color: #374151;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.bookings-toggle-btn:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.bookings-toggle-btn.today-only {
+  background: #4b3cc4;
+  color: white;
+  border-color: #4b3cc4;
+}
+
+.bookings-toggle-btn.today-only:hover {
+  background: #3730a3;
+  border-color: #3730a3;
+}
+
+.bookings-toggle-btn.all-bookings {
+  background: #059669;
+  color: white;
+  border-color: #059669;
+}
+
+.bookings-toggle-btn.all-bookings:hover {
+  background: #047857;
+  border-color: #047857;
+}
+
+.bookings-toggle-icon {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2;
+}
+
+.bookings-toggle-text {
+  font-weight: 500;
+}
+
 /* Tabs */
 .bookings-tabs {
   display: flex;

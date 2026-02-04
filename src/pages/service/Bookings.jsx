@@ -24,6 +24,7 @@ const Bookings = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState(""); // New date filter state
+  const [showAllBookings, setShowAllBookings] = useState(false); // Toggle for showing all bookings vs today only
 
   const statusConfig = {
     pending: {
@@ -526,6 +527,12 @@ const Bookings = () => {
     // Date filter
     if (dateFilter && booking.date !== dateFilter) return false;
 
+    // Today-only filter (when showAllBookings is false, only show today's bookings)
+    if (!showAllBookings) {
+      const today = new Date().toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
+      if (booking.date !== today) return false;
+    }
+
     // Status filters
     if (statusFilter === "all") {
       // Exclude completed, rejected, and cancelled bookings from "Active" tab
@@ -802,6 +809,44 @@ const Bookings = () => {
             </button>
           )}
         </div>
+
+        {/* Today Only Toggle */}
+        <div className="bookings-toggle-filter">
+          <button
+            className={`bookings-toggle-btn ${showAllBookings ? 'all-bookings' : 'today-only'}`}
+            onClick={() => setShowAllBookings(!showAllBookings)}
+            title={showAllBookings ? "Click to show today's bookings only" : "Click to show all bookings"}
+          >
+            <svg className="bookings-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              {showAllBookings ? (
+                // Calendar icon for "All Bookings"
+                <>
+                  <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
+                  <line x1="16" x2="16" y1="2" y2="6"/>
+                  <line x1="8" x2="8" y1="2" y2="6"/>
+                  <line x1="3" x2="21" y1="10" y2="10"/>
+                  <path d="M8 14h.01"/>
+                  <path d="M12 14h.01"/>
+                  <path d="M16 14h.01"/>
+                  <path d="M8 18h.01"/>
+                  <path d="M12 18h.01"/>
+                </>
+              ) : (
+                // Today icon for "Today Only"
+                <>
+                  <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
+                  <line x1="16" x2="16" y1="2" y2="6"/>
+                  <line x1="8" x2="8" y1="2" y2="6"/>
+                  <line x1="3" x2="21" y1="10" y2="10"/>
+                  <circle cx="12" cy="16" r="2"/>
+                </>
+              )}
+            </svg>
+            <span className="bookings-toggle-text">
+              {showAllBookings ? 'All Bookings' : 'Today Only'}
+            </span>
+          </button>
+        </div>
       </div>
 
       {/* Status Tabs */}
@@ -905,7 +950,9 @@ const Bookings = () => {
             <p>
               {searchQuery || statusFilter !== "all" || dateFilter
                 ? "Try adjusting your filters"
-                : "Bookings will appear here when customers make them through the app"}
+                : !showAllBookings 
+                  ? "No bookings for today. Toggle to 'All Bookings' to see future bookings."
+                  : "Bookings will appear here when customers make them through the app"}
             </p>
           </div>
         ) : (
