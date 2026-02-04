@@ -52,6 +52,7 @@ import Services from "./pages/service/Services";
 import Technicians from "./pages/service/Technicians";
 import Categories from "./pages/service/Categories";
 import AdminCategoriesServices from "./pages/Admin/AdminCategoriesServices";
+import ServiceAdmin from "./pages/service/admin/ServiceAdmin";
 
 // Notification System
 import { NotificationProvider } from "./context/NotificationContext";
@@ -380,6 +381,11 @@ function App() {
           <Route
             path="/admin/categories-services"
             element={<AdminCategoriesServices />}
+          />
+
+          <Route
+            path="/admin/service-admin"
+            element={<ServiceAdmin />}
           />
 
           {/* Service Register */}

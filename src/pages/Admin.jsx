@@ -429,20 +429,37 @@ const AVAILABLE_FEATURES = [
       <div style={styles.header}>
         <h1 style={styles.title}>Admin Dashboard</h1>
 
-        <button
-  style={{
-    padding: "10px 16px",
-    borderRadius: "10px",
-    border: "none",
-    background: "linear-gradient(135deg, #6366f1, #4f46e5)",
-    color: "#fff",
-    fontWeight: 600,
-    cursor: "pointer",
-  }}
-  onClick={() => navigate("/Admin/categories-services")}
->
-  Global Packages
-</button>
+        <div style={{ display: "flex", gap: "12px" }}>
+          <button
+            style={{
+              padding: "10px 16px",
+              borderRadius: "10px",
+              border: "none",
+              background: "linear-gradient(135deg, #6366f1, #4f46e5)",
+              color: "#fff",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+            onClick={() => navigate("/Admin/categories-services")}
+          >
+            Global Packages
+          </button>
+          
+          <button
+            style={{
+              padding: "10px 16px",
+              borderRadius: "10px",
+              border: "none",
+              background: "linear-gradient(135deg, #10b981, #059669)",
+              color: "#fff",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+            onClick={() => navigate("/Admin/service-admin")}
+          >
+            Service Admin
+          </button>
+        </div>
       </div>
 
       {/* Invite + Pending */}

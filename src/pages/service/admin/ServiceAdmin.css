@@ -1,0 +1,308 @@
+/* Service Admin Dashboard Styles */
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.service-admin-spinner {
+  animation: spin 1s linear infinite;
+}
+
+.service-admin-pulse {
+  animation: pulse 2s infinite;
+}
+
+/* Enhanced hover effects */
+.service-admin-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px 0 rgba(0, 0, 0, 0.15);
+}
+
+.service-admin-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.service-admin-table-row:hover {
+  background-color: rgba(59, 130, 246, 0.05);
+  transform: translateX(2px);
+  transition: all 0.2s ease;
+}
+
+.service-admin-table-row.dark:hover {
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+/* Tab animations */
+.service-admin-tab-button {
+  position: relative;
+  overflow: hidden;
+}
+
+.service-admin-tab-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.service-admin-tab-button:hover::before {
+  left: 100%;
+}
+
+/* Stats card animations */
+.service-admin-stats-grid {
+  animation: fadeIn 0.6s ease-out;
+}
+
+.service-admin-stat-card {
+  animation: slideIn 0.4s ease-out;
+  transition: all 0.3s ease;
+}
+
+.service-admin-stat-card:nth-child(1) { animation-delay: 0.1s; }
+.service-admin-stat-card:nth-child(2) { animation-delay: 0.2s; }
+.service-admin-stat-card:nth-child(3) { animation-delay: 0.3s; }
+.service-admin-stat-card:nth-child(4) { animation-delay: 0.4s; }
+.service-admin-stat-card:nth-child(5) { animation-delay: 0.5s; }
+.service-admin-stat-card:nth-child(6) { animation-delay: 0.6s; }
+
+/* Loading states */
+.service-admin-loading {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.service-admin-skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Enhanced table styles */
+.service-admin-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.service-admin-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  backdrop-filter: blur(10px);
+}
+
+.service-admin-table tbody tr {
+  transition: all 0.2s ease;
+}
+
+.service-admin-table tbody tr:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Pagination animations */
+.service-admin-pagination-button {
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.service-admin-pagination-button:hover {
+  transform: translateY(-1px);
+}
+
+.service-admin-pagination-button:active {
+  transform: translateY(0);
+}
+
+/* Search input enhancements */
+.service-admin-search-input {
+  transition: all 0.3s ease;
+}
+
+.service-admin-search-input:focus {
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: #3b82f6;
+}
+
+/* Status badges with animations */
+.service-admin-status-badge {
+  position: relative;
+  overflow: hidden;
+}
+
+.service-admin-status-badge.active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+/* Responsive design improvements */
+@media (max-width: 1200px) {
+  .service-admin-stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .service-admin-stats-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .service-admin-filters-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .service-admin-header-content {
+    flex-direction: column;
+    gap: 16px;
+    text-align: center;
+  }
+  
+  .service-admin-tab-container {
+    flex-direction: column;
+  }
+  
+  .service-admin-tab-button {
+    border-radius: 8px;
+    margin-bottom: 4px;
+  }
+  
+  .service-admin-pagination-container {
+    flex-direction: column;
+    gap: 16px;
+    text-align: center;
+  }
+  
+  .service-admin-pagination-buttons {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 640px) {
+  .service-admin-table-wrapper {
+    font-size: 12px;
+  }
+  
+  .service-admin-stat-card {
+    padding: 16px;
+  }
+  
+  .service-admin-content {
+    padding: 16px;
+  }
+  
+  .service-admin-header-content {
+    padding: 16px;
+  }
+  
+  .service-admin-table th,
+  .service-admin-table td {
+    padding: 8px;
+  }
+  
+  .service-admin-insights-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Dark mode specific enhancements */
+.service-admin-dark .service-admin-table tbody tr:hover {
+  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.1);
+}
+
+.service-admin-dark .service-admin-search-input:focus {
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+/* Print styles */
+@media print {
+  .service-admin-header,
+  .service-admin-tab-container,
+  .service-admin-filters-container,
+  .service-admin-pagination-container {
+    display: none;
+  }
+  
+  .service-admin-table {
+    font-size: 12px;
+  }
+  
+  .service-admin-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Accessibility improvements */
+.service-admin-button:focus,
+.service-admin-tab-button:focus,
+.service-admin-pagination-button:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+.service-admin-search-input:focus {
+  outline: none;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .service-admin-stat-card {
+    border: 2px solid;
+  }
+  
+  .service-admin-status-badge {
+    border: 1px solid;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .service-admin-card,
+  .service-admin-button,
+  .service-admin-table-row,
+  .service-admin-stat-card {
+    transition: none;
+    animation: none;
+  }
+  
+  .service-admin-pulse,
+  .service-admin-spinner {
+    animation: none;
+  }
+}

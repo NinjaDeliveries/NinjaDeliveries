@@ -158,7 +158,8 @@ if (!isAdmin) {
   if (serviceSnap.exists()) {
     const serviceData = serviceSnap.data();
 
-    if (serviceData.isActive === false) {
+    // Check account status (accountEnabled) for login access, not isActive (service availability)
+    if (serviceData.accountEnabled === false) {
       toast("Your service account is disabled. Contact admin.", {
         position: "top-center",
       });

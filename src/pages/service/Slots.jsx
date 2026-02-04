@@ -180,15 +180,23 @@ export default function Slots() {
 
       console.log("Loading company availability for user:", user.uid);
 
-      // Get company status from service_company collection (isActive field)
+      // Get company status from service_company collection (isActive field for service availability)
       const companyRef = doc(db, "service_company", user.uid);
       const companySnap = await getDoc(companyRef);
 
       if (companySnap.exists()) {
         const companyData = companySnap.data();
         console.log("Company data:", companyData);
-        // Use isActive field (true = online, false = offline)
+        // Use isActive field for service availability (true = online, false = offline)
         setIsOnline(companyData.isActive ?? true);
+        
+        // Ensure accountEnabled exists for login access (separate from service availability)
+        if (companyData.accountEnabled === undefined) {
+          await updateDoc(companyRef, {
+            accountEnabled: true, // Default to enabled for login
+            updatedAt: new Date(),
+          });
+        }
       } else {
         console.log("No company document found");
         setIsOnline(true);
@@ -301,23 +309,23 @@ export default function Slots() {
       const user = auth.currentUser;
       if (!user) return;
 
-      // Update service_company for status (isActive field) and service_availability for offline windows
+      // Update service_company for service availability (isActive field) and service_availability for offline windows
       const companyRef = doc(db, "service_company", user.uid);
 
       if (isInOfflineWindow && isOnline) {
-        console.log("AUTO → OFFLINE");
+        console.log("AUTO → OFFLINE (service availability only)");
         setIsOnline(false);
         await updateDoc(companyRef, {
-          isActive: false, // Use isActive field
+          isActive: false, // Service availability, not login access
           updatedAt: new Date(),
         });
       }
 
       if (!isInOfflineWindow && !isOnline) {
-        console.log("AUTO → ONLINE");
+        console.log("AUTO → ONLINE (service availability only)");
         setIsOnline(true);
         await updateDoc(companyRef, {
-          isActive: true, // Use isActive field
+          isActive: true, // Service availability, not login access
           updatedAt: new Date(),
         });
       }
@@ -328,25 +336,25 @@ export default function Slots() {
     return () => clearInterval(interval);
   }, [offlineWindows, isOnline]);
 
-  // Update online/offline status in service_company collection (fix isActive field)
+  // Update online/offline status in service_company collection (isActive field for service availability only)
   const updateStatus = async (status) => {
     try {
       setUpdating(true);
       const user = auth.currentUser;
       if (!user) return;
 
-      console.log(`Updating company status to: ${status ? 'ONLINE' : 'OFFLINE'}`);
+      console.log(`Updating company service availability to: ${status ? 'ONLINE' : 'OFFLINE'}`);
       setIsOnline(status);
 
-      // Update service_company collection with isActive field (true = online, false = offline)
+      // Update service_company collection with isActive field for service availability (not login access)
       await updateDoc(doc(db, "service_company", user.uid), {
-        isActive: status, // This is the correct field for company status
+        isActive: status, // This controls service visibility, not login access
         updatedAt: new Date(),
       });
 
-      console.log("Company status updated successfully in service_company collection");
+      console.log("Company service availability updated successfully in service_company collection");
     } catch (error) {
-      console.error("Error updating company status:", error);
+      console.error("Error updating company service availability:", error);
       alert("Failed to update status. Please try again.");
       setIsOnline(!status);
     } finally {

@@ -78,7 +78,8 @@ const handleRegister = async (e) => {
       deliveryZoneId: "OoS7Zjg2gxj2MJesvlC2", // Dharamshala zone ID
       deliveryZoneName: "Dharamshala",
       email: form.email,
-      isActive: true,
+      isActive: true, // Service availability (online/offline)
+      accountEnabled: true, // Login access (enabled/disabled)
       name: form.name,
       phone: form.phone,
       type: form.type,

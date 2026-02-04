@@ -118,7 +118,7 @@ export const getAvailableCompanies = async (location = null, categoryId = null, 
     
     // Build query for companies
     let companiesQuery = collection(db, 'service_companies');
-    const constraints = [where('isActive', '==', true)];
+    const constraints = [where('isActive', '==', true)]; // isActive = service availability, not login access
     
     if (location) {
       constraints.push(where('location', '==', location));
