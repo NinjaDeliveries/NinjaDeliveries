@@ -3,8 +3,6 @@ import { auth, db } from "../../context/Firebase";
 import { collection, addDoc, doc, updateDoc, query, where, getDocs } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "../../context/Firebase";
-
-
 const AddServiceModal = ({ onClose, onSaved, editService }) => {
   const [name, setName] = useState("");
   // const [categoryId, setCategoryId] = useState("");
