@@ -19,10 +19,9 @@ import {
 } from "firebase/firestore";
 
 
-import { db, auth } from "../context/Firebase";
+import { db } from "../context/Firebase";
 import { useUser } from "../context/adminContext";
 import { useEffect, useState } from "react";
-import { signOut } from "firebase/auth";
 import { logActivity } from "../context/Firebase";
 // add...
 const Home = () => {
@@ -341,33 +340,11 @@ const adminFunctions = [
     image: radiusMap,
     permission: "page:radius",
   },
-//   {
-//   title: "Service Management",
-//   text: "Manage services, bookings, technicians",
-//   link: "/service-dashboard",
-//   image: "https://cdn-icons-png.flaticon.com/512/2972/2972185.png",
-//   permission: "page:service_dashboard",
-// },
 
 ];
 
   return (
     <div className="min-h-screen bg-gray-50">
-
-      {/*  LOGOUT (ADDED – SAFE) */}
-      <div className="logout-wrapper">
-        <button
-          className="logout-btn"
-          onClick={async () => {
-            await signOut(auth);
-            window.location.href = "/";
-          }}
-        >
-          Logout
-        </button>
-      </div>
-
-
 
       <div className="ninja-header text-center">
         <h1 className="ninja-title">Ninja Deliveries Admin</h1>

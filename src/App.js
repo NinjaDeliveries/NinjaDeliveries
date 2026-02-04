@@ -38,323 +38,356 @@ import { useLocation } from "react-router-dom";
 import { useUser } from "./context/adminContext";
 import ProtectedRoute from "./ProtectedRoute";
 import { logAdminActivity } from "./utils/activityLogger";
-// import ServiceDashboard from "./pages/ServiceDashboard";
-// import ServiceManagement from "./pages/service/ServiceManagement";
-// import ServiceBookings from "./pages/service/ServiceBookings";
-// import ServiceSlots from "./pages/service/ServiceSlots";
 
+// Service Dashboard
+import ServiceDashboard from "./pages/service/ServiceDashboard";
+import ServiceRegister from "./pages/service/ServiceRegister";
+import ServiceRoute from "./ServiceRoute";
+import Overview from "./pages/service/Overview";
+import Bookings from "./pages/service/Bookings";
+import Slots from "./pages/service/Slots";
+import Payments from "./pages/service/Payments";
+import Settings from "./pages/service/Settings";
+import Services from "./pages/service/Services";
+import Technicians from "./pages/service/Technicians";
+import Categories from "./pages/service/Categories";
+import AdminCategoriesServices from "./pages/Admin/AdminCategoriesServices";
+
+// Notification System
+import { NotificationProvider } from "./context/NotificationContext";
+import NotificationAlert from "./components/NotificationAlert";
+import Feedback from "./pages/service/Feedback";
 
 function App() {
-const { user } = useUser();
-const isAdmin =
-  user &&
-  (
-    user.roleKey === "all_access_admin" ||
-    (Array.isArray(user.permissions) && user.permissions.length > 0)
-  );
-const location = useLocation();
+  const { user, loadingUser } = useUser();
+  const isAdmin =
+    user &&
+    (
+      user.roleKey === "all_access_admin" ||
+      (Array.isArray(user.permissions) && user.permissions.length > 0)
+    );
+  const location = useLocation();
 
-const [nav, setNav] = useState(false);
-// const [Isadmin, setIsadmin] = useState(false);
-const [is24x7, setis24x7] = useState(false);
-const [isEme, setisEme] = useState(false);
+  // Service dashboard state
+  const [nav, setNav] = useState(false);
+  const [is24x7, setis24x7] = useState(false);
+  const [isEme, setisEme] = useState(false);
 
-// 🔹 UI + ROLE STATE HANDLING (HEAD)
-useEffect(() => {
-  if (user) {
-    setNav(true);
-    // setIsadmin(user.roleKey === "all_access_admin");
+  // UI + ROLE STATE HANDLING
+  useEffect(() => {
+    if (user && !loadingUser) {
+      setNav(true);
+      // Optional future flags
+      setis24x7(user.roleKey === "fresh_greens");
+      setisEme(user.roleKey === "eme_store");
+    } else {
+      setNav(false);
+      setis24x7(false);
+      setisEme(false);
+    }
+  }, [user, loadingUser, location.pathname]);
 
-    // optional future flags
-    setis24x7(user.roleKey === "fresh_greens");
-    setisEme(user.roleKey === "eme_store");
-  } else {
-    setNav(false);
-    // setIsadmin(false);
-    setis24x7(false);
-    setisEme(false);
+  // ACTIVITY LOGGING
+  useEffect(() => {
+    if (!user) return;
+
+    logAdminActivity({
+      user,
+      type: "NAVIGATION",
+      module: "ROUTE",
+      action: "Visited page",
+      route: location.pathname,
+      component: "Router",
+    });
+  }, [user, location.pathname]);
+
+  if (loadingUser) {
+    return (
+      <div style={{
+        height: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: 18,
+        fontWeight: 500,
+      }}>
+        Loading…
+      </div>
+    );
   }
-}, [user, location.pathname]);
-
-
-// 🔹 ACTIVITY LOGGING (BRANCH)
-useEffect(() => {
-  if (!user) return;
-
-  logAdminActivity({
-    user,
-    type: "NAVIGATION",
-    module: "ROUTE",
-    action: "Visited page",
-    route: location.pathname,
-    component: "Router",
-  });
-}, [user, location.pathname]);
 
   return (
-    <div>
-      {/* {nav && Isadmin && <Navbar />} */}
-      {nav && <Navbar />}
-      <Routes>
-        {/* MAin ROUTE */}
-        {/* <Route
-          path="/"
-          element={
-            nav === true ? (
-              Isadmin === true ? (
-                <Home />
-              ) : isEme === true ? (
-                <StoreOrder />
-              ) : is24x7 === true ? (
-                <FreshGreens />
-              ) : (
-                <OrderQRCodeQueue />
-              )
-            ) : (
-              <Login
-                setNav={setNav}
-                setIsadmin={setIsadmin}
-                setisEme={setisEme}
-                setis24x7={setis24x7}
-              />
-              
-            )
-          }
-        /> */}
-        <Route
-  path="/"
-  element={
-    nav ? (
-      isAdmin ? (
-        <Home />
-      ) : isEme ? (
-        <StoreOrder />
-      ) : is24x7 ? (
-        <FreshGreens />
-      ) : (
-        <OrderQRCodeQueue />
-      )
-    ) : (
-      <Login
-        setNav={setNav}
-        setIsadmin={() => {}}
-        setisEme={setisEme}
-        setis24x7={setis24x7}
-      />
-    )
-  }
-/>
-        {/* REGISTER ROUTE (DIRECT LINK ONLY) */}
-        <Route 
-        path="/register"
-        element={<Register setNav={setNav} />}
-        />
-        {/* <Route
-          path="/home"
-          element={
-            nav === true ? (
-              // Isadmin === true ? (
-                <Home />
-              ) : isEme === true ? (
-                <StoreOrder />
-              ) : is24x7 === true ? (
-                <FreshGreens />
-              ) : (
-                <OrderQRCodeQueue />
-              )
-            ) : (
-              <Login
-                setNav={setNav}
-                setIsadmin={setIsadmin}
-                setisEme={setisEme}
-                setis24x7={setis24x7}
-              />
-            )
-          }
-        /> */}
-        <Route
-  path="/home"
-  element={
-    nav ? (
-      isAdmin ? <Home /> : <Navigate to="/" />
-    ) : (
-      <Navigate to="/" />
-    )
-  }
-/>
-        <Route
-          path="/bussinessregistration"
-          element={
-            nav === true ? <BusinessRegistration /> : <Navigate to="/" />
-          }
-        />
-
-        <Route
-          path="/productslist"
-          element={nav === true ? <FetchListedItems /> : <Navigate to="/" />}
-        />
-        <Route
-          path="/riderregistration"
-          element={nav === true ? <RiderRegistration /> : <Navigate to="/" />}
-        />
-        <Route
-          path="/riderlist"
-          element={nav === true ? <RiderDataFetch /> : <Navigate to="/" />}
-        />
-        <Route
-          path="/addtransaction"
-          element={nav === true ? <FetchAddTransaction /> : <Navigate to="/" />}
-        />
-        <Route
-          path="/promocode"
-          element={nav === true ? <PromoCode /> : <Navigate to="/" />}
-        />
-        <Route
-          path="/referralcode"
-          element={nav === true ? <ReferralCode /> : <Navigate to="/" />}
-        />
-        <Route
-          path="/report"
-          element={nav === true ? <Report /> : <Navigate to="/" />}
-        />
-        <Route
-          path="/orderlist"
-          element={nav === true ? <OrderList /> : <Navigate to="/" />}
-        />
-        {/* <Route
-          path="/AddItems"
-          element={nav === true ? <ListingNewItems /> : <Navigate to="/" />}
-        /> */}
-        <Route
-        path="/AddItems"
-        element={
-          nav === true ? (
-        <ProtectedRoute user={user}>
-          <ListingNewItems />
-          </ProtectedRoute>
-          ) : (
-          <Navigate to="/" />
-        )
-        }
-      />
-        <Route
-          path="/AddSalesItems"
-          element={
-            nav === true ? <ListingNewSalesItems /> : <Navigate to="/" />
-          }
-        />
-        <Route
-          path="/updatesubcategory"
-          element={nav === true ? <UpdateSubCategory /> : <Navigate to="/" />}
-        />
-        <Route
-          path="/addcategories"
-          element={nav === true ? <AddCategory /> : <Navigate to="/" />}
-        />
-        <Route
-          path="/downloadbill"
-          element={nav === true ? <OrdersBill /> : <Navigate to="/" />}
-        />
-        <Route
-          path="/categories_management"
-          element={
-            nav === true ? (
-              <ProtectedRoute user={user}>
-                <UpdateCategories/>
-              </ProtectedRoute>    
-            ) : (      
-            <Navigate to="/" />
-          )
-        } 
-        />
-        <Route
-          path="/pushNotification"
-          element={
-            nav === true ? <PushNotificationPage /> : <Navigate to="/" />
-          }
-        />
-        <Route
-          path="/questions"
-          element={nav === true ? <QuestionManager /> : <Navigate to="/" />}
-        />
-        <Route
-          path="/leaderboard"
-          element={nav === true ? <Leaderboard /> : <Navigate to="/" />}
-        />
-        <Route
-          path="/hotspot"
-          element={nav === true ? <HotspotForm /> : <Navigate to="/" />}
-        />
-        <Route
-          path="/scanorder"
-          element={nav === true ? <OrderQRCodeQueue /> : <Navigate to="/" />}
-        />
-        <Route
-          path="/banner_management"
-          element={nav === true ? <BannerAdmin /> : <Navigate to="/" />}
-        />
-        <Route
-          path="/coupon_management"
-          element={
-            nav === true ? <CouponCampaignManager /> : <Navigate to="/" />
-          }
-        />
-        <Route
-          path="/RiderCharges"
-          element={nav === true ? <RiderCharges /> : <Navigate to="/" />}
-        />
-        <Route
-          path="/Fresh_Greens"
-          element={nav === true ? <FreshGreens /> : <Navigate to="/" />}
-        />
-        <Route
-          path="/RadiusMap"
-          element={nav === true ? <RadiusMap /> : <Navigate to="/" />}
-        />
-        <Route
-          path="/Test"
-          element={nav === true ? <StoreOrder /> : <Navigate to="/" />}
-        />
-        <Route path="/seed-ninja-eats" element={nav === true ? <SeedNinjaEats /> : <Navigate to="/" />} />
-
-        <Route
-  path="/admin"
-  element={
-    (user?.permissions?.includes("page:users") ||
-      user?.roleKey === "all_access_admin")
-      ? <Admin />
-      : <Navigate to="/no-access" />
-  }
-/>
-        {process.env.NODE_ENV === "development" && (
+    <NotificationProvider>
+      <div>
+        {nav && isAdmin && <Navbar />}
+        <NotificationAlert />
+        
+        <Routes>
+          {/* Main Route */}
           <Route
-          path="/__admin_dev"
-          element={
-            // user?.permissions?.includes("page:users")
-            (user?.permissions?.includes("page:users") || user?.roleKey === "all_access_admin")
+            path="/"
+            element={
+              nav ? (
+                isAdmin ? (
+                  <Home />
+                ) : isEme ? (
+                  <StoreOrder />
+                ) : is24x7 ? (
+                  <FreshGreens />
+                ) : (
+                  <OrderQRCodeQueue />
+                )
+              ) : (
+                <Login
+                  setNav={setNav}
+                  setIsadmin={() => {}}
+                  setisEme={setisEme}
+                  setis24x7={setis24x7}
+                />
+              )
+            }
+          />
 
+          {/* Register Route */}
+          <Route 
+            path="/register"
+            element={<Register setNav={setNav} />}
+          />
 
-            ? <Admin />
-            : <Navigate to="/no-access" />
-          }
-        />
-      )}
-      {/* <Route path="/service-dashboard" element={<ServiceDashboard />} />
-<Route
-  path="/service-dashboard/services"
-  element={<ServiceManagement />}
-/>
-<Route
-  path="/service-dashboard/bookings"
-  element={<ServiceBookings />}
-/>
-<Route
-  path="/service-dashboard/slots"
-  element={<ServiceSlots />}
-/> */}
+          <Route
+            path="/login"
+            element={
+              <Login
+                setNav={setNav}
+                setIsadmin={() => {}}
+                setisEme={setisEme}
+                setis24x7={setis24x7}
+              />
+            }
+          />
+          
+          <Route
+            path="/home"
+            element={
+              nav ? (
+                isAdmin ? <Home /> : <Navigate to="/" />
+              ) : (
+                <Navigate to="/" />
+              )
+            }
+          />
 
+          <Route
+            path="/bussinessregistration"
+            element={
+              nav === true ? <BusinessRegistration /> : <Navigate to="/" />
+            }
+          />
+
+          <Route
+            path="/productslist"
+            element={nav === true ? <FetchListedItems /> : <Navigate to="/" />}
+          />
+
+          <Route
+            path="/riderregistration"
+            element={nav === true ? <RiderRegistration /> : <Navigate to="/" />}
+          />
+
+          <Route
+            path="/riderlist"
+            element={nav === true ? <RiderDataFetch /> : <Navigate to="/" />}
+          />
+
+          <Route
+            path="/addtransaction"
+            element={nav === true ? <FetchAddTransaction /> : <Navigate to="/" />}
+          />
+
+          <Route
+            path="/promocode"
+            element={nav === true ? <PromoCode /> : <Navigate to="/" />}
+          />
+
+          <Route
+            path="/referralcode"
+            element={nav === true ? <ReferralCode /> : <Navigate to="/" />}
+          />
+
+          <Route
+            path="/report"
+            element={nav === true ? <Report /> : <Navigate to="/" />}
+          />
+
+          <Route
+            path="/orderlist"
+            element={nav === true ? <OrderList /> : <Navigate to="/" />}
+          />
+
+          <Route
+            path="/AddItems"
+            element={
+              nav === true ? (
+                <ProtectedRoute user={user}>
+                  <ListingNewItems />
+                </ProtectedRoute>
+              ) : (
+                <Navigate to="/" />
+              )
+            }
+          />
+
+          <Route
+            path="/AddSalesItems"
+            element={
+              nav === true ? <ListingNewSalesItems /> : <Navigate to="/" />
+            }
+          />
+
+          <Route
+            path="/updatesubcategory"
+            element={nav === true ? <UpdateSubCategory /> : <Navigate to="/" />}
+          />
+
+          <Route
+            path="/addcategories"
+            element={nav === true ? <AddCategory /> : <Navigate to="/" />}
+          />
+
+          <Route
+            path="/downloadbill"
+            element={nav === true ? <OrdersBill /> : <Navigate to="/" />}
+          />
+
+          <Route
+            path="/categories_management"
+            element={
+              nav === true ? (
+                <ProtectedRoute user={user}>
+                  <UpdateCategories/>
+                </ProtectedRoute>    
+              ) : (      
+                <Navigate to="/" />
+              )
+            } 
+          />
+
+          <Route
+            path="/pushNotification"
+            element={
+              nav === true ? <PushNotificationPage /> : <Navigate to="/" />
+            }
+          />
+
+          <Route
+            path="/questions"
+            element={nav === true ? <QuestionManager /> : <Navigate to="/" />}
+          />
+
+          <Route
+            path="/leaderboard"
+            element={nav === true ? <Leaderboard /> : <Navigate to="/" />}
+          />
+
+          <Route
+            path="/hotspot"
+            element={nav === true ? <HotspotForm /> : <Navigate to="/" />}
+          />
+
+          <Route
+            path="/scanorder"
+            element={nav === true ? <OrderQRCodeQueue /> : <Navigate to="/" />}
+          />
+
+          <Route
+            path="/banner_management"
+            element={nav === true ? <BannerAdmin /> : <Navigate to="/" />}
+          />
+
+          <Route
+            path="/coupon_management"
+            element={
+              nav === true ? <CouponCampaignManager /> : <Navigate to="/" />
+            }
+          />
+
+          <Route
+            path="/RiderCharges"
+            element={nav === true ? <RiderCharges /> : <Navigate to="/" />}
+          />
+
+          <Route
+            path="/Fresh_Greens"
+            element={nav === true ? <FreshGreens /> : <Navigate to="/" />}
+          />
+
+          <Route
+            path="/RadiusMap"
+            element={nav === true ? <RadiusMap /> : <Navigate to="/" />}
+          />
+
+          <Route
+            path="/Test"
+            element={nav === true ? <StoreOrder /> : <Navigate to="/" />}
+          />
+
+          <Route 
+            path="/seed-ninja-eats" 
+            element={nav === true ? <SeedNinjaEats /> : <Navigate to="/" />} 
+          />
+
+          <Route
+            path="/admin"
+            element={
+              (user?.permissions?.includes("page:users") ||
+                user?.roleKey === "all_access_admin")
+                ? <Admin />
+                : <Navigate to="/no-access" />
+            }
+          />
+
+          {process.env.NODE_ENV === "development" && (
+            <Route
+              path="/__admin_dev"
+              element={
+                (user?.permissions?.includes("page:users") || user?.roleKey === "all_access_admin")
+                ? <Admin />
+                : <Navigate to="/no-access" />
+              }
+            />
+          )}
+
+          {/* Service Dashboard Routes */}
+          <Route
+            path="/service-dashboard"
+            element={
+              <ServiceRoute>
+                <ServiceDashboard />
+              </ServiceRoute>
+            }
+          >
+            <Route index element={<Overview />} />
+            <Route path="categories" element={<Categories />} />
+            <Route path="services" element={<Services />} />
+            <Route path="bookings" element={<Bookings />} />
+            <Route path="slots" element={<Slots />} />
+            <Route path="technicians" element={<Technicians />} />
+            <Route path="payments" element={<Payments />} />
+            <Route path="settings" element={<Settings />} />
+            <Route path="feedback" element={<Feedback />} />
+          </Route>
+
+          <Route
+            path="/admin/categories-services"
+            element={<AdminCategoriesServices />}
+          />
+
+          {/* Service Register */}
+          <Route path="/service-register" element={<ServiceRegister />} />
         </Routes>
-    </div>
+        
+      </div>
+    </NotificationProvider>
   );
 }
 

@@ -19,6 +19,8 @@ import { getFirestore } from "firebase/firestore";
 import "../style/login.css";
 
 
+
+
 export default function Login({ setNav, setIsadmin, setisEme, setis24x7 }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -27,6 +29,12 @@ export default function Login({ setNav, setIsadmin, setisEme, setis24x7 }) {
   const db = getFirestore();
   const { user } = useUser();
   const navigate = useNavigate();
+
+useEffect(() => {
+  if (auth.currentUser) {
+    navigate("/", { replace: true });
+  }
+}, [navigate]);
   useEffect(() => {
     const pending = sessionStorage.getItem("pendingApproval");
   
@@ -39,11 +47,11 @@ export default function Login({ setNav, setIsadmin, setisEme, setis24x7 }) {
     }
   }, []);
   
-  useEffect(() => {
-    if (user && user.storeId) {
-    navigate("/home");
-  }
-}, [user, navigate]);
+//   useEffect(() => {
+//     if (user && user.storeId) {
+//     navigate("/home");
+//   }
+// }, [user, navigate]);
 
 
   const handleSubmit = async (e) => {
@@ -107,7 +115,6 @@ export default function Login({ setNav, setIsadmin, setisEme, setis24x7 }) {
   await auth.signOut();
   return;
 }
-
         if (adminData.isActive === false) {
           toast("Admin access disabled. Contact super admin.");
           await auth.signOut();
@@ -140,7 +147,38 @@ export default function Login({ setNav, setIsadmin, setisEme, setis24x7 }) {
         // // : [],
         // });
       }
+      
+// 🔹 SERVICE USERS CHECK (NEW)
+let isServiceUser = false;
 
+if (!isAdmin) {
+  const serviceRef = doc(db, "service_company", user.uid);
+  const serviceSnap = await getDoc(serviceRef);
+
+  if (serviceSnap.exists()) {
+    const serviceData = serviceSnap.data();
+
+    if (serviceData.isActive === false) {
+      toast("Your service account is disabled. Contact admin.", {
+        position: "top-center",
+      });
+      await auth.signOut();
+      return;
+    }
+
+    isServiceUser = true;
+    userSource = "service_company";
+
+    toast("Service Dashboard Login Successful", {
+      type: "success",
+      position: "top-center",
+    });
+
+    setNav(false); // ❌ service dashboard has its own layout
+    navigate("/service-dashboard");
+    return; // ⛔ stop admin logic here
+  }
+}
       if (!isAdmin) {
       try {
         if (typeof userEmail === "string" && userEmail.length > 0) {

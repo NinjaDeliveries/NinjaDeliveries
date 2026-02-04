@@ -16,6 +16,7 @@ import {
   setDoc,
 } from "firebase/firestore";
 import { deleteDoc } from "firebase/firestore";
+import { useNavigate } from "react-router-dom";
 
 
 /* =======================================================
@@ -120,6 +121,8 @@ export default function Admin() {
   const [roles, setRoles] = useState(ROLE_PRESETS);
   const [roleName, setRoleName] = useState("");
   const [selectedFeatures, setSelectedFeatures] = useState([]);
+  const navigate = useNavigate();
+
 
 useEffect(() => {
   const loadRoles = async () => {
@@ -217,12 +220,18 @@ setActiveUsers(
     }
   };
 
-  /* ================= REGISTER LINK ================= */
+  /* ================= REGISTER LINKS ================= */
   const registerLink = `${window.location.origin}/admin.html#/Register`;
+  const serviceRegisterLink = `${window.location.origin}/admin.html#/service-register`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(registerLink);
-    toast.success("Register link copied!", { position: "top-center" });
+    toast.success("Ninja User Register link copied!", { position: "top-center" });
+  };
+
+  const handleServiceCopy = () => {
+    navigator.clipboard.writeText(serviceRegisterLink);
+    toast.success("Service Management Register link copied!", { position: "top-center" });
   };
 
   /* ================= STORES ================= */
@@ -375,6 +384,7 @@ const handleCreateRole = async () => {
   }
 };
 
+
 //   const AVAILABLE_FEATURES = [
 //   { key: "manage_products", label: "Add / Edit Products" },
 //   { key: "manage_categories", label: "Manage Categories" },
@@ -418,18 +428,50 @@ const AVAILABLE_FEATURES = [
     <div style={styles.container}>
       <div style={styles.header}>
         <h1 style={styles.title}>Admin Dashboard</h1>
+
+        <button
+  style={{
+    padding: "10px 16px",
+    borderRadius: "10px",
+    border: "none",
+    background: "linear-gradient(135deg, #6366f1, #4f46e5)",
+    color: "#fff",
+    fontWeight: 600,
+    cursor: "pointer",
+  }}
+  onClick={() => navigate("/Admin/categories-services")}
+>
+  Global Packages
+</button>
       </div>
 
       {/* Invite + Pending */}
       <div style={styles.topRow}>
         <div style={styles.inviteSide}>
           <div style={styles.card}>
-            <h3>Invite Admin</h3>
-            <div style={styles.inviteCompact}>
-              <input value={registerLink} readOnly style={styles.inviteInput} />
-              <button onClick={handleCopy} style={styles.inviteButton}>
-                Copy
-              </button>
+            <h3>Invite Users</h3>
+            <div style={{ marginBottom: "15px" }}>
+              <label style={{ fontSize: "14px", fontWeight: "600", color: "#555", marginBottom: "5px", display: "block" }}>
+                Ninja User Register Link
+              </label>
+              <div style={styles.inviteCompact}>
+                <input value={registerLink} readOnly style={styles.inviteInput} />
+                <button onClick={handleCopy} style={styles.inviteButton}>
+                  Copy
+                </button>
+              </div>
+            </div>
+            
+            <div>
+              <label style={{ fontSize: "14px", fontWeight: "600", color: "#555", marginBottom: "5px", display: "block" }}>
+                Service Management Register Link
+              </label>
+              <div style={styles.inviteCompact}>
+                <input value={serviceRegisterLink} readOnly style={styles.inviteInput} />
+                <button onClick={handleServiceCopy} style={styles.inviteButton}>
+                  Copy
+                </button>
+              </div>
             </div>
           </div>
         </div>
