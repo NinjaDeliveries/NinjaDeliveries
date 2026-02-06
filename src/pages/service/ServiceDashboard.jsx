@@ -31,6 +31,7 @@ const ServiceDashboard = () => {
     { label: "Feedback", path: "/service-dashboard/feedback" },
     { label: "Payments", path: "/service-dashboard/payments" },
     { label: "Settings", path: "/service-dashboard/settings" },
+    { label: "How to Use", path: "/service-dashboard/guide", highlight: true },
   ];
 
   useEffect(() => {
@@ -83,12 +84,15 @@ const ServiceDashboard = () => {
               key={item.path}
               className={`sd-menu-item ${
                 location.pathname === item.path ? "active" : ""
-              }`}
+              } ${item.highlight ? "highlight-menu" : ""}`}
               onClick={() => navigate(item.path)}
             >
               <span>{item.label}</span>
               {item.badge > 0 && (
                 <span className="menu-badge">{item.badge}</span>
+              )}
+              {item.highlight && (
+                <span className="new-badge">NEW</span>
               )}
             </div>
           ))}

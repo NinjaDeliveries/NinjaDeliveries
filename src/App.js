@@ -51,6 +51,7 @@ import Settings from "./pages/service/Settings";
 import Services from "./pages/service/Services";
 import Technicians from "./pages/service/Technicians";
 import Categories from "./pages/service/Categories";
+import UserGuide from "./pages/service/UserGuide";
 import AdminCategoriesServices from "./pages/Admin/AdminCategoriesServices";
 import ServiceAdmin from "./pages/service/admin/ServiceAdmin";
 
@@ -376,6 +377,7 @@ function App() {
             <Route path="payments" element={<Payments />} />
             <Route path="settings" element={<Settings />} />
             <Route path="feedback" element={<Feedback />} />
+            <Route path="guide" element={<UserGuide />} />
           </Route>
 
           <Route
