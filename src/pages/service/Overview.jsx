@@ -659,11 +659,17 @@ const Overview = () => {
     const unsubBookings = onSnapshot(bookingsQ, (snap) => {
       console.log('📊 Bookings snapshot received:', snap.size, 'bookings');
       
-      const totalBookings = snap.size;
-      const completedBookings = snap.docs.filter(d => d.data().status === 'completed').length;
+      // Filter out rejected and cancelled bookings
+      const validBookings = snap.docs.filter(d => {
+        const status = d.data().status;
+        return status !== 'rejected' && status !== 'cancelled';
+      });
       
-      // Calculate total revenue
-      const totalRevenue = snap.docs.reduce((sum, doc) => {
+      const totalBookings = validBookings.length;
+      const completedBookings = validBookings.filter(d => d.data().status === 'completed').length;
+      
+      // Calculate total revenue (only from completed bookings, excluding rejected/cancelled)
+      const totalRevenue = validBookings.reduce((sum, doc) => {
         const booking = doc.data();
         if (booking.status === 'completed') {
           return sum + (booking.totalPrice || booking.price || booking.amount || 0);
@@ -671,14 +677,15 @@ const Overview = () => {
         return sum;
       }, 0);
 
-      // Calculate completion rate
+      // Calculate completion rate (excluding rejected/cancelled)
       const completionRate = totalBookings > 0 ? (completedBookings / totalBookings) * 100 : 0;
 
       console.log('📈 Calculated stats:', {
         totalBookings,
         completedBookings,
         totalRevenue,
-        completionRate
+        completionRate,
+        excludedBookings: snap.size - validBookings.length
       });
 
       setStats(prev => ({ 
@@ -689,12 +696,12 @@ const Overview = () => {
         completionRate: completionRate
       }));
 
-      // Process weekly data
-      const weeklyStats = processWeeklyData(snap.docs);
+      // Process weekly data (will also exclude rejected/cancelled)
+      const weeklyStats = processWeeklyData(validBookings);
       setWeeklyData(weeklyStats);
 
-      // Process top services
-      const servicesStats = processTopServices(snap.docs);
+      // Process top services (will also exclude rejected/cancelled)
+      const servicesStats = processTopServices(validBookings);
       setTopServices(servicesStats);
     });
 
@@ -746,6 +753,15 @@ const Overview = () => {
       const booking = doc.data();
       const bookingDate = booking.createdAt?.toDate();
       
+      // Skip rejected and cancelled bookings
+      if (booking.status === 'rejected' || booking.status === 'cancelled') {
+        console.log('⏭️ Skipping rejected/cancelled booking:', {
+          id: doc.id,
+          status: booking.status
+        });
+        return;
+      }
+      
       console.log('📋 Processing booking:', {
         id: doc.id,
         date: bookingDate?.toLocaleDateString(),
@@ -763,7 +779,7 @@ const Overview = () => {
         
         weekData[dayIndex].bookings += 1;
         
-        // Add revenue for all bookings, not just completed ones
+        // Add revenue for all bookings except rejected/cancelled
         const amount = booking.totalPrice || booking.price || booking.amount || 0;
         if (amount > 0) {
           weekData[dayIndex].revenue += amount;
@@ -781,6 +797,12 @@ const Overview = () => {
 
     bookingDocs.forEach(doc => {
       const booking = doc.data();
+      
+      // Skip rejected and cancelled bookings
+      if (booking.status === 'rejected' || booking.status === 'cancelled') {
+        return;
+      }
+      
       const serviceName = booking.serviceName || 'Unknown Service';
       
       if (!serviceStats[serviceName]) {
