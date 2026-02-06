@@ -49,6 +49,7 @@ const syncAppService = async (service) => {
       name: service.name,
       masterCategoryId: service.masterCategoryId,
       serviceType: service.serviceType,
+      imageUrl: service.imageUrl || null, // ✅ Image URL add kiya
       isActive: true,
       createdAt: new Date(),
     });
@@ -449,17 +450,21 @@ const fetchAdminServices = async (catId) => {
 
     setUploading(true);
 
-    // upload image
+    // upload image (only for custom services)
     let imageUrl = imagePreview;
-    if (serviceImage) {
-      imageUrl = await uploadImage();
-    }
-
-    // final service name
+    
+    // final service name and image
     let finalServiceName = name;
     if (!isCustomService) {
       const svc = adminServices.find(s => s.id === selectedServiceId);
-      if (svc) finalServiceName = svc.name;
+      if (svc) {
+        finalServiceName = svc.name;
+        // 🔥 FIX: Use image from master service for admin services
+        imageUrl = svc.imageUrl || imageUrl;
+      }
+    } else if (serviceImage) {
+      // Only upload new image for custom services
+      imageUrl = await uploadImage();
     }
 
     // ✅ BUILD PAYLOAD (ONLY ONCE)

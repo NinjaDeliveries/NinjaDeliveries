@@ -30,6 +30,7 @@ const AdminCategoriesServices = () => {
   
   // Image upload states
   const [categoryImage, setCategoryImage] = useState(null);
+  const [serviceImage, setServiceImage] = useState(null);
   const [imagePreview, setImagePreview] = useState("");
   const [uploading, setUploading] = useState(false);
   
@@ -142,6 +143,8 @@ const AdminCategoriesServices = () => {
     setSelectedCategory(categoryName);
     setSelectedCategoryId(categoryId);
     setName("");
+    setServiceImage(null);
+    setImagePreview("");
     setShowModal(true);
   };
 
@@ -150,6 +153,8 @@ const AdminCategoriesServices = () => {
     setName(service.name);
     setEditingService(service);
     setSelectedCategory(service.categoryName);
+    setServiceImage(null);
+    setImagePreview(service.imageUrl || "");
     setShowModal(true);
   };
 
@@ -168,7 +173,12 @@ const AdminCategoriesServices = () => {
       return;
     }
 
-    setCategoryImage(file);
+    // Set the appropriate image state based on mode
+    if (mode === "category" || mode === "edit") {
+      setCategoryImage(file);
+    } else if (mode === "service" || mode === "edit-service") {
+      setServiceImage(file);
+    }
 
     const reader = new FileReader();
     reader.onload = (e) => setImagePreview(e.target.result);
@@ -182,6 +192,16 @@ const AdminCategoriesServices = () => {
     const storageRef = ref(storage, fileName);
 
     const snapshot = await uploadBytes(storageRef, categoryImage);
+    return await getDownloadURL(snapshot.ref);
+  };
+
+  const uploadServiceImage = async () => {
+    if (!serviceImage) return null;
+
+    const fileName = `service-images/master/${Date.now()}_${serviceImage.name}`;
+    const storageRef = ref(storage, fileName);
+
+    const snapshot = await uploadBytes(storageRef, serviceImage);
     return await getDownloadURL(snapshot.ref);
   };
 
@@ -227,9 +247,17 @@ const AdminCategoriesServices = () => {
           return;
         }
 
+        let imageUrl = null;
+        
+        // Upload service image if selected
+        if (serviceImage) {
+          imageUrl = await uploadServiceImage();
+        }
+
         await addDoc(collection(db, "service_services_master"), {
           name: name.trim(),
           categoryName: selectedCategory,
+          imageUrl: imageUrl,
           isActive: true,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
@@ -237,14 +265,23 @@ const AdminCategoriesServices = () => {
       }
 
       if (mode === "edit-service" && editingService) {
+        let imageUrl = imagePreview; // Keep existing image if no new image selected
+        
+        // Upload new image if selected
+        if (serviceImage) {
+          imageUrl = await uploadServiceImage();
+        }
+        
         await updateDoc(doc(db, "service_services_master", editingService.id), {
           name: name.trim(),
+          imageUrl: imageUrl,
           updatedAt: serverTimestamp(),
         });
       }
 
       setShowModal(false);
       setCategoryImage(null);
+      setServiceImage(null);
       setImagePreview("");
       setEditingCategory(null);
       setEditingService(null);
@@ -318,11 +355,14 @@ const AdminCategoriesServices = () => {
     if (!window.confirm(`Delete service "${srv.name}"?`)) return;
     
     try {
+      console.log("Deleting service:", srv.id, srv.name);
       await deleteDoc(doc(db, "service_services_master", srv.id));
+      console.log("Service deleted successfully");
       await fetchServices();
+      alert("Service deleted successfully!");
     } catch (error) {
       console.error("Error deleting service:", error);
-      alert("Error deleting service. Please try again.");
+      alert(`Error deleting service: ${error.message}`);
     }
   };
 
@@ -660,10 +700,26 @@ const AdminCategoriesServices = () => {
                         categoryServices.map((service) => (
                           <div key={service.id} className="categories-service-item">
                             <div className="categories-service-info">
-                              <h5 className="categories-service-name">{service.name}</h5>
-                              <span className={`categories-service-status ${service.isActive !== false ? 'active' : 'inactive'}`}>
-                                {service.isActive !== false ? 'Active' : 'Inactive'}
-                              </span>
+                              {service.imageUrl && (
+                                <img 
+                                  src={service.imageUrl} 
+                                  alt={service.name}
+                                  className="categories-service-image"
+                                  style={{
+                                    width: '40px',
+                                    height: '40px',
+                                    borderRadius: '8px',
+                                    objectFit: 'cover',
+                                    marginRight: '12px'
+                                  }}
+                                />
+                              )}
+                              <div>
+                                <h5 className="categories-service-name">{service.name}</h5>
+                                <span className={`categories-service-status ${service.isActive !== false ? 'active' : 'inactive'}`}>
+                                  {service.isActive !== false ? 'Active' : 'Inactive'}
+                                </span>
+                              </div>
                             </div>
                             <div className="categories-service-actions">
                               <button
@@ -680,7 +736,7 @@ const AdminCategoriesServices = () => {
                               </button>
                               <button
                                 className="categories-service-btn delete"
-                                onClick={() => deleteService(service.id)}
+                                onClick={() => deleteService(service)}
                               >
                                 Delete
                               </button>
@@ -778,12 +834,54 @@ const AdminCategoriesServices = () => {
               )}
 
               {(mode === "service" || mode === "edit-service") && (
-                <div className="admin-form-group">
-                  <label>Category</label>
-                  <div className="selected-category">
-                    <span className="category-badge">{selectedCategory}</span>
+                <>
+                  <div className="admin-form-group">
+                    <label>Category</label>
+                    <div className="selected-category">
+                      <span className="category-badge">{selectedCategory}</span>
+                    </div>
                   </div>
-                </div>
+
+                  <div className="admin-form-group">
+                    <label>Service Image</label>
+                    <div className="admin-image-upload">
+                      {imagePreview ? (
+                        <div className="admin-image-preview">
+                          <img src={imagePreview} alt="Service preview" />
+                          <button
+                            type="button"
+                            className="admin-remove-image-btn"
+                            onClick={() => {
+                              setImagePreview("");
+                              setServiceImage(null);
+                            }}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="admin-image-placeholder">
+                          <span>📷</span>
+                          <span>No image selected</span>
+                        </div>
+                      )}
+
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageChange}
+                        className="admin-file-input"
+                        id="service-image"
+                      />
+                      <label htmlFor="service-image" className="admin-file-label">
+                        {imagePreview ? "Change Image" : "Upload Image"}
+                      </label>
+                    </div>
+                    <small className="admin-image-help">
+                      Supported formats: JPG, PNG. Max size: 5MB
+                    </small>
+                  </div>
+                </>
               )}
             </div>
 

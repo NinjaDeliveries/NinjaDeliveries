@@ -414,9 +414,19 @@ const syncAppCategory = async (adminCat) => {
     await addDoc(collection(db, "app_categories"), {
       masterCategoryId: adminCat.id,
       name: adminCat.name,
+      imageUrl: adminCat.imageUrl || null, // ✅ Image URL add kiya
       isActive: true,
       createdAt: new Date(),
     });
+  } else {
+    // ✅ Update existing category (including image URL)
+    for (const d of snap.docs) {
+      await updateDoc(d.ref, {
+        name: adminCat.name,
+        imageUrl: adminCat.imageUrl || null, // ✅ Image URL update
+        updatedAt: new Date(),
+      });
+    }
   }
 };
 

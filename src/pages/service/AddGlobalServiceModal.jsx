@@ -379,12 +379,26 @@ const AddGlobalServiceModal = ({ onClose, onSaved }) => {
       const snap = await getDocs(q);
       const selectedCategory = categories.find(c => c.id === categoryId);
 
+      // 🔥 FETCH MASTER SERVICE TO GET IMAGE
+      const masterServiceQuery = query(
+        collection(db, "service_services_master"),
+        where("name", "==", name.trim())
+      );
+      const masterServiceSnap = await getDocs(masterServiceQuery);
+      let masterServiceData = null;
+      
+      if (!masterServiceSnap.empty) {
+        masterServiceData = masterServiceSnap.docs[0].data();
+        console.log("Found master service with image:", masterServiceData.imageUrl);
+      }
+
       const payload = {
         companyId: user.uid,
         name: name.trim(),
         categoryId: categoryId || null,
         masterCategoryId: selectedCategory?.masterCategoryId || null,
         source: "global",
+        imageUrl: masterServiceData?.imageUrl || null, // 🔥 SYNC IMAGE FROM MASTER
         createdAt: new Date(),
         updatedAt: new Date(),
       };

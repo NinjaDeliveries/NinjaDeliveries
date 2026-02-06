@@ -127,10 +127,18 @@ const fetchServices = async () => {
   // already exists → do nothing
   if (!snap.empty) return;
 
+  // Get image URL from master service
+  let imageUrl = service.imageUrl;
+  if (!imageUrl && service.adminServiceId) {
+    const master = serviceMasters.find(s => s.id === service.adminServiceId);
+    imageUrl = master?.imageUrl || null;
+  }
+
   await addDoc(collection(db, "app_services"), {
     masterServiceId: service.adminServiceId,
     masterCategoryId: service.categoryMasterId,
     name: getServiceName(service),
+    imageUrl: imageUrl, // ✅ Image URL bhi save ho rahi hai
     isActive: true,
     createdAt: new Date(),
   });
@@ -289,9 +297,14 @@ const fetchCategoryMasters = async () => {
 
 const fetchServiceMasters = async () => {
   const snap = await getDocs(collection(db, "service_services_master"));
-  setServiceMasters(
-    snap.docs.map(d => ({ id: d.id, ...d.data() }))
-  );
+  const masterServices = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  setServiceMasters(masterServices);
+  
+  // Log for debugging
+  if (process.env.NODE_ENV === 'development') {
+    console.log("Master services loaded:", masterServices.length);
+    console.log("Services with images:", masterServices.filter(s => s.imageUrl).length);
+  }
 };
 
   useEffect(() => {
@@ -316,6 +329,22 @@ const getServiceName = (service) => {
   );
 
   return master ? master.name : (service.name || "Unnamed Service");
+};
+
+// Helper function to get service image URL
+const getServiceImageUrl = (service) => {
+  if (!service) return null;
+  
+  // If service already has an imageUrl, use it
+  if (service.imageUrl) return service.imageUrl;
+  
+  // For admin services, try to get image from master
+  if (service.serviceType === "admin" && service.adminServiceId) {
+    const master = serviceMasters.find(s => s.id === service.adminServiceId);
+    return master?.imageUrl || null;
+  }
+  
+  return null;
 };
 
 // Helper function to format availability information
@@ -540,6 +569,7 @@ const formatAvailability = (availability, unit) => {
         <div className="services-list">
           {filteredServices.map(service => {
             const serviceName = getServiceName(service);
+            const serviceImageUrl = getServiceImageUrl(service);
             const isActive = service.isActive ?? true;
             
             return (
@@ -547,7 +577,29 @@ const formatAvailability = (availability, unit) => {
                 <div className="services-card-content">
                   <div className="services-main-section">
                     <div className="services-icon">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      {serviceImageUrl ? (
+                        <img 
+                          src={serviceImageUrl} 
+                          alt={serviceName}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            borderRadius: '8px'
+                          }}
+                          onError={(e) => {
+                            // Fallback to SVG icon if image fails to load
+                            e.target.style.display = 'none';
+                            e.target.nextElementSibling.style.display = 'block';
+                          }}
+                        />
+                      ) : null}
+                      <svg 
+                        viewBox="0 0 24 24" 
+                        fill="none" 
+                        stroke="currentColor"
+                        style={{ display: serviceImageUrl ? 'none' : 'block' }}
+                      >
                         <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
                       </svg>
                     </div>
