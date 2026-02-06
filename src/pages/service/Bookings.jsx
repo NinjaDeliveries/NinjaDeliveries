@@ -1030,6 +1030,24 @@ const Bookings = () => {
                                   <span className="bookings-id-badge">
                                     #{booking.id.slice(-8)}
                                   </span>
+                                  {/* Package Type Badge */}
+                                  {booking.packageType && (
+                                    <span className="bookings-package-badge" style={{
+                                      background: '#dbeafe',
+                                      color: '#1e40af',
+                                      padding: '4px 10px',
+                                      borderRadius: '12px',
+                                      fontSize: '12px',
+                                      fontWeight: '600',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '4px',
+                                      textTransform: 'capitalize'
+                                    }}>
+                                      📦 {booking.packageType}
+                                      {booking.packageDuration && ` (${booking.packageDuration})`}
+                                    </span>
+                                  )}
                                   <span className={`bookings-status-badge ${status.className}`}>
                                     {status.icon}
                                     <span>{status.label}</span>
@@ -1442,6 +1460,10 @@ const Bookings = () => {
                     </p>
                     <p className="service-price">
                       ₹{(() => {
+                        // If package price exists, use it
+                        if (selectedBooking.packagePrice) {
+                          return selectedBooking.packagePrice.toLocaleString();
+                        }
                         // If addOns exist, calculate original price by subtracting addon prices from total
                         if (selectedBooking.addOns && selectedBooking.addOns.length > 0 && selectedBooking.totalPrice) {
                           const addOnsTotal = selectedBooking.addOns.reduce((total, addon) => total + (addon.price || 0), 0);
@@ -1453,6 +1475,102 @@ const Bookings = () => {
                       })()}
                     </p>
                   </div>
+                  
+                  {/* Package Details */}
+                  {(selectedBooking.packageType || selectedBooking.packageDuration) && (
+                    <div className="package-details" style={{
+                      marginTop: '12px',
+                      padding: '12px',
+                      background: '#f0f9ff',
+                      borderRadius: '8px',
+                      border: '1px solid #bae6fd'
+                    }}>
+                      <h5 style={{margin: '0 0 8px 0', color: '#0369a1', fontSize: '14px', fontWeight: '600'}}>
+                        📦 Package Information
+                      </h5>
+                      <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '8px'}}>
+                        {selectedBooking.packageType && (
+                          <div className="package-info-item">
+                            <span style={{fontSize: '12px', color: '#64748b', display: 'block'}}>Package Type</span>
+                            <span style={{fontSize: '14px', fontWeight: '600', color: '#0f172a', textTransform: 'capitalize'}}>
+                              {selectedBooking.packageType}
+                            </span>
+                          </div>
+                        )}
+                        {selectedBooking.packageDuration && (
+                          <div className="package-info-item">
+                            <span style={{fontSize: '12px', color: '#64748b', display: 'block'}}>Duration</span>
+                            <span style={{fontSize: '14px', fontWeight: '600', color: '#0f172a'}}>
+                              {selectedBooking.packageDuration} {selectedBooking.packageType === 'monthly' ? 'Month(s)' : selectedBooking.packageType === 'weekly' ? 'Week(s)' : 'Day(s)'}
+                            </span>
+                          </div>
+                        )}
+                        {selectedBooking.packagePrice && (
+                          <div className="package-info-item">
+                            <span style={{fontSize: '12px', color: '#64748b', display: 'block'}}>Package Price</span>
+                            <span style={{fontSize: '14px', fontWeight: '600', color: '#059669'}}>
+                              ₹{selectedBooking.packagePrice.toLocaleString()}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Working Days */}
+                      {selectedBooking.workingDays && selectedBooking.workingDays.length > 0 && (
+                        <div style={{marginTop: '12px'}}>
+                          <span style={{fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '6px'}}>Working Days</span>
+                          <div style={{display: 'flex', flexWrap: 'wrap', gap: '6px'}}>
+                            {selectedBooking.workingDays.map((day, index) => (
+                              <span key={index} style={{
+                                background: '#fff',
+                                border: '1px solid #0ea5e9',
+                                color: '#0369a1',
+                                padding: '4px 10px',
+                                borderRadius: '16px',
+                                fontSize: '12px',
+                                fontWeight: '500'
+                              }}>
+                                {day}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Service Frequency */}
+                      {selectedBooking.serviceFrequency && (
+                        <div style={{marginTop: '8px'}}>
+                          <span style={{fontSize: '12px', color: '#64748b', display: 'block'}}>Service Frequency</span>
+                          <span style={{fontSize: '14px', fontWeight: '500', color: '#0f172a'}}>
+                            {selectedBooking.serviceFrequency}
+                          </span>
+                        </div>
+                      )}
+                      
+                      {/* Start Date & End Date */}
+                      {(selectedBooking.packageStartDate || selectedBooking.packageEndDate) && (
+                        <div style={{marginTop: '8px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px'}}>
+                          {selectedBooking.packageStartDate && (
+                            <div>
+                              <span style={{fontSize: '12px', color: '#64748b', display: 'block'}}>Start Date</span>
+                              <span style={{fontSize: '14px', fontWeight: '500', color: '#0f172a'}}>
+                                {selectedBooking.packageStartDate}
+                              </span>
+                            </div>
+                          )}
+                          {selectedBooking.packageEndDate && (
+                            <div>
+                              <span style={{fontSize: '12px', color: '#64748b', display: 'block'}}>End Date</span>
+                              <span style={{fontSize: '14px', fontWeight: '500', color: '#0f172a'}}>
+                                {selectedBooking.packageEndDate}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
                   {selectedBooking.notes && (
                     <p className="service-notes">{selectedBooking.notes}</p>
                   )}
