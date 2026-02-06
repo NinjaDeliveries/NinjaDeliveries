@@ -604,9 +604,9 @@ const Overview = () => {
       where("companyId", "==", user.uid)
     );
 
-    // Workers (LIVE)
+    // Workers (LIVE) - Fixed collection name
     const workersQ = query(
-      collection(db, "service_technicians"),
+      collection(db, "service_workers"), // ✅ Changed from service_technicians to service_workers
       where("companyId", "==", user.uid)
     );
 
@@ -642,7 +642,27 @@ const Overview = () => {
     });
 
     const unsubWorkers = onSnapshot(workersQ, (snap) => {
-      const activeWorkers = snap.docs.filter(d => d.data().isActive !== false).length;
+      console.log('👷 Workers snapshot received:', snap.size, 'total workers');
+      
+      const allWorkers = snap.docs.map(d => ({
+        id: d.id,
+        ...d.data()
+      }));
+      
+      console.log('👷 All workers:', allWorkers);
+      
+      const activeWorkers = snap.docs.filter(d => {
+        const data = d.data();
+        const isActive = data.isActive !== false; // Default to true if not set
+        console.log(`Worker ${d.id}:`, {
+          name: data.name,
+          isActive: data.isActive,
+          calculated: isActive
+        });
+        return isActive;
+      }).length;
+      
+      console.log('✅ Active workers count:', activeWorkers);
       setStats(prev => ({ ...prev, totalWorkers: activeWorkers }));
     });
 
@@ -763,11 +783,15 @@ const Overview = () => {
         
         weekData[dayIndex].bookings += 1;
         
-        // Add revenue for all bookings, not just completed ones
-        const amount = booking.totalPrice || booking.price || booking.amount || 0;
-        if (amount > 0) {
-          weekData[dayIndex].revenue += amount;
-          console.log(`💰 Added ₹${amount} to ${weekData[dayIndex].day} (${bookingDate.toLocaleDateString()})`);
+        // ✅ FIX: Only add revenue for COMPLETED bookings
+        if (booking.status === 'completed') {
+          const amount = booking.totalPrice || booking.price || booking.amount || 0;
+          if (amount > 0) {
+            weekData[dayIndex].revenue += amount;
+            console.log(`💰 Added ₹${amount} to ${weekData[dayIndex].day} (${bookingDate.toLocaleDateString()}) - Status: ${booking.status}`);
+          }
+        } else {
+          console.log(`⏭️ Skipped ₹${booking.totalPrice || booking.price || booking.amount || 0} from ${weekData[dayIndex].day} - Status: ${booking.status}`);
         }
       }
     });
