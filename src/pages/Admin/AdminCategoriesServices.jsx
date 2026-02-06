@@ -297,30 +297,163 @@ const AdminCategoriesServices = () => {
 
   // ================= TOGGLE STATUS =================
   const toggleCategoryStatus = async (categoryId, currentStatus) => {
+    const category = categories.find(c => c.id === categoryId);
+    if (!category) return;
+
+    const newStatus = !currentStatus;
+    const confirmMessage = newStatus 
+      ? `Enable category "${category.name}"? This will enable it across all collections.`
+      : `Disable category "${category.name}"? This will disable it and all its services across all collections (master, company, and app).`;
+    
+    if (!window.confirm(confirmMessage)) return;
+
     try {
+      console.log(`🔄 Starting cascade update for category: ${category.name} to ${newStatus ? 'ACTIVE' : 'INACTIVE'}`);
+      
+      // 1. Update service_categories_master
       await updateDoc(doc(db, "service_categories_master", categoryId), {
-        isActive: !currentStatus,
+        isActive: newStatus,
         updatedAt: serverTimestamp(),
       });
+      console.log(`✅ Updated service_categories_master`);
+
+      // 2. Update all services in service_services_master for this category
+      const masterServicesSnap = await getDocs(collection(db, "service_services_master"));
+      const masterServicesToUpdate = masterServicesSnap.docs.filter(
+        d => d.data().categoryName === category.name
+      );
+      
+      for (const serviceDoc of masterServicesToUpdate) {
+        await updateDoc(doc(db, "service_services_master", serviceDoc.id), {
+          isActive: newStatus,
+          updatedAt: serverTimestamp(),
+        });
+      }
+      console.log(`✅ Updated ${masterServicesToUpdate.length} services in service_services_master`);
+
+      // 3. Update all company categories in service_categories
+      const companyCategories = await getDocs(collection(db, "service_categories"));
+      const companyCatsToUpdate = companyCategories.docs.filter(
+        d => d.data().name === category.name
+      );
+      
+      for (const catDoc of companyCatsToUpdate) {
+        await updateDoc(doc(db, "service_categories", catDoc.id), {
+          isActive: newStatus,
+          updatedAt: serverTimestamp(),
+        });
+      }
+      console.log(`✅ Updated ${companyCatsToUpdate.length} categories in service_categories`);
+
+      // 4. Update all company services in service_services
+      const companyServices = await getDocs(collection(db, "service_services"));
+      const companyServicesToUpdate = companyServices.docs.filter(
+        d => d.data().categoryName === category.name
+      );
+      
+      for (const serviceDoc of companyServicesToUpdate) {
+        await updateDoc(doc(db, "service_services", serviceDoc.id), {
+          isActive: newStatus,
+          updatedAt: serverTimestamp(),
+        });
+      }
+      console.log(`✅ Updated ${companyServicesToUpdate.length} services in service_services`);
+
+      // 5. Update all app categories in app_categories
+      const appCategories = await getDocs(collection(db, "app_categories"));
+      const appCatsToUpdate = appCategories.docs.filter(
+        d => d.data().name === category.name
+      );
+      
+      for (const catDoc of appCatsToUpdate) {
+        await updateDoc(doc(db, "app_categories", catDoc.id), {
+          isActive: newStatus,
+          updatedAt: serverTimestamp(),
+        });
+      }
+      console.log(`✅ Updated ${appCatsToUpdate.length} categories in app_categories`);
+
+      // 6. Update all app services in app_services
+      const appServices = await getDocs(collection(db, "app_services"));
+      const appServicesToUpdate = appServices.docs.filter(
+        d => d.data().categoryName === category.name
+      );
+      
+      for (const serviceDoc of appServicesToUpdate) {
+        await updateDoc(doc(db, "app_services", serviceDoc.id), {
+          isActive: newStatus,
+          updatedAt: serverTimestamp(),
+        });
+      }
+      console.log(`✅ Updated ${appServicesToUpdate.length} services in app_services`);
+
+      console.log(`🎉 Cascade update completed successfully!`);
+      alert(`Category "${category.name}" has been ${newStatus ? 'enabled' : 'disabled'} across all collections.`);
       
       await fetchCategories(); // Refresh the list
+      await fetchServices(); // Refresh services too
     } catch (error) {
-      console.error("Error updating category status:", error);
-      alert("Error updating category status. Please try again.");
+      console.error("❌ Error updating category status:", error);
+      alert(`Error updating category status: ${error.message}`);
     }
   };
 
   const toggleServiceStatus = async (serviceId, currentStatus) => {
+    const service = services.find(s => s.id === serviceId);
+    if (!service) return;
+
+    const newStatus = !currentStatus;
+    const confirmMessage = newStatus 
+      ? `Enable service "${service.name}"? This will enable it across all collections.`
+      : `Disable service "${service.name}"? This will disable it across all collections (master, company, and app).`;
+    
+    if (!window.confirm(confirmMessage)) return;
+
     try {
+      console.log(`🔄 Starting cascade update for service: ${service.name} to ${newStatus ? 'ACTIVE' : 'INACTIVE'}`);
+      
+      // 1. Update service_services_master
       await updateDoc(doc(db, "service_services_master", serviceId), {
-        isActive: !currentStatus,
+        isActive: newStatus,
         updatedAt: serverTimestamp(),
       });
+      console.log(`✅ Updated service_services_master`);
+
+      // 2. Update all company services in service_services
+      const companyServices = await getDocs(collection(db, "service_services"));
+      const companyServicesToUpdate = companyServices.docs.filter(
+        d => d.data().name === service.name && d.data().categoryName === service.categoryName
+      );
+      
+      for (const serviceDoc of companyServicesToUpdate) {
+        await updateDoc(doc(db, "service_services", serviceDoc.id), {
+          isActive: newStatus,
+          updatedAt: serverTimestamp(),
+        });
+      }
+      console.log(`✅ Updated ${companyServicesToUpdate.length} services in service_services`);
+
+      // 3. Update all app services in app_services
+      const appServices = await getDocs(collection(db, "app_services"));
+      const appServicesToUpdate = appServices.docs.filter(
+        d => d.data().name === service.name && d.data().categoryName === service.categoryName
+      );
+      
+      for (const serviceDoc of appServicesToUpdate) {
+        await updateDoc(doc(db, "app_services", serviceDoc.id), {
+          isActive: newStatus,
+          updatedAt: serverTimestamp(),
+        });
+      }
+      console.log(`✅ Updated ${appServicesToUpdate.length} services in app_services`);
+
+      console.log(`🎉 Cascade update completed successfully!`);
+      alert(`Service "${service.name}" has been ${newStatus ? 'enabled' : 'disabled'} across all collections.`);
       
       await fetchServices(); // Refresh the list
     } catch (error) {
-      console.error("Error updating service status:", error);
-      alert("Error updating service status. Please try again.");
+      console.error("❌ Error updating service status:", error);
+      alert(`Error updating service status: ${error.message}`);
     }
   };
 
