@@ -59,7 +59,7 @@ const fetchServices = async () => {
     const user = auth.currentUser;
     if (!user) return;
 
-    // Try both possible field names
+    // Fetch company services
     let q = query(
       collection(db, "service_services"),
       where("companyId", "==", user.uid)
@@ -76,10 +76,25 @@ const fetchServices = async () => {
       snap = await getDocs(q);
     }
 
-    const list = snap.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    // ✅ Fetch master services to get images (exactly like categories!)
+    const masterServicesSnap = await getDocs(collection(db, "service_services_master"));
+    const masterServicesMap = {};
+    masterServicesSnap.docs.forEach(doc => {
+      masterServicesMap[doc.id] = doc.data();
+    });
+
+    // ✅ Map company services with master service data (including images)
+    const list = snap.docs.map(doc => {
+      const serviceData = doc.data();
+      const masterService = masterServicesMap[serviceData.adminServiceId];
+      
+      return {
+        id: doc.id,
+        ...serviceData,
+        // Get image from master service if not already present
+        imageUrl: serviceData.imageUrl || masterService?.imageUrl || null,
+      };
+    });
 
     setServices(list);
   } catch (err) {
@@ -332,13 +347,14 @@ const getServiceName = (service) => {
 };
 
 // Helper function to get service image URL
+// Note: Image is already merged in fetchServices, this is just a fallback
 const getServiceImageUrl = (service) => {
   if (!service) return null;
   
-  // If service already has an imageUrl, use it
+  // Image should already be merged from fetchServices
   if (service.imageUrl) return service.imageUrl;
   
-  // For admin services, try to get image from master
+  // Fallback: try to get from master (shouldn't be needed now)
   if (service.serviceType === "admin" && service.adminServiceId) {
     const master = serviceMasters.find(s => s.id === service.adminServiceId);
     return master?.imageUrl || null;
