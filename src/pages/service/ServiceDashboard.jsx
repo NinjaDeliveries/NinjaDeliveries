@@ -74,6 +74,15 @@ const ServiceDashboard = () => {
       {/* SIDEBAR */}
       <aside className="sd-sidebar">
         <div className="sd-sidebar-header">
+          {serviceData?.logoUrl && (
+            <div 
+              className="sd-company-logo" 
+              onClick={() => navigate("/service-dashboard")}
+              style={{ cursor: 'pointer' }}
+            >
+              <img src={serviceData.logoUrl} alt="Company Logo" />
+            </div>
+          )}
           <h2>{serviceData?.companyName || "Service Dashboard"}</h2>
           <p>{serviceData?.email}</p>
         </div>

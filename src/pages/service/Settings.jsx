@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { auth, db } from "../../context/Firebase";
+import { auth, db, storage } from "../../context/Firebase";
 import {
   doc,
   getDoc,
@@ -12,6 +12,7 @@ import {
   reauthenticateWithCredential, 
   EmailAuthProvider 
 } from "firebase/auth";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import "../../style/ServiceDashboard.css";
 import { useNotifications } from "../../context/NotificationContext";
 
@@ -29,7 +30,12 @@ export default function Settings() {
     ownerName: "",
     businessType: "service",
     description: "",
+    logoUrl: "",
   });
+  
+  const [logoFile, setLogoFile] = useState(null);
+  const [logoPreview, setLogoPreview] = useState(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   
   // Contact Information
   const [contactInfo, setContactInfo] = useState({
@@ -79,7 +85,13 @@ export default function Settings() {
             ownerName: String(data.name || ""),
             businessType: String(data.type || "service"),
             description: String(data.description || ""),
+            logoUrl: String(data.logoUrl || ""),
           });
+          
+          // Set logo preview if exists
+          if (data.logoUrl) {
+            setLogoPreview(data.logoUrl);
+          }
           
           setContactInfo({
             email: String(data.email || ""),
@@ -121,6 +133,60 @@ export default function Settings() {
     return () => unsubscribe();
   }, []);
 
+  // Handle logo file selection
+  const handleLogoChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        alert('Please select an image file');
+        return;
+      }
+      
+      // Validate file size (max 2MB)
+      if (file.size > 2 * 1024 * 1024) {
+        alert('Image size should be less than 2MB');
+        return;
+      }
+      
+      setLogoFile(file);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setLogoPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Upload logo to Firebase Storage
+  const uploadLogo = async () => {
+    if (!logoFile) return businessInfo.logoUrl;
+    
+    try {
+      setUploadingLogo(true);
+      const user = auth.currentUser;
+      if (!user) throw new Error("User not authenticated");
+      
+      // Create a reference to the logo file
+      const logoRef = ref(storage, `service_company_logos/${user.uid}/${Date.now()}_${logoFile.name}`);
+      
+      // Upload the file
+      await uploadBytes(logoRef, logoFile);
+      
+      // Get the download URL
+      const downloadURL = await getDownloadURL(logoRef);
+      
+      return downloadURL;
+    } catch (error) {
+      console.error("Error uploading logo:", error);
+      throw error;
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
   // Save settings
   const handleSave = async () => {
     try {
@@ -132,6 +198,12 @@ export default function Settings() {
         return;
       }
 
+      // Upload logo if a new file is selected
+      let logoUrl = businessInfo.logoUrl;
+      if (logoFile) {
+        logoUrl = await uploadLogo();
+      }
+
       // Update the service_company document
       await updateDoc(doc(db, "service_company", user.uid), {
         // Business info
@@ -139,6 +211,7 @@ export default function Settings() {
         name: businessInfo.ownerName,
         type: businessInfo.businessType,
         description: businessInfo.description,
+        logoUrl: logoUrl,
         
         // Contact info
         email: contactInfo.email,
@@ -152,6 +225,10 @@ export default function Settings() {
         // Update timestamp
         updatedAt: new Date(),
       });
+
+      // Update local state
+      setBusinessInfo(prev => ({ ...prev, logoUrl }));
+      setLogoFile(null);
 
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -342,6 +419,47 @@ export default function Settings() {
               <div className="settings-section">
                 <h3>Business Information</h3>
                 <p>Update your business details and contact information</p>
+                
+                <div className="settings-form-grid">
+                  {/* Logo Upload */}
+                  <div className="settings-field settings-field-full">
+                    <label className="settings-label">Company Logo</label>
+                    <div className="logo-upload-container">
+                      <div className="logo-preview">
+                        {logoPreview ? (
+                          <img src={logoPreview} alt="Company Logo" className="logo-preview-img" />
+                        ) : (
+                          <div className="logo-placeholder">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                              <circle cx="8.5" cy="8.5" r="1.5"/>
+                              <polyline points="21 15 16 10 5 21"/>
+                            </svg>
+                            <span>No logo uploaded</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="logo-upload-actions">
+                        <input
+                          type="file"
+                          id="logo-upload"
+                          accept="image/*"
+                          onChange={handleLogoChange}
+                          style={{ display: 'none' }}
+                        />
+                        <label htmlFor="logo-upload" className="logo-upload-btn">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="17 8 12 3 7 8"/>
+                            <line x1="12" y1="3" x2="12" y2="15"/>
+                          </svg>
+                          {logoPreview ? 'Change Logo' : 'Upload Logo'}
+                        </label>
+                        <p className="logo-upload-hint">PNG, JPG up to 2MB</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
                 
                 <div className="settings-form-grid">
                   <div className="settings-field">

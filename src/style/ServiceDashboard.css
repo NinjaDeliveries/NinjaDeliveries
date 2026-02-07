@@ -1,4 +1,7 @@
-ni /* ========== LAYOUT ========== */
+/* ========== GOOGLE FONTS IMPORT ========== */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Roboto:wght@300;400;500;600&display=swap');
+
+/* ========== LAYOUT ========== */
 .sd-wrapper {
   display: flex;
   min-height: 100vh;
@@ -246,20 +249,47 @@ ni /* ========== LAYOUT ========== */
 }
 
 .sd-sidebar-header {
-  padding: 20px;
+  padding: 20px 16px 16px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  text-align: center;
+  position: relative;
+  flex-shrink: 0;
 }
 
 .sd-sidebar-header h2 {
-  font-size: 20px;
+  font-size: 18px;
   margin: 0;
+  font-weight: 700;
+  font-family: 'Montserrat', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: #ffffff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  position: relative;
+  padding-bottom: 6px;
 }
 
+/* Underline effect for company name */
+.sd-sidebar-header h2::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 35px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #ffffff, transparent);
+  border-radius: 2px;
+}
 
 .sd-sidebar-header p {
-  font-size: 12px;
-  opacity: 0.8;
-  margin-top: 4px;
+  font-size: 11px;
+  margin-top: 10px;
+  font-weight: 400;
+  font-family: 'Roboto', sans-serif;
+  letter-spacing: 0.6px;
+  color: rgba(255, 255, 255, 0.85);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 /* ========== NOTIFICATION BELL ========== */
@@ -478,6 +508,15 @@ ni /* ========== LAYOUT ========== */
 .sd-menu {
   padding: 15px;
   flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.sd-menu::-webkit-scrollbar {
+  display: none;
 }
 
 .sd-menu-item {
@@ -581,11 +620,12 @@ ni /* ========== LAYOUT ========== */
 
 /* ========== FOOTER ========== */
 .sd-sidebar-footer {
-  padding: 12px;
+  padding: 16px 12px;
   font-size: 11px;
   text-align: center;
-  opacity: 0.7;
   border-top: 1px solid rgba(255, 255, 255, 0.15);
+  flex-shrink: 0;
+  background: rgba(0, 0, 0, 0.1);
 }
 
 /* ========== MAIN CONTENT ========== */
@@ -910,27 +950,34 @@ ni /* ========== LAYOUT ========== */
 
 .sd-logout-btn {
   width: 100%;
-  padding: 10px;
+  padding: 12px;
   border-radius: 8px;
   border: none;
   cursor: pointer;
-
   background: #ef4444;
   color: white;
   font-weight: 600;
-
-  transition: background 0.3s ease;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+  margin-bottom: 12px;
 }
 
 .sd-logout-btn:hover {
   background: #dc2626;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+}
+
+.sd-logout-btn:active {
+  transform: translateY(0px);
 }
 
 .sd-footer-text {
-  margin-top: 10px;
-  font-size: 12px;
+  font-size: 11px;
   opacity: 0.7;
   text-align: center;
+  color: rgba(255, 255, 255, 0.8);
 }
 /* ========== SERVICE CARD IMPROVEMENTS ========== */
 .sd-service-actions {
@@ -22831,5 +22878,378 @@ input:checked + .settings-toggle-slider:before {
   
   .list-booking-header-actions {
     align-self: flex-end;
+  }
+}
+
+/* ========== COMPANY LOGO IN SIDEBAR ========== */
+.sd-company-logo {
+  width: 70px;
+  height: 70px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  overflow: hidden;
+  position: relative;
+  animation: logoFloat 3s ease-in-out infinite;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.sd-company-logo:hover {
+  transform: scale(1.08);
+  animation: none;
+}
+
+.sd-company-logo:active {
+  transform: scale(0.92);
+  animation: logoClick 0.4s ease;
+}
+
+@keyframes logoClick {
+  0% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(0.85) rotate(-8deg);
+  }
+  60% {
+    transform: scale(1.05) rotate(3deg);
+  }
+  100% {
+    transform: scale(0.92);
+  }
+}
+
+/* Animated gradient border */
+.sd-company-logo::before {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: -3px;
+  right: -3px;
+  bottom: -3px;
+  border-radius: 50%;
+  background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #f7b731, #ff6b6b);
+  background-size: 300% 300%;
+  animation: gradientRotate 4s ease infinite;
+  z-index: -1;
+  transition: all 0.3s ease;
+}
+
+.sd-company-logo:hover::before {
+  top: -5px;
+  left: -5px;
+  right: -5px;
+  bottom: -5px;
+  animation: gradientRotate 1.5s ease infinite;
+}
+
+.sd-company-logo:active::before {
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+}
+
+/* Inner glow effect */
+.sd-company-logo::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 50%;
+  box-shadow: 
+    inset 0 0 15px rgba(255, 255, 255, 0.2),
+    0 0 20px rgba(255, 255, 255, 0.3),
+    0 0 30px rgba(255, 255, 255, 0.2);
+  pointer-events: none;
+  animation: pulse 2s ease-in-out infinite;
+  transition: all 0.3s ease;
+}
+
+.sd-company-logo:hover::after {
+  box-shadow: 
+    inset 0 0 20px rgba(255, 255, 255, 0.3),
+    0 0 30px rgba(255, 255, 255, 0.5),
+    0 0 45px rgba(255, 255, 255, 0.4);
+}
+
+.sd-company-logo:active::after {
+  box-shadow: 
+    inset 0 0 25px rgba(255, 255, 255, 0.4),
+    0 0 35px rgba(255, 255, 255, 0.6),
+    0 0 50px rgba(255, 255, 255, 0.5);
+}
+
+.sd-company-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  position: relative;
+  z-index: 1;
+  transition: transform 0.3s ease;
+}
+
+.sd-company-logo:hover img {
+  transform: scale(1.1) rotate(5deg);
+}
+
+/* Floating animation */
+@keyframes logoFloat {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+/* Gradient rotation animation */
+@keyframes gradientRotate {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Pulse animation for glow */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* ========== LOGO UPLOAD IN SETTINGS ========== */
+.logo-upload-container {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  padding: 24px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 16px;
+  border: none;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Animated background effect */
+.logo-upload-container::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
+  animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%) translateY(-100%) rotate(45deg);
+  }
+  100% {
+    transform: translateX(100%) translateY(100%) rotate(45deg);
+  }
+}
+
+.logo-preview {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 4px solid rgba(255, 255, 255, 0.9);
+  background: white;
+  flex-shrink: 0;
+  position: relative;
+  box-shadow: 
+    0 10px 30px rgba(0, 0, 0, 0.3),
+    0 0 0 8px rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+  animation: logoPreviewFloat 3s ease-in-out infinite;
+}
+
+.logo-preview:hover {
+  transform: scale(1.05) rotate(5deg);
+  box-shadow: 
+    0 15px 40px rgba(0, 0, 0, 0.4),
+    0 0 0 8px rgba(255, 255, 255, 0.2);
+}
+
+@keyframes logoPreviewFloat {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.logo-preview-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.logo-preview:hover .logo-preview-img {
+  transform: scale(1.1);
+}
+
+.logo-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #9ca3af;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+}
+
+.logo-placeholder svg {
+  width: 48px;
+  height: 48px;
+  stroke-width: 1.5;
+  animation: iconBounce 2s ease-in-out infinite;
+}
+
+@keyframes iconBounce {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.logo-placeholder span {
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+  padding: 0 10px;
+}
+
+.logo-upload-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+  z-index: 1;
+}
+
+.logo-upload-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: white;
+  color: #667eea;
+  padding: 12px 24px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  border: none;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.logo-upload-btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(102, 126, 234, 0.2);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.logo-upload-btn:hover::before {
+  width: 300px;
+  height: 300px;
+}
+
+.logo-upload-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.logo-upload-btn:active {
+  transform: translateY(0px);
+}
+
+.logo-upload-btn svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2.5;
+  position: relative;
+  z-index: 1;
+  transition: transform 0.3s ease;
+}
+
+.logo-upload-btn:hover svg {
+  transform: translateY(-3px);
+  animation: uploadBounce 0.6s ease infinite;
+}
+
+@keyframes uploadBounce {
+  0%, 100% {
+    transform: translateY(-3px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.logo-upload-hint {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0;
+  font-weight: 500;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+@media (max-width: 640px) {
+  .logo-upload-container {
+    flex-direction: column;
+    text-align: center;
+    padding: 20px;
+  }
+  
+  .logo-preview {
+    width: 120px;
+    height: 120px;
+  }
+  
+  .logo-upload-actions {
+    align-items: center;
+    width: 100%;
+  }
+  
+  .logo-upload-btn {
+    width: 100%;
   }
 }
