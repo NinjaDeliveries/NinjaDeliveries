@@ -661,7 +661,20 @@ const Payments = () => {
                     </td>
                     <td className="customer-cell">
                       <div className="customer-info">
-                        <div className="customer-avatar">
+                        <div className="customer-avatar" style={{
+                          width: '48px',
+                          height: '48px',
+                          borderRadius: '50%',
+                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          color: '#ffffff',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: '700',
+                          fontSize: '20px',
+                          textTransform: 'uppercase',
+                          lineHeight: '1'
+                        }}>
                           {payment.customerName.charAt(0).toUpperCase()}
                         </div>
                         <div className="customer-details">

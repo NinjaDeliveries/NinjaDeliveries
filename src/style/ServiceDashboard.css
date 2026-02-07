@@ -20860,65 +20860,59 @@ input:checked + .settings-toggle-slider:before {
 .payments-table-container {
   background: white;
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   overflow: hidden;
   margin-top: 24px;
 }
 
 .payments-table-header {
-  padding: 20px 24px;
+  padding: 24px 24px 16px 24px;
   border-bottom: 1px solid #e5e7eb;
-  background: #f8fafc;
+  background: white;
 }
 
 .payments-table-header h3 {
   margin: 0 0 4px 0;
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 600;
   color: #1f2937;
 }
 
 .payments-table-header p {
   margin: 0;
-  font-size: 14px;
-  color: #6b7280;
+  font-size: 13px;
+  color: #9ca3af;
 }
 
 .payments-table-wrapper {
   overflow-x: auto;
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
 }
 
 .payments-table {
   width: 100%;
-  border-collapse: collapse;
+  min-width: 1400px;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 14px;
-  table-layout: fixed;
 }
 
-.payments-table th:nth-child(1) { width: 120px; } /* Transaction ID */
-.payments-table th:nth-child(2) { width: 180px; } /* Customer */
-.payments-table th:nth-child(3) { width: 120px; } /* Category */
-.payments-table th:nth-child(4) { width: 160px; } /* Service */
-.payments-table th:nth-child(5) { width: 140px; } /* Worker */
-.payments-table th:nth-child(6) { width: 100px; } /* Amount */
-.payments-table th:nth-child(7) { width: 100px; } /* Method */
-.payments-table th:nth-child(8) { width: 100px; } /* Status */
-.payments-table th:nth-child(9) { width: 140px; } /* Date */
-
 .payments-table thead {
-  background: #f9fafb;
-  border-bottom: 2px solid #e5e7eb;
+  background: #fafafa;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .payments-table th {
-  padding: 16px 12px;
+  padding: 16px 20px;
   text-align: left;
   font-weight: 600;
-  color: #374151;
-  font-size: 13px;
+  color: #6b7280;
+  font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.8px;
   white-space: nowrap;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .payments-table tbody tr {
@@ -20927,76 +20921,228 @@ input:checked + .settings-toggle-slider:before {
 }
 
 .payments-table tbody tr:hover {
-  background: #f8fafc;
+  background: #f9fafb;
+}
+
+.payments-table tbody tr:last-child {
+  border-bottom: none;
 }
 
 .payments-table td {
-  padding: 16px 12px;
+  padding: 20px;
   vertical-align: middle;
+  border-bottom: 1px solid #f3f4f6;
 }
 
 /* Transaction ID */
+.transaction-id {
+  padding-left: 24px;
+}
+
 .transaction-id-text {
   font-family: 'Courier New', monospace;
   font-weight: 600;
-  color: #4f46e5;
-  background: #eff6ff;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 12px;
+  color: #6366f1;
+  font-size: 13px;
+  letter-spacing: 0.5px;
 }
 
 /* Customer Cell */
+.customer-cell {
+  min-width: 220px;
+}
+
 .customer-info {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
 }
 
 .customer-avatar {
-  width: 36px;
-  height: 36px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 600;
-  font-size: 14px;
+  font-weight: 700;
+  font-size: 20px;
   flex-shrink: 0;
+  text-transform: uppercase;
+  line-height: 1;
+  user-select: none;
 }
 
 .customer-details {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
   min-width: 0;
 }
 
 .customer-name {
   font-weight: 600;
   color: #1f2937;
-  font-size: 14px;
+  font-size: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
 }
 
 .customer-phone {
-  font-size: 12px;
+  font-size: 14px;
   color: #6b7280;
+  font-weight: 400;
+  letter-spacing: 0.3px;
 }
 
 /* Category Cell */
+.category-cell {
+  min-width: 140px;
+}
+
 .category-badge {
-  background: #f3e8ff;
+  display: inline-block;
+  padding: 6px 12px;
+  background: #ede9fe;
   color: #7c3aed;
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 600;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
   white-space: nowrap;
 }
 
 /* Service Cell */
+.service-cell {
+  min-width: 180px;
+  max-width: 250px;
+}
+
+.service-name {
+  color: #374151;
+  font-size: 14px;
+  font-weight: 500;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Worker Cell */
+.worker-cell {
+  min-width: 150px;
+}
+
+.worker-name {
+  color: #10b981;
+  font-weight: 600;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* Amount Cell */
+.amount-cell {
+  min-width: 120px;
+}
+
+.amount-value {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.amount-value .rupee-symbol {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.amount-value .amount-number {
+  font-size: 16px;
+  color: #1f2937;
+}
+
+/* Method Cell */
+.method-cell {
+  min-width: 100px;
+}
+
+.method-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.method-badge.cash {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.method-badge.online {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+/* Status Cell */
+.status-cell {
+  min-width: 140px;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.status-badge.completed {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-badge.pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-badge.failed {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+/* Date Cell */
+.date-cell {
+  min-width: 160px;
+  padding-right: 24px;
+}
+
+.date-value {
+  color: #6b7280;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+  .payments-table th,
+  .payments-table td {
+    padding: 12px 16px;
+  }
+}
 .service-cell {
   max-width: 200px;
 }
