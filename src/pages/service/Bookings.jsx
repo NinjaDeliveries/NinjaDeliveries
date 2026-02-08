@@ -575,8 +575,11 @@ const Bookings = () => {
 
     // Status filters
     if (statusFilter === "all") {
-      // Exclude completed, rejected, and cancelled bookings from "Active" tab
-      return booking.status !== "completed" && booking.status !== "rejected" && booking.status !== "cancelled";
+      // Exclude completed, rejected, cancelled, and expired bookings from "Active" tab
+      return booking.status !== "completed" && 
+             booking.status !== "rejected" && 
+             booking.status !== "cancelled" && 
+             booking.status !== "expired";
     }
     if (statusFilter === "cancelled") {
       // Show cancelled bookings (customer cancellations from app with status: "cancelled")
@@ -661,8 +664,13 @@ const Bookings = () => {
   // Get status counts
   const getStatusCount = (status) => {
     if (status === "all") {
-      // Exclude completed, rejected, and cancelled bookings from "Active" count
-      return bookings.filter(b => b.status !== "completed" && b.status !== "rejected" && b.status !== "cancelled").length;
+      // Exclude completed, rejected, cancelled, and expired bookings from "Active" count
+      return bookings.filter(b => 
+        b.status !== "completed" && 
+        b.status !== "rejected" && 
+        b.status !== "cancelled" && 
+        b.status !== "expired"
+      ).length;
     }
     return bookings.filter(b => b.status === status).length;
   };
@@ -750,7 +758,12 @@ const Bookings = () => {
           </div>
           <div className="bookings-stat-content">
             <p className="bookings-stat-label">Active</p>
-            <p className="bookings-stat-value">{bookings.filter(b => b.status !== "completed" && b.status !== "rejected" && b.status !== "cancelled").length}</p>
+            <p className="bookings-stat-value">{bookings.filter(b => 
+              b.status !== "completed" && 
+              b.status !== "rejected" && 
+              b.status !== "cancelled" && 
+              b.status !== "expired"
+            ).length}</p>
           </div>
         </div>
 
