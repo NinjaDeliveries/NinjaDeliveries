@@ -580,9 +580,38 @@ export default function Slots() {
     closeAssignWorker();
   };
 
-  // Check if booking can be assigned (not already assigned)
+  // Check if booking date is in the past (not today or future)
+  const isBookingInPast = (booking) => {
+    if (!booking.date) return false;
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset to start of day
+    
+    const [year, month, day] = booking.date.split('-').map(Number);
+    const bookingDate = new Date(year, month - 1, day);
+    bookingDate.setHours(0, 0, 0, 0); // Reset to start of day
+    
+    return bookingDate < today;
+  };
+
+  // Check if booking can be assigned (only for today and future dates)
   const canAssignWorker = (booking) => {
-    return !booking.workerId && !booking.workerName && booking.status !== 'assigned' && booking.status !== 'completed' && booking.status !== 'cancelled';
+    // Don't allow assignment if already assigned, completed, or cancelled
+    if (booking.status === 'assigned' || booking.status === 'completed' || booking.status === 'cancelled') {
+      return false;
+    }
+    
+    // Don't allow assignment if worker already assigned
+    if (booking.workerId || booking.workerName) {
+      return false;
+    }
+    
+    // Don't allow assignment if booking date is in the past (before today)
+    if (isBookingInPast(booking)) {
+      return false;
+    }
+    
+    return true;
   };
 
   // Get today's date in local timezone
@@ -1046,7 +1075,55 @@ export default function Slots() {
                           >
                             View
                           </button>
-                          {canAssignWorker(booking) && (
+                          {booking.status === 'completed' ? (
+                            <span style={{
+                              backgroundColor: '#27ae60',
+                              color: 'white',
+                              padding: '4px 8px',
+                              borderRadius: '4px',
+                              fontSize: '11px',
+                              fontWeight: '600',
+                              marginLeft: '4px'
+                            }}>
+                              COMPLETED
+                            </span>
+                          ) : booking.status === 'cancelled' ? (
+                            <span style={{
+                              backgroundColor: '#e74c3c',
+                              color: 'white',
+                              padding: '4px 8px',
+                              borderRadius: '4px',
+                              fontSize: '11px',
+                              fontWeight: '600',
+                              marginLeft: '4px'
+                            }}>
+                              CANCELLED
+                            </span>
+                          ) : booking.status === 'assigned' || booking.workerId || booking.workerName ? (
+                            <span style={{
+                              backgroundColor: '#3498db',
+                              color: 'white',
+                              padding: '4px 8px',
+                              borderRadius: '4px',
+                              fontSize: '11px',
+                              fontWeight: '600',
+                              marginLeft: '4px'
+                            }}>
+                              ASSIGNED
+                            </span>
+                          ) : isBookingInPast(booking) ? (
+                            <span style={{
+                              backgroundColor: '#95a5a6',
+                              color: 'white',
+                              padding: '4px 8px',
+                              borderRadius: '4px',
+                              fontSize: '11px',
+                              fontWeight: '600',
+                              marginLeft: '4px'
+                            }}>
+                              EXPIRED
+                            </span>
+                          ) : canAssignWorker(booking) ? (
                             <button 
                               style={assignButtonStyle}
                               onClick={() => handleAssignWorker(booking)}
@@ -1054,7 +1131,7 @@ export default function Slots() {
                             >
                               Assign
                             </button>
-                          )}
+                          ) : null}
                           <div 
                             className="compact-status-dot"
                             style={{ backgroundColor: getStatusColor(booking.status) }}
@@ -1096,7 +1173,55 @@ export default function Slots() {
                           >
                             View
                           </button>
-                          {canAssignWorker(booking) && (
+                          {booking.status === 'completed' ? (
+                            <span style={{
+                              backgroundColor: '#27ae60',
+                              color: 'white',
+                              padding: '4px 8px',
+                              borderRadius: '4px',
+                              fontSize: '11px',
+                              fontWeight: '600',
+                              marginLeft: '4px'
+                            }}>
+                              COMPLETED
+                            </span>
+                          ) : booking.status === 'cancelled' ? (
+                            <span style={{
+                              backgroundColor: '#e74c3c',
+                              color: 'white',
+                              padding: '4px 8px',
+                              borderRadius: '4px',
+                              fontSize: '11px',
+                              fontWeight: '600',
+                              marginLeft: '4px'
+                            }}>
+                              CANCELLED
+                            </span>
+                          ) : booking.status === 'assigned' || booking.workerId || booking.workerName ? (
+                            <span style={{
+                              backgroundColor: '#3498db',
+                              color: 'white',
+                              padding: '4px 8px',
+                              borderRadius: '4px',
+                              fontSize: '11px',
+                              fontWeight: '600',
+                              marginLeft: '4px'
+                            }}>
+                              ASSIGNED
+                            </span>
+                          ) : isBookingInPast(booking) ? (
+                            <span style={{
+                              backgroundColor: '#95a5a6',
+                              color: 'white',
+                              padding: '4px 8px',
+                              borderRadius: '4px',
+                              fontSize: '11px',
+                              fontWeight: '600',
+                              marginLeft: '4px'
+                            }}>
+                              EXPIRED
+                            </span>
+                          ) : canAssignWorker(booking) ? (
                             <button 
                               style={assignButtonStyle}
                               onClick={() => handleAssignWorker(booking)}
@@ -1104,7 +1229,7 @@ export default function Slots() {
                             >
                               Assign
                             </button>
-                          )}
+                          ) : null}
                           <div 
                             className="list-booking-status"
                             style={{ backgroundColor: getStatusColor(booking.status) }}
