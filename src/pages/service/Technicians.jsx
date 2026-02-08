@@ -378,137 +378,53 @@ const Technicians = () => {
         updatedAt: new Date(),
       });
 
-      // If DEACTIVATING a worker, check if any categories need to be deactivated
-      if (!newStatus && technician.assignedCategories && technician.assignedCategories.length > 0) {
-        console.log("🔍 Worker deactivated, checking categories:", technician.assignedCategories);
+      // If DEACTIVATING a worker
+      if (!newStatus) {
+        console.log("🔍 Worker deactivated, checking categories and services...");
         
         const deactivatedCategories = [];
+        const deactivatedServices = [];
         
-        // For each category assigned to this worker
-        for (const categoryId of technician.assignedCategories) {
-          // Check if any OTHER active workers are assigned to this category
-          const otherActiveWorkers = technicians.filter(worker => 
-            worker.id !== technicianId && // Not the current worker
-            (worker.isActive ?? true) && // Worker is active
-            (worker.assignedCategories?.includes(categoryId) || worker.role === categoryId) // Assigned to this category
-          );
+        // 1. Handle Categories
+        if (technician.assignedCategories && technician.assignedCategories.length > 0) {
+          for (const categoryId of technician.assignedCategories) {
+            // Check if any OTHER active workers are assigned to this category
+            const otherActiveWorkers = technicians.filter(worker => 
+              worker.id !== technicianId && 
+              (worker.isActive ?? true) && 
+              (worker.assignedCategories?.includes(categoryId) || worker.role === categoryId)
+            );
 
-          console.log(`📊 Category ${categoryId}: ${otherActiveWorkers.length} other active workers`);
+            console.log(`📊 Category ${categoryId}: ${otherActiveWorkers.length} other active workers`);
 
-          // If no other active workers for this category, deactivate it
-          if (otherActiveWorkers.length === 0) {
-            console.log(`⚠️ No active workers left for category ${categoryId}, deactivating...`);
-            
-            // Get category details
-            const categoryDoc = categories.find(c => c.id === categoryId);
-            if (categoryDoc) {
-              // Deactivate the category
-              await updateDoc(doc(db, "service_categories", categoryId), {
-                isActive: false,
-                updatedAt: new Date(),
-                autoDeactivated: true, // Flag to indicate auto-deactivation
-              });
-
-              deactivatedCategories.push(categoryDoc.name);
-
-              // Deactivate all services under this category
-              const servicesQuery = query(
-                collection(db, "service_services"),
-                where("companyId", "==", user.uid),
-                where("masterCategoryId", "==", categoryDoc.masterCategoryId)
-              );
-
-              const servicesSnap = await getDocs(servicesQuery);
-              
-              for (const serviceDoc of servicesSnap.docs) {
-                const serviceData = serviceDoc.data();
-                
-                await updateDoc(serviceDoc.ref, {
+            // If no other active workers for this category, deactivate it
+            if (otherActiveWorkers.length === 0) {
+              const categoryDoc = categories.find(c => c.id === categoryId);
+              if (categoryDoc) {
+                await updateDoc(doc(db, "service_categories", categoryId), {
                   isActive: false,
                   updatedAt: new Date(),
                   autoDeactivated: true,
                 });
 
-                // Sync app_services visibility for admin services
-                if (serviceData.serviceType === "admin" && serviceData.adminServiceId) {
-                  await syncAppServiceVisibility(serviceData.adminServiceId);
-                }
-              }
+                deactivatedCategories.push(categoryDoc.name);
 
-              // Sync app_categories visibility
-              await syncAppCategoryVisibility(categoryDoc.masterCategoryId);
+                // Deactivate all services under this category
+                const servicesQuery = query(
+                  collection(db, "service_services"),
+                  where("companyId", "==", user.uid),
+                  where("masterCategoryId", "==", categoryDoc.masterCategoryId)
+                );
 
-              console.log(`✅ Category ${categoryId} and its services deactivated`);
-            }
-          }
-        }
-
-        // Show notification if categories were auto-deactivated
-        if (deactivatedCategories.length > 0) {
-          alert(
-            `Worker deactivated successfully.\n\n` +
-            `The following categories were also deactivated because no other active workers are assigned to them:\n` +
-            `• ${deactivatedCategories.join('\n• ')}`
-          );
-        }
-      }
-      
-      // If REACTIVATING a worker, reactivate their assigned categories
-      if (newStatus && technician.assignedCategories && technician.assignedCategories.length > 0) {
-        console.log("✅ Worker reactivated, checking categories:", technician.assignedCategories);
-        
-        const reactivatedCategories = [];
-        
-        // For each category assigned to this worker
-        for (const categoryId of technician.assignedCategories) {
-          console.log(`🔍 Checking category ${categoryId} for reactivation...`);
-          
-          // Fetch fresh category data from database
-          const categoryDocSnap = await getDocs(query(
-            collection(db, "service_categories"),
-            where("__name__", "==", categoryId)
-          ));
-          
-          if (!categoryDocSnap.empty) {
-            const categoryData = categoryDocSnap.docs[0].data();
-            const isActive = categoryData.isActive ?? true;
-            
-            console.log(`Category ${categoryId} current status: ${isActive ? 'active' : 'inactive'}`);
-            
-            if (!isActive) {
-              console.log(`🔄 Reactivating category ${categoryId}...`);
-              
-              // Reactivate the category
-              await updateDoc(doc(db, "service_categories", categoryId), {
-                isActive: true,
-                updatedAt: new Date(),
-                autoDeactivated: false,
-              });
-
-              reactivatedCategories.push(categoryData.name);
-
-              // Reactivate all services under this category
-              const servicesQuery = query(
-                collection(db, "service_services"),
-                where("companyId", "==", user.uid),
-                where("masterCategoryId", "==", categoryData.masterCategoryId)
-              );
-
-              const servicesSnap = await getDocs(servicesQuery);
-              
-              console.log(`Found ${servicesSnap.size} services to check for reactivation`);
-              
-              for (const serviceDoc of servicesSnap.docs) {
-                const serviceData = serviceDoc.data();
+                const servicesSnap = await getDocs(servicesQuery);
                 
-                // Reactivate if it was auto-deactivated or if it's inactive
-                if (serviceData.autoDeactivated || !(serviceData.isActive ?? true)) {
-                  console.log(`Reactivating service: ${serviceData.name}`);
+                for (const serviceDoc of servicesSnap.docs) {
+                  const serviceData = serviceDoc.data();
                   
                   await updateDoc(serviceDoc.ref, {
-                    isActive: true,
+                    isActive: false,
                     updatedAt: new Date(),
-                    autoDeactivated: false,
+                    autoDeactivated: true,
                   });
 
                   // Sync app_services visibility for admin services
@@ -516,22 +432,180 @@ const Technicians = () => {
                     await syncAppServiceVisibility(serviceData.adminServiceId);
                   }
                 }
+
+                // Sync app_categories visibility
+                await syncAppCategoryVisibility(categoryDoc.masterCategoryId);
               }
-
-              // Sync app_categories visibility
-              await syncAppCategoryVisibility(categoryData.masterCategoryId);
-
-              console.log(`✅ Category ${categoryId} and its services reactivated`);
             }
           }
         }
 
-        // Show notification if categories were auto-reactivated
+        // 2. Handle Individual Services (assigned directly to worker)
+        if (technician.assignedServices && technician.assignedServices.length > 0) {
+          for (const serviceId of technician.assignedServices) {
+            // Check if any OTHER active workers are assigned to this service
+            const otherActiveWorkers = technicians.filter(worker => 
+              worker.id !== technicianId && 
+              (worker.isActive ?? true) && 
+              worker.assignedServices?.includes(serviceId)
+            );
+
+            console.log(`📊 Service ${serviceId}: ${otherActiveWorkers.length} other active workers`);
+
+            // If no other active workers for this service, deactivate it
+            if (otherActiveWorkers.length === 0) {
+              const serviceDoc = services.find(s => s.id === serviceId);
+              if (serviceDoc) {
+                await updateDoc(doc(db, "service_services", serviceId), {
+                  isActive: false,
+                  updatedAt: new Date(),
+                  autoDeactivated: true,
+                });
+
+                deactivatedServices.push(serviceDoc.name);
+
+                // Sync app_services visibility for admin services
+                if (serviceDoc.serviceType === "admin" && serviceDoc.adminServiceId) {
+                  await syncAppServiceVisibility(serviceDoc.adminServiceId);
+                }
+              }
+            }
+          }
+        }
+
+        // Show notification
+        const messages = [];
+        if (deactivatedCategories.length > 0) {
+          messages.push(`Categories deactivated:\n• ${deactivatedCategories.join('\n• ')}`);
+        }
+        if (deactivatedServices.length > 0) {
+          messages.push(`Services deactivated:\n• ${deactivatedServices.join('\n• ')}`);
+        }
+        
+        if (messages.length > 0) {
+          alert(
+            `Worker deactivated successfully.\n\n` +
+            `The following were also deactivated because no other active workers are assigned:\n\n` +
+            messages.join('\n\n')
+          );
+        }
+      }
+      
+      // If REACTIVATING a worker
+      if (newStatus) {
+        console.log("✅ Worker reactivated, checking categories and services...");
+        
+        const reactivatedCategories = [];
+        const reactivatedServices = [];
+        
+        // 1. Handle Categories
+        if (technician.assignedCategories && technician.assignedCategories.length > 0) {
+          for (const categoryId of technician.assignedCategories) {
+            console.log(`🔍 Checking category ${categoryId} for reactivation...`);
+            
+            // Fetch fresh category data from database
+            const categoryDocSnap = await getDocs(query(
+              collection(db, "service_categories"),
+              where("__name__", "==", categoryId)
+            ));
+            
+            if (!categoryDocSnap.empty) {
+              const categoryData = categoryDocSnap.docs[0].data();
+              const isActive = categoryData.isActive ?? true;
+              
+              if (!isActive) {
+                console.log(`🔄 Reactivating category ${categoryId}...`);
+                
+                await updateDoc(doc(db, "service_categories", categoryId), {
+                  isActive: true,
+                  updatedAt: new Date(),
+                  autoDeactivated: false,
+                });
+
+                reactivatedCategories.push(categoryData.name);
+
+                // Reactivate all services under this category
+                const servicesQuery = query(
+                  collection(db, "service_services"),
+                  where("companyId", "==", user.uid),
+                  where("masterCategoryId", "==", categoryData.masterCategoryId)
+                );
+
+                const servicesSnap = await getDocs(servicesQuery);
+                
+                for (const serviceDoc of servicesSnap.docs) {
+                  const serviceData = serviceDoc.data();
+                  
+                  if (serviceData.autoDeactivated || !(serviceData.isActive ?? true)) {
+                    await updateDoc(serviceDoc.ref, {
+                      isActive: true,
+                      updatedAt: new Date(),
+                      autoDeactivated: false,
+                    });
+
+                    // Sync app_services visibility for admin services
+                    if (serviceData.serviceType === "admin" && serviceData.adminServiceId) {
+                      await syncAppServiceVisibility(serviceData.adminServiceId);
+                    }
+                  }
+                }
+
+                // Sync app_categories visibility
+                await syncAppCategoryVisibility(categoryData.masterCategoryId);
+              }
+            }
+          }
+        }
+
+        // 2. Handle Individual Services (assigned directly to worker)
+        if (technician.assignedServices && technician.assignedServices.length > 0) {
+          for (const serviceId of technician.assignedServices) {
+            console.log(`🔍 Checking service ${serviceId} for reactivation...`);
+            
+            // Fetch fresh service data from database
+            const serviceDocSnap = await getDocs(query(
+              collection(db, "service_services"),
+              where("__name__", "==", serviceId)
+            ));
+            
+            if (!serviceDocSnap.empty) {
+              const serviceData = serviceDocSnap.docs[0].data();
+              const isActive = serviceData.isActive ?? true;
+              
+              if (!isActive) {
+                console.log(`🔄 Reactivating service ${serviceId}...`);
+                
+                await updateDoc(doc(db, "service_services", serviceId), {
+                  isActive: true,
+                  updatedAt: new Date(),
+                  autoDeactivated: false,
+                });
+
+                reactivatedServices.push(serviceData.name);
+
+                // Sync app_services visibility for admin services
+                if (serviceData.serviceType === "admin" && serviceData.adminServiceId) {
+                  await syncAppServiceVisibility(serviceData.adminServiceId);
+                }
+              }
+            }
+          }
+        }
+
+        // Show notification
+        const messages = [];
         if (reactivatedCategories.length > 0) {
+          messages.push(`Categories reactivated:\n• ${reactivatedCategories.join('\n• ')}`);
+        }
+        if (reactivatedServices.length > 0) {
+          messages.push(`Services reactivated:\n• ${reactivatedServices.join('\n• ')}`);
+        }
+        
+        if (messages.length > 0) {
           alert(
             `Worker reactivated successfully.\n\n` +
-            `The following categories were also reactivated:\n` +
-            `• ${reactivatedCategories.join('\n• ')}`
+            `The following were also reactivated:\n\n` +
+            messages.join('\n\n')
           );
         }
       }
