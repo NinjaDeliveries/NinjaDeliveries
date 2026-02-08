@@ -129,9 +129,10 @@ const fetchServices = async () => {
   // };
 
   const syncAppService = async (service) => {
-  // only admin services go to app
+  // Only admin services go to app (custom services don't sync to app)
   if (service.serviceType !== "admin" || !service.adminServiceId) return;
 
+  // Check if service already exists using masterServiceId (standardized field)
   const q = query(
     collection(db, "app_services"),
     where("masterServiceId", "==", service.adminServiceId)
@@ -139,24 +140,25 @@ const fetchServices = async () => {
 
   const snap = await getDocs(q);
 
-  // already exists → do nothing
-  if (!snap.empty) return;
+  // Only add if it doesn't exist
+  if (snap.empty) {
+    // Get image URL from master service
+    let imageUrl = service.imageUrl;
+    if (!imageUrl && service.adminServiceId) {
+      const master = serviceMasters.find(s => s.id === service.adminServiceId);
+      imageUrl = master?.imageUrl || null;
+    }
 
-  // Get image URL from master service
-  let imageUrl = service.imageUrl;
-  if (!imageUrl && service.adminServiceId) {
-    const master = serviceMasters.find(s => s.id === service.adminServiceId);
-    imageUrl = master?.imageUrl || null;
+    await addDoc(collection(db, "app_services"), {
+      masterServiceId: service.adminServiceId,
+      masterCategoryId: service.categoryMasterId || service.masterCategoryId,
+      name: getServiceName(service),
+      serviceType: "admin", // ✅ Added serviceType field
+      imageUrl: imageUrl,
+      isActive: true,
+      createdAt: new Date(),
+    });
   }
-
-  await addDoc(collection(db, "app_services"), {
-    masterServiceId: service.adminServiceId,
-    masterCategoryId: service.categoryMasterId,
-    name: getServiceName(service),
-    imageUrl: imageUrl, // ✅ Image URL bhi save ho rahi hai
-    isActive: true,
-    createdAt: new Date(),
-  });
 };
 
   const fetchCategories = async () => {
@@ -202,53 +204,59 @@ const fetchServices = async () => {
   };
 
   const handleDeleteService = async (serviceId) => {
-  if (!window.confirm("Delete service?")) return;
+  if (!window.confirm("Delete service? This will remove it from your company and the app if no other company uses it.")) return;
 
   try {
     const service = services.find(s => s.id === serviceId);
     if (!service) return;
 
-    // const serviceKey =
-    //   service.serviceType === "custom"
-    //     ? `custom_${service.name.toLowerCase().trim()}`
-    //     : service.adminServiceId;
+    console.log("🗑️ Deleting service:", service.name);
 
-    // 1️⃣ delete company service
+    // 1️⃣ Delete company service from service_services
     await deleteDoc(doc(db, "service_services", serviceId));
+    console.log("✅ Deleted from service_services");
 
-    // 2️⃣ check if anyone still uses it
-    // const q = query(
-    //   collection(db, "service_services"),
-    //   where(
-    //     service.serviceType === "custom"
-    //       ? "name"
-    //       : "adminServiceId",
-    //     "==",
-    //     service.serviceType === "custom"
-    //       ? service.name
-    //       : service.adminServiceId
-    //   )
-    // );
+    // 2️⃣ Check if any other company still uses this service (only for admin services)
+    if (service.serviceType === "admin" && service.adminServiceId) {
+      const q = query(
+        collection(db, "service_services"),
+        where("adminServiceId", "==", service.adminServiceId),
+        where("isActive", "==", true)
+      );
 
-    // const snap = await getDocs(q);
+      const snap = await getDocs(q);
+      console.log(`📊 Other companies using this service: ${snap.size}`);
 
-    // 3️⃣ if nobody uses it → delete from app_services
-    // if (snap.empty) {
-    //   const appQ = query(
-    //     collection(db, "app_services"),
-    //     where("serviceKey", "==", serviceKey)
-    //   );
+      // 3️⃣ If nobody else uses it, delete from app_services
+      if (snap.empty) {
+        console.log("🗑️ No other companies use this service, removing from app_services");
+        
+        const appQ = query(
+          collection(db, "app_services"),
+          where("masterServiceId", "==", service.adminServiceId)
+        );
 
-    //   const appSnap = await getDocs(appQ);
-    //   for (const d of appSnap.docs) {
-    //     await deleteDoc(d.ref);
-    //   }
-    // }
+        const appSnap = await getDocs(appQ);
+        console.log(`📊 Found ${appSnap.size} entries in app_services to delete`);
+        
+        for (const d of appSnap.docs) {
+          await deleteDoc(d.ref);
+          console.log(`✅ Deleted from app_services: ${d.id}`);
+        }
+      } else {
+        console.log("ℹ️ Other companies still use this service, keeping in app_services");
+      }
+    } else if (service.serviceType === "custom") {
+      // For custom services, just delete from company collection
+      console.log("ℹ️ Custom service deleted (not in app_services)");
+    }
 
+    console.log("✅ Service deletion complete");
     fetchServices();
+    alert("Service deleted successfully!");
   } catch (err) {
-    console.error(err);
-    alert("Delete failed");
+    console.error("❌ Delete error:", err);
+    alert(`Delete failed: ${err.message}`);
   }
 };
 const syncAppServiceVisibility = async (adminServiceId) => {
