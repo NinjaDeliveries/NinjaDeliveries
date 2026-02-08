@@ -13,7 +13,6 @@ import {
 } from "firebase/firestore";
 import "../../style/ServiceDashboard.css";
 import AssignWorkerModal from "./AssignWorkerModal";
-
 export default function Slots() {
   const [loading, setLoading] = useState(true);
   const [bookings, setBookings] = useState([]);
