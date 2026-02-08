@@ -8,6 +8,8 @@ import {
   deleteDoc,
   doc,
   serverTimestamp,
+  query,
+  where,
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import "../../style/ServiceDashboard.css";
@@ -485,16 +487,48 @@ const AdminCategoriesServices = () => {
   };
 
   const deleteService = async (srv) => {
-    if (!window.confirm(`Delete service "${srv.name}"?`)) return;
+    if (!window.confirm(`Delete service "${srv.name}"? This will also remove it from all companies and the app.`)) return;
     
     try {
-      console.log("Deleting service:", srv.id, srv.name);
+      console.log("🗑️ Deleting master service:", srv.id, srv.name);
+      
+      // 1️⃣ Delete from service_services_master
       await deleteDoc(doc(db, "service_services_master", srv.id));
-      console.log("Service deleted successfully");
+      console.log("✅ Deleted from service_services_master");
+
+      // 2️⃣ Delete all company services that use this master service
+      const companyServicesQuery = query(
+        collection(db, "service_services"),
+        where("adminServiceId", "==", srv.id)
+      );
+      const companyServicesSnap = await getDocs(companyServicesQuery);
+      
+      console.log(`📊 Found ${companyServicesSnap.size} company services to delete`);
+      
+      for (const serviceDoc of companyServicesSnap.docs) {
+        await deleteDoc(serviceDoc.ref);
+        console.log(`✅ Deleted company service: ${serviceDoc.id}`);
+      }
+
+      // 3️⃣ Delete from app_services
+      const appServicesQuery = query(
+        collection(db, "app_services"),
+        where("masterServiceId", "==", srv.id)
+      );
+      const appServicesSnap = await getDocs(appServicesQuery);
+      
+      console.log(`📊 Found ${appServicesSnap.size} app services to delete`);
+      
+      for (const appServiceDoc of appServicesSnap.docs) {
+        await deleteDoc(appServiceDoc.ref);
+        console.log(`✅ Deleted app service: ${appServiceDoc.id}`);
+      }
+
+      console.log("✅ Master service deletion complete");
       await fetchServices();
-      alert("Service deleted successfully!");
+      alert(`Service "${srv.name}" deleted successfully from all collections!`);
     } catch (error) {
-      console.error("Error deleting service:", error);
+      console.error("❌ Error deleting service:", error);
       alert(`Error deleting service: ${error.message}`);
     }
   };

@@ -29,26 +29,25 @@ const AddServiceModal = ({ onClose, onSaved, editService }) => {
   const isEditMode = !!editService;
 
 const syncAppService = async (service) => {
-  const serviceKey =
-    service.serviceType === "custom"
-      ? `custom_${service.name.toLowerCase().trim()}`
-      : service.adminServiceId;
+  // Only admin services go to app (custom services don't sync to app)
+  if (service.serviceType !== "admin" || !service.adminServiceId) return;
 
+  // Check if service already exists using masterServiceId (standardized field)
   const q = query(
     collection(db, "app_services"),
-    where("serviceKey", "==", serviceKey)
+    where("masterServiceId", "==", service.adminServiceId)
   );
 
   const snap = await getDocs(q);
 
-  // add only once
+  // Only add if it doesn't exist
   if (snap.empty) {
     await addDoc(collection(db, "app_services"), {
-      serviceKey,
-      name: service.name,
+      masterServiceId: service.adminServiceId,
       masterCategoryId: service.masterCategoryId,
-      serviceType: service.serviceType,
-      imageUrl: service.imageUrl || null, // ✅ Image URL add kiya
+      name: service.name,
+      serviceType: "admin", // ✅ Added serviceType field
+      imageUrl: service.imageUrl || null,
       isActive: true,
       createdAt: new Date(),
     });
