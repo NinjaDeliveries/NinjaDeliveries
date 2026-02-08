@@ -23,7 +23,6 @@ const AddServiceModal = ({ onClose, onSaved, editService }) => {
       }
     },
   ]);
-
   const [serviceImage, setServiceImage] = useState(null);
   const [imagePreview, setImagePreview] = useState("");
   const [uploading, setUploading] = useState(false);
