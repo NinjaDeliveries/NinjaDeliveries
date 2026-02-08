@@ -12,7 +12,7 @@ import {
 
 const AddGlobalServiceModal = ({ onClose, onSaved }) => {
   const [name, setName] = useState("");
-  const [categoryId, setCategoryId] = useState("");
+  const [categoryId, setCategoryId] = useState(""); // Empty string = no category selected
   const [categories, setCategories] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [globalMatch, setGlobalMatch] = useState(null);
@@ -423,13 +423,17 @@ const AddGlobalServiceModal = ({ onClose, onSaved }) => {
       }
 
       await addDoc(collection(db, "service_services"), payload);
+      console.log("✅ Service added to Firestore");
 
       if (payload.masterCategoryId) {
         await syncAppCategoryVisibility(payload.masterCategoryId);
       }
 
-      onSaved();
-      onClose();
+      console.log("🔄 Calling onSaved callback...");
+      // Call onSaved - parent will handle closing modal after refresh
+      await onSaved();
+      console.log("✅ onSaved callback completed");
+      // Don't call onClose here - let parent handle it after refresh
     } catch (err) {
       console.error(err);
       alert("Error saving service");

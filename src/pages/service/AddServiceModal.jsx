@@ -6,8 +6,8 @@ import { storage } from "../../context/Firebase";
 const AddServiceModal = ({ onClose, onSaved, editService }) => {
   const [name, setName] = useState("");
   // const [categoryId, setCategoryId] = useState("");
-  const [categoryMasterId, setCategoryMasterId] = useState("");
-  const [selectedCompanyCategoryId, setSelectedCompanyCategoryId] = useState(""); // New state for company category selection
+  const [categoryMasterId, setCategoryMasterId] = useState(""); // Empty = no category selected
+  const [selectedCompanyCategoryId, setSelectedCompanyCategoryId] = useState(""); // Empty = no company category selected
   const [categories, setCategories] = useState([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [servicesLoading, setServicesLoading] = useState(false);
@@ -99,20 +99,35 @@ const fetchAdminServices = async (catId) => {
     return;
   }
 
-  // Skip if we already fetched services for this category
-  if (lastFetchedCategoryId === catId && adminServices.length > 0) {
-    return;
-  }
-
   console.log("🔍 Fetching services for category:", catId);
   setServicesLoading(true);
 
   try {
+    const user = auth.currentUser;
+    if (!user) {
+      setServicesLoading(false);
+      return;
+    }
+
     // Get the selected category name
     const selectedCategory = categories.find(cat => cat.masterCategoryId === catId);
     const categoryName = selectedCategory?.name;
     
     console.log("🔍 Category name:", categoryName);
+
+    // 🔥 FETCH COMPANY'S EXISTING SERVICES TO FILTER THEM OUT
+    const companyServicesQuery = query(
+      collection(db, "service_services"),
+      where("companyId", "==", user.uid)
+    );
+    const companyServicesSnap = await getDocs(companyServicesQuery);
+    const alreadyAddedServiceIds = new Set(
+      companyServicesSnap.docs
+        .map(doc => doc.data().adminServiceId)
+        .filter(Boolean) // Remove null/undefined values
+    );
+    
+    console.log("🚫 Already added service IDs:", Array.from(alreadyAddedServiceIds));
 
     // Fetch all services from master collection
     const snap = await getDocs(collection(db, "service_services_master"));
@@ -120,9 +135,12 @@ const fetchAdminServices = async (catId) => {
     
     console.log(`📋 Total services in master: ${allServices.length}`);
     
-    // Filter services by category name or category ID
+    // Filter services by category name or category ID AND exclude already added services
     const matchingServices = allServices.filter(service => {
       const isActive = service.isActive !== false; // Default to true if not set
+      
+      // 🔥 CHECK IF SERVICE IS ALREADY ADDED BY THIS COMPANY
+      const isAlreadyAdded = alreadyAddedServiceIds.has(service.id);
       
       // Try to match by category ID first
       const matchesCategoryId = 
@@ -140,16 +158,16 @@ const fetchAdminServices = async (catId) => {
       
       const matches = matchesCategoryId || matchesCategoryName;
       
-      console.log(`🔍 "${service.name}": active=${isActive}, categoryId match=${matchesCategoryId}, categoryName match=${matchesCategoryName}, overall match=${matches}`);
+      console.log(`🔍 "${service.name}": active=${isActive}, alreadyAdded=${isAlreadyAdded}, categoryMatch=${matches}`);
       
-      return isActive && matches;
+      // 🔥 ONLY SHOW SERVICES THAT ARE ACTIVE, MATCH CATEGORY, AND NOT ALREADY ADDED
+      return isActive && matches && !isAlreadyAdded;
     });
     
-    console.log(`✅ Found ${matchingServices.length} matching services for category "${categoryName}" (${catId})`);
+    console.log(`✅ Found ${matchingServices.length} available services (filtered out already added)`);
     
     if (matchingServices.length === 0) {
-      console.log("❌ No services match this category");
-      console.log("Available service categories:", [...new Set(allServices.map(s => s.categoryName || s.category).filter(Boolean))]);
+      console.log("❌ No available services (all may be already added)");
     }
     
     setAdminServices(matchingServices);
@@ -314,13 +332,13 @@ const fetchAdminServices = async (catId) => {
       }
       setCategories(list);
       
-      // Auto-select and preload services if there's only one category
-      if (list.length === 1 && !editService) {
-        const singleCategory = list[0];
-        setSelectedCompanyCategoryId(singleCategory.id);
-        setCategoryMasterId(singleCategory.masterCategoryId);
-        fetchAdminServices(singleCategory.masterCategoryId);
-      }
+      // Don't auto-select category - let user choose
+      // if (list.length === 1 && !editService) {
+      //   const singleCategory = list[0];
+      //   setSelectedCompanyCategoryId(singleCategory.id);
+      //   setCategoryMasterId(singleCategory.masterCategoryId);
+      //   fetchAdminServices(singleCategory.masterCategoryId);
+      // }
     } catch (err) {
       console.error("Fetch categories error:", err);
       setCategories([]);
@@ -408,6 +426,11 @@ const fetchAdminServices = async (catId) => {
   // Fetch categories immediately when modal opens
   useEffect(() => {
     fetchCategories();
+    // Clear the service cache when modal opens (so it refetches with updated filters)
+    if (!editService) {
+      setLastFetchedCategoryId(null);
+      setAdminServices([]);
+    }
   }, []); // Remove dependency to load immediately
 
  
@@ -551,11 +574,15 @@ if (isCustomService) {
     if (isEditMode) {
       // update service
       await updateDoc(doc(db, "service_services", editService.id), payload);
-      onSaved({ ...payload, id: editService.id });
+      console.log("✅ Service updated in Firestore:", editService.id);
+      console.log("🔄 Calling onSaved callback...");
+      await onSaved({ ...payload, id: editService.id });
+      console.log("✅ onSaved callback completed");
     } else {
       // create service
       payload.createdAt = new Date();
       const docRef = await addDoc(collection(db, "service_services"), payload);
+      console.log("✅ Service added to Firestore:", docRef.id);
 
       // ✅ sync with app_services
       await syncAppService({
@@ -563,10 +590,12 @@ if (isCustomService) {
         id: docRef.id,
       });
       
-      onSaved({ ...payload, id: docRef.id });
+      console.log("🔄 Calling onSaved callback...");
+      await onSaved({ ...payload, id: docRef.id });
+      console.log("✅ onSaved callback completed");
     }
 
-    onClose(); 
+    // Don't call onClose here - let parent handle it after refresh
   } catch (error) {
     console.error("Error saving service:", error);
     alert("Error saving service. Please try again.");
@@ -672,6 +701,8 @@ if (isCustomService) {
                    setSelectedServiceId("");
                    setIsCustomService(false);
                    setName("");
+                   // Clear cache to force refetch with updated filters
+                   setLastFetchedCategoryId(null);
                    fetchAdminServices(masterCatId);
                  } else {
                    setCategoryMasterId("");

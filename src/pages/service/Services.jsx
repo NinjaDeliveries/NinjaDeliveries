@@ -59,6 +59,8 @@ const fetchServices = async () => {
     const user = auth.currentUser;
     if (!user) return;
 
+    console.log("🔄 Fetching services...");
+
     // Fetch company services
     let q = query(
       collection(db, "service_services"),
@@ -66,6 +68,7 @@ const fetchServices = async () => {
     );
 
     let snap = await getDocs(q);
+    console.log(`📊 Found ${snap.docs.length} services`);
 
     // If no results, try with serviceId field
     if (snap.docs.length === 0) {
@@ -74,6 +77,7 @@ const fetchServices = async () => {
         where("serviceId", "==", user.uid)
       );
       snap = await getDocs(q);
+      console.log(`📊 Found ${snap.docs.length} services with serviceId field`);
     }
 
     // ✅ Fetch master services to get images (exactly like categories!)
@@ -96,6 +100,7 @@ const fetchServices = async () => {
       };
     });
 
+    console.log("✅ Services loaded:", list.length);
     setServices(list);
   } catch (err) {
     console.error("Fetch services error:", err);
@@ -808,15 +813,19 @@ const formatAvailability = (availability, unit) => {
 
       {openModal && (
   <AddServiceModal
-    onClose={handleCloseModal}
+    onClose={() => {
+      setOpenModal(false);
+      setEditService(null);
+    }}
     onSaved={async (newService) => {
-      await syncAppService(newService); // 🔥 THIS CREATES app_services
-      // Small delay to ensure database write is completed
-      setTimeout(() => {
-        fetchServices();
-        fetchCategories();
-      }, 500);
-      setOpenModal(false); // Close modal after successful save
+      console.log("📥 onSaved callback triggered for:", newService);
+      await syncAppService(newService);
+      await fetchServices();
+      await fetchCategories();
+      console.log("✅ Fetch completed, closing modal");
+      // Close modal after refresh completes
+      setOpenModal(false);
+      setEditService(null);
     }}
     editService={editService}
   />
@@ -824,14 +833,16 @@ const formatAvailability = (availability, unit) => {
 
       {openGlobalServiceModal && (
   <AddGlobalServiceModal
-    onClose={() => setOpenGlobalServiceModal(false)}
-    onSaved={() => {
-      // Small delay to ensure database write is completed
-      setTimeout(() => {
-        fetchServices();
-        fetchCategories();
-      }, 500);
-      setOpenGlobalServiceModal(false); // Close modal after successful save
+    onClose={() => {
+      setOpenGlobalServiceModal(false);
+    }}
+    onSaved={async () => {
+      console.log("📥 onSaved callback triggered");
+      await fetchServices();
+      await fetchCategories();
+      console.log("✅ Fetch completed, closing modal");
+      // Close modal after refresh completes
+      setOpenGlobalServiceModal(false);
     }}
   />
 )}
