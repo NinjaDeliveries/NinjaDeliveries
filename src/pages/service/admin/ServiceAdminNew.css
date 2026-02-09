@@ -1,0 +1,440 @@
+/* Service Admin Dashboard - Professional CSS Styles */
+
+/* ========================================
+   GLOBAL STYLES & VARIABLES
+   ======================================== */
+:root {
+  /* Color Palette */
+  --primary-color: #2563eb;
+  --primary-dark: #1e40af;
+  --primary-light: #3b82f6;
+  --secondary-color: #10b981;
+  --secondary-dark: #059669;
+  --accent-color: #f59e0b;
+  --accent-dark: #d97706;
+  
+  /* Neutral Colors */
+  --white: #ffffff;
+  --gray-50: #f9fafb;
+  --gray-100: #f3f4f6;
+  --gray-200: #e5e7eb;
+  --gray-300: #d1d5db;
+  --gray-400: #9ca3af;
+  --gray-500: #6b7280;
+  --gray-600: #4b5563;
+  --gray-700: #374151;
+  --gray-800: #1f2937;
+  --gray-900: #111827;
+  
+  /* Status Colors */
+  --success-color: #10b981;
+  --warning-color: #f59e0b;
+  --error-color: #ef4444;
+  --info-color: #3b82f6;
+  
+  /* Dark Mode Colors */
+  --dark-bg: #0f172a;
+  --dark-surface: #1e293b;
+  --dark-border: #334155;
+  --dark-text: #f1f5f9;
+  --dark-text-secondary: #94a3b8;
+  
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-2xl: 48px;
+  
+  /* Border Radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-normal: 250ms ease;
+  --transition-slow: 350ms ease;
+}
+
+/* ========================================
+   MAIN LAYOUT
+   ======================================== */
+.service-admin {
+  display: flex;
+  min-height: 100vh;
+  background: var(--gray-50);
+  color: var(--gray-900);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+.service-admin.dark {
+  background: var(--dark-bg);
+  color: var(--dark-text);
+}
+
+/* ========================================
+   MAIN CONTENT AREA
+   ======================================== */
+.admin-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin-left: 280px;
+  transition: margin-left var(--transition-normal);
+  min-height: 100vh;
+}
+
+.admin-main.sidebar-collapsed {
+  margin-left: 80px;
+}
+
+.admin-content {
+  flex: 1;
+  padding: var(--spacing-lg);
+  max-width: 100%;
+  overflow-y: auto;
+}
+
+/* ========================================
+   CONNECTION STATUS
+   ======================================== */
+.connection-status {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-lg);
+  font-size: 12px;
+  font-weight: 500;
+  z-index: 1000;
+  box-shadow: var(--shadow-md);
+  transition: all var(--transition-normal);
+}
+
+.connection-status.connected {
+  color: var(--success-color);
+  border-color: var(--success-color);
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.connection-status.connecting {
+  color: var(--warning-color);
+  border-color: var(--warning-color);
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.connection-status.error {
+  color: var(--error-color);
+  border-color: var(--error-color);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.dark .connection-status {
+  background: var(--dark-surface);
+  border-color: var(--dark-border);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* ========================================
+   ERROR STATE
+   ======================================== */
+.admin-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  padding: var(--spacing-xl);
+  text-align: center;
+}
+
+.admin-error h2 {
+  color: var(--error-color);
+  margin-bottom: var(--spacing-md);
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.admin-error p {
+  color: var(--gray-600);
+  margin-bottom: var(--spacing-lg);
+  font-size: 16px;
+}
+
+.admin-error button {
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: var(--primary-color);
+  color: var(--white);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color var(--transition-normal);
+}
+
+.admin-error button:hover {
+  background: var(--primary-dark);
+}
+
+/* ========================================
+   SECTION HEADERS
+   ======================================== */
+.admin-overview h2,
+.services-section h2,
+.analytics-section h2,
+.settings-section h2 {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--gray-900);
+  margin-bottom: var(--spacing-sm);
+  line-height: 1.2;
+}
+
+.dark .admin-overview h2,
+.dark .services-section h2,
+.dark .analytics-section h2,
+.dark .settings-section h2 {
+  color: var(--dark-text);
+}
+
+.admin-overview p,
+.services-section p,
+.analytics-section p,
+.settings-section p {
+  color: var(--gray-600);
+  font-size: 16px;
+  margin-bottom: var(--spacing-xl);
+}
+
+.dark .admin-overview p,
+.dark .services-section p,
+.dark .analytics-section p,
+.dark .settings-section p {
+  color: var(--dark-text-secondary);
+}
+
+/* ========================================
+   LOADING STATES
+   ======================================== */
+.loading-spinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+}
+
+.loading-spinner::after {
+  content: '';
+  width: 40px;
+  height: 40px;
+  border: 4px solid var(--gray-200);
+  border-top: 4px solid var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--gray-200) 25%, var(--gray-300) 50%, var(--gray-200) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-md);
+}
+
+.dark .skeleton {
+  background: linear-gradient(90deg, var(--gray-700) 25%, var(--gray-600) 50%, var(--gray-700) 75%);
+  background-size: 200% 100%;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* ========================================
+   RESPONSIVE DESIGN
+   ======================================== */
+@media (max-width: 1200px) {
+  .admin-main {
+    margin-left: 240px;
+  }
+  
+  .admin-main.sidebar-collapsed {
+    margin-left: 70px;
+  }
+  
+  .admin-content {
+    padding: var(--spacing-md);
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-main {
+    margin-left: 0;
+  }
+  
+  .admin-main.sidebar-collapsed {
+    margin-left: 0;
+  }
+  
+  .admin-content {
+    padding: var(--spacing-sm);
+  }
+  
+  .connection-status {
+    top: 70px;
+    right: 10px;
+    font-size: 11px;
+  }
+  
+  .admin-overview h2,
+  .services-section h2,
+  .analytics-section h2,
+  .settings-section h2 {
+    font-size: 24px;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-content {
+    padding: var(--spacing-xs);
+  }
+  
+  .admin-overview h2,
+  .services-section h2,
+  .analytics-section h2,
+  .settings-section h2 {
+    font-size: 20px;
+  }
+  
+  .admin-overview p,
+  .services-section p,
+  .analytics-section p,
+  .settings-section p {
+    font-size: 14px;
+  }
+}
+
+/* ========================================
+   DARK MODE TRANSITIONS
+   ======================================== */
+.service-admin,
+.service-admin * {
+  transition: background-color var(--transition-normal),
+              color var(--transition-normal),
+              border-color var(--transition-normal);
+}
+
+/* ========================================
+   UTILITY CLASSES
+   ======================================== */
+.text-center { text-align: center; }
+.text-left { text-align: left; }
+.text-right { text-align: right; }
+
+.font-bold { font-weight: 700; }
+.font-semibold { font-weight: 600; }
+.font-medium { font-weight: 500; }
+
+.text-sm { font-size: 14px; }
+.text-xs { font-size: 12px; }
+
+.mb-0 { margin-bottom: 0; }
+.mb-1 { margin-bottom: var(--spacing-xs); }
+.mb-2 { margin-bottom: var(--spacing-sm); }
+.mb-3 { margin-bottom: var(--spacing-md); }
+.mb-4 { margin-bottom: var(--spacing-lg); }
+
+.mt-0 { margin-top: 0; }
+.mt-1 { margin-top: var(--spacing-xs); }
+.mt-2 { margin-top: var(--spacing-sm); }
+.mt-3 { margin-top: var(--spacing-md); }
+.mt-4 { margin-top: var(--spacing-lg); }
+
+.p-0 { padding: 0; }
+.p-1 { padding: var(--spacing-xs); }
+.p-2 { padding: var(--spacing-sm); }
+.p-3 { padding: var(--spacing-md); }
+.p-4 { padding: var(--spacing-lg); }
+
+.hidden { display: none; }
+.block { display: block; }
+.flex { display: flex; }
+.inline-flex { display: inline-flex; }
+
+.items-center { align-items: center; }
+.items-start { align-items: flex-start; }
+.items-end { align-items: flex-end; }
+
+.justify-center { justify-content: center; }
+.justify-between { justify-content: space-between; }
+.justify-start { justify-content: flex-start; }
+.justify-end { justify-content: flex-end; }
+
+.w-full { width: 100%; }
+.h-full { height: 100%; }
+
+.rounded-sm { border-radius: var(--radius-sm); }
+.rounded-md { border-radius: var(--radius-md); }
+.rounded-lg { border-radius: var(--radius-lg); }
+.rounded-xl { border-radius: var(--radius-xl); }
+
+.shadow-sm { box-shadow: var(--shadow-sm); }
+.shadow-md { box-shadow: var(--shadow-md); }
+.shadow-lg { box-shadow: var(--shadow-lg); }
+.shadow-xl { box-shadow: var(--shadow-xl); }
+
+.cursor-pointer { cursor: pointer; }
+.cursor-not-allowed { cursor: not-allowed; }
+
+.select-none { user-select: none; }
+.select-text { user-select: text; }
+
+.overflow-hidden { overflow: hidden; }
+.overflow-auto { overflow: auto; }
+.overflow-scroll { overflow: scroll; }
+
+.relative { position: relative; }
+.absolute { position: absolute; }
+.fixed { position: fixed; }
+.sticky { position: sticky; }
+
+.z-10 { z-index: 10; }
+.z-20 { z-index: 20; }
+.z-30 { z-index: 30; }
+.z-40 { z-index: 40; }
+.z-50 { z-index: 50; }

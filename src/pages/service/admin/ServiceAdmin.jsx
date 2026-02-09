@@ -1,8 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { db } from '../../../context/Firebase';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, limit, where, serverTimestamp, addDoc } from 'firebase/firestore';
+import { getDatabase, ref, onValue, off } from 'firebase/database';
 import { toast } from 'react-toastify';
 import './ServiceAdmin.css';
+import { detectDevice } from '../../../utils/deviceDetection';
+import CompanyActivityDetails from './CompanyActivityDetails';
 
 const ServiceAdmin = () => {
   const [companies, setCompanies] = useState([]);
@@ -16,142 +19,89 @@ const ServiceAdmin = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
+  const [itemsPerPage] = useState(20); // Changed from 10 to 20
   const [lastUpdated, setLastUpdated] = useState(new Date());
+  const [onlineCompanies, setOnlineCompanies] = useState(new Set());
+  const [connectionStatus, setConnectionStatus] = useState('connected');
+  const [selectedCompany, setSelectedCompany] = useState(null); // For activity details modal
 
-  const refreshData = () => {
-    setLastUpdated(new Date());
-    toast.success('Data refreshed successfully');
-  };
+  // Refs for cleanup
+  const unsubscribeRefs = useRef({});
+  const realtimeRefs = useRef({});
 
-  useEffect(() => {
-    setupRealtimeListeners();
-    const savedDarkMode = localStorage.getItem('serviceAdmin_darkMode') === 'true';
-    setDarkMode(savedDarkMode);
+  // Cleanup listeners
+  const cleanupListeners = useCallback(() => {
+    Object.values(unsubscribeRefs.current).forEach(unsubscribe => {
+      if (unsubscribe) unsubscribe();
+    });
+    Object.values(realtimeRefs.current).forEach(unsubscribe => {
+      if (unsubscribe) unsubscribe();
+    });
+    unsubscribeRefs.current = {};
+    realtimeRefs.current = {};
   }, []);
 
-  // Regenerate activity logs when companies data changes
-  useEffect(() => {
-    if (companies.length > 0) {
-      // Add a small delay to ensure companies data is fully processed
-      setTimeout(() => {
-        generateSampleActivityLogs();
-      }, 200);
+  // Log activity with device detection
+  const logActivity = useCallback(async (action, companyId, details = {}) => {
+    try {
+      const deviceInfo = detectDevice(navigator.userAgent);
+      
+      // Find company name from companies list
+      let companyName = 'Admin';
+      if (companyId && companyId !== 'admin') {
+        const company = companies.find(c => c.id === companyId);
+        companyName = company?.companyName || company?.name || company?.businessName || details.companyName || 'Unknown Company';
+      }
+      
+      const activityData = {
+        companyId,
+        companyName, // Store company name directly in the log
+        userId: 'admin',
+        action,
+        details: {
+          action: details.action || action.replace('_', ' ').toUpperCase(),
+          timestamp: details.timestamp || new Date().toISOString(),
+          ...details
+        },
+        deviceInfo: {
+          userAgent: navigator.userAgent,
+          device: deviceInfo.device || 'Desktop',
+          browser: deviceInfo.browser || 'Unknown',
+          os: deviceInfo.os || 'Unknown',
+          ip: details.ip || '192.168.1.1' // Get from server or use Cloud Function
+        },
+        timestamp: serverTimestamp(),
+        type: 'admin',
+        success: details.success !== false // Default to true unless explicitly false
+      };
+
+      const docRef = await addDoc(collection(db, 'service_activity_logs'), activityData);
+      console.log('Activity logged successfully:', docRef.id, activityData);
+      return docRef;
+    } catch (error) {
+      console.error('Failed to log activity:', error);
     }
   }, [companies]);
 
-  const setupRealtimeListeners = async () => {
+  const refreshData = useCallback(async () => {
+    console.log('Refresh button clicked');
+    toast.success('Data refreshed successfully');
+    setLastUpdated(new Date());
+    
+    // Log the refresh activity with proper success status
     try {
-      setLoading(true);
-      
-      // Companies listener
-      onSnapshot(
-        collection(db, 'service_company'), 
-        (snapshot) => {
-          const companiesList = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          }));
-          setCompanies(companiesList);
-          setLastUpdated(new Date());
-          
-          // Generate activity logs with real company data after companies are loaded
-          if (companiesList.length > 0) {
-            setTimeout(() => generateSampleActivityLogs(), 100);
-          }
-        },
-        (error) => {
-          console.error('Companies listener error:', error);
-          toast.error('Failed to load companies data');
-        }
-      );
-
-      // Services listener
-      onSnapshot(
-        collection(db, 'service_services'), 
-        (snapshot) => {
-          const servicesList = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          }));
-          setServices(servicesList);
-          setLastUpdated(new Date());
-        },
-        (error) => {
-          console.error('Services listener error:', error);
-        }
-      );
-
-      // Categories listener
-      onSnapshot(
-        collection(db, 'service_categories_master'), 
-        (snapshot) => {
-          const categoriesList = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          }));
-          setCategories(categoriesList);
-          setLastUpdated(new Date());
-        }
-      );
-
-      // Try to load real activity logs from Firebase (if collection exists)
-      try {
-        onSnapshot(
-          collection(db, 'service_activity_logs'), 
-          (snapshot) => {
-            if (snapshot.docs.length > 0) {
-              const realLogs = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-              }));
-              setActivityLogs(realLogs);
-            } else {
-              // If no real logs, generate sample data
-              generateSampleActivityLogs();
-            }
-          },
-          (error) => {
-            generateSampleActivityLogs();
-          }
-        );
-      } catch (error) {
-        console.log('Activity logs collection not available, using sample data');
-        generateSampleActivityLogs();
-      }
-      
-      setLoading(false);
-      
-    } catch (error) {
-      console.error('Error setting up listeners:', error);
-      toast.error('Failed to setup real-time data');
-      setLoading(false);
-    }
-  };
-
-  const generateSampleActivityLogs = () => {
-    // Only generate if we have real companies loaded
-    if (companies.length > 0) {
-      const actions = ['Login', 'Logout', 'Service Added', 'Service Updated', 'Booking Received', 'Profile Updated'];
-      const sampleLogs = Array.from({ length: 50 }, (_, index) => {
-        const randomCompany = companies[index % companies.length];
-        const companyName = randomCompany.companyName || randomCompany.name || randomCompany.businessName || 'Unknown Company';
-        
-        return {
-          id: `log_${index}`,
-          companyId: randomCompany.id,
-          companyName: companyName,
-          action: actions[index % actions.length],
-          timestamp: new Date(Date.now() - index * 3600000).toISOString(),
-          success: index % 7 !== 0,
-          ipAddress: `192.168.1.${100 + (index % 50)}`,
-          device: index % 3 === 0 ? 'Mobile' : 'Web',
-          details: `Action performed from ${index % 3 === 0 ? 'Mobile App' : 'Web Dashboard'}`
-        };
+      const result = await logActivity('refresh_data', 'admin', { 
+        action: 'Data refreshed from admin panel',
+        timestamp: new Date().toISOString(),
+        success: true
       });
-      setActivityLogs(sampleLogs);
+      console.log('Refresh activity logged:', result);
+    } catch (error) {
+      console.error('Failed to log refresh activity:', error);
     }
-  };
+  }, [logActivity]);
+
+  // Removed demo data generation - only use real Firestore data
 
   const exportToCSV = (data, filename) => {
     if (data.length === 0) {
@@ -162,7 +112,7 @@ const ServiceAdmin = () => {
     const headers = Object.keys(data[0]);
     const csvContent = [
       headers.join(','),
-      ...data.map(row => 
+      ...data.map(row =>
         headers.map(header => {
           const value = row[header];
           // Handle values that might contain commas or quotes
@@ -183,7 +133,7 @@ const ServiceAdmin = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
+
     toast.success(`${filename} exported successfully`);
   };
 
@@ -191,49 +141,212 @@ const ServiceAdmin = () => {
     const newDarkMode = !darkMode;
     setDarkMode(newDarkMode);
     localStorage.setItem('serviceAdmin_darkMode', newDarkMode.toString());
+    logActivity('toggle_dark_mode', 'admin', { 
+      newMode: newDarkMode ? 'dark' : 'light',
+      timestamp: new Date().toISOString()
+    });
   };
-  const filteredCompanies = companies.filter(company => {
-    const companyName = company.companyName || company.name || company.businessName || company.title || '';
-    const matchesSearch = !searchTerm || 
-      companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (company.email || '').toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = statusFilter === 'all' || 
-      (statusFilter === 'active' && company.isActive) ||
-      (statusFilter === 'inactive' && !company.isActive) ||
-      (statusFilter === 'online' && company.isOnline);
-    
-    return matchesSearch && matchesStatus;
-  });
+
+  const setupRealtimeListeners = useCallback(async () => {
+    try {
+      setLoading(true);
+      setConnectionStatus('connecting');
+
+      // Cleanup existing listeners
+      cleanupListeners();
+
+      // Companies listener with error handling
+      try {
+        const companiesQuery = query(
+          collection(db, 'service_company'),
+          orderBy('createdAt', 'desc')
+        );
+
+        const unsubscribeCompanies = onSnapshot(
+          companiesQuery,
+          (snapshot) => {
+            try {
+              const companiesList = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+                createdAt: doc.data().createdAt?.toDate(),
+                lastLogin: doc.data().lastLogin?.toDate()
+              }));
+              setCompanies(companiesList);
+            } catch (error) {
+              console.error('Error processing companies data:', error);
+            }
+          },
+          (error) => {
+            console.error('Companies listener error:', error);
+            toast.error('Failed to load companies data');
+            setConnectionStatus('error');
+          }
+        );
+        unsubscribeRefs.current.companies = unsubscribeCompanies;
+      } catch (error) {
+        console.error('Error setting up companies listener:', error);
+      }
+
+      // Services listener with error handling
+      try {
+        const servicesQuery = query(
+          collection(db, 'service_services'),
+          orderBy('createdAt', 'desc')
+        );
+
+        const unsubscribeServices = onSnapshot(
+          servicesQuery,
+          (snapshot) => {
+            try {
+              const servicesList = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+                createdAt: doc.data().createdAt?.toDate()
+              }));
+              setServices(servicesList);
+            } catch (error) {
+              console.error('Error processing services data:', error);
+            }
+          },
+          (error) => {
+            console.error('Services listener error:', error);
+          }
+        );
+        unsubscribeRefs.current.services = unsubscribeServices;
+      } catch (error) {
+        console.error('Error setting up services listener:', error);
+      }
+
+      // Categories listener with error handling - simplified query
+      try {
+        console.log('Setting up categories listener...');
+        const categoriesQuery = query(
+          collection(db, 'service_categories_master'),
+          orderBy('name')
+        );
+
+        const unsubscribeCategories = onSnapshot(
+          categoriesQuery,
+          (snapshot) => {
+            try {
+              console.log('Categories snapshot received:', snapshot.docs.length, 'documents');
+              const categoriesList = snapshot.docs
+                .map(doc => {
+                  const data = doc.data();
+                  console.log('Category document:', { id: doc.id, ...data });
+                  return {
+                    id: doc.id,
+                    ...data,
+                    createdAt: data.createdAt?.toDate()
+                  };
+                })
+                .filter(category => category.status === 'active'); // Filter in JS instead of query
+              
+              console.log('Final categories list:', categoriesList);
+              setCategories(categoriesList);
+            } catch (error) {
+              console.error('Error processing categories data:', error);
+            }
+          },
+          (error) => {
+            console.error('Categories listener error:', error);
+          }
+        );
+        unsubscribeRefs.current.categories = unsubscribeCategories;
+      } catch (error) {
+        console.error('Error setting up categories listener:', error);
+      }
+
+      // Real-time online status using Realtime Database with error handling
+      try {
+        const database = getDatabase();
+        const onlineStatusRef = ref(database, 'onlineStatus');
+
+        const unsubscribeOnline = onValue(
+          onlineStatusRef,
+          (snapshot) => {
+            try {
+              const onlineData = snapshot.val() || {};
+              const onlineSet = new Set();
+
+              Object.keys(onlineData).forEach(companyId => {
+                if (onlineData[companyId].isOnline) {
+                  onlineSet.add(companyId);
+                }
+              });
+
+              setOnlineCompanies(onlineSet);
+            } catch (error) {
+              console.error('Error processing online status data:', error);
+            }
+          },
+          (error) => {
+            console.error('Online status listener error:', error);
+          }
+        );
+        realtimeRefs.current.online = unsubscribeOnline;
+      } catch (error) {
+        console.error('Error setting up online status listener:', error);
+      }
+
+      setConnectionStatus('connected');
+      setLoading(false);
+      setLastUpdated(new Date());
+
+    } catch (error) {
+      console.error('Error setting up listeners:', error);
+      toast.error('Failed to setup real-time data');
+      setConnectionStatus('error');
+      setLoading(false);
+    }
+  }, [cleanupListeners]);
 
   const filteredServices = services.filter(service => {
-    const matchesSearch = !searchTerm || 
+    const matchesSearch = !searchTerm ||
       (service.serviceName || service.name || service.title || '').toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     let matchesCategory = selectedCategory === 'all';
     if (!matchesCategory && selectedCategory !== 'all') {
       // Try multiple ways to match category
       matchesCategory = service.categoryId === selectedCategory ||
-                       service.category === selectedCategory ||
-                       service.categoryName === selectedCategory;
-      
+        service.category === selectedCategory ||
+        service.categoryName === selectedCategory;
+
       // Also try to match by category name
       if (!matchesCategory) {
         const category = categories.find(c => c.id === selectedCategory);
         if (category) {
           matchesCategory = service.category === category.name ||
-                           service.categoryName === category.name;
+            service.categoryName === category.name;
         }
       }
     }
-    
+
     return matchesSearch && matchesCategory;
   });
 
   const filteredLogs = activityLogs.filter(log => {
-    return !searchTerm || 
+    return !searchTerm ||
       log.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       log.action.toLowerCase().includes(searchTerm.toLowerCase());
+  });
+
+  const filteredCompanies = companies.filter(company => {
+    const matchesSearch = !searchTerm ||
+      (company.companyName || company.name || company.businessName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (company.email || '').toLowerCase().includes(searchTerm.toLowerCase());
+
+    let matchesStatus = statusFilter === 'all';
+    if (statusFilter === 'active') {
+      matchesStatus = company.isActive === true;
+    } else if (statusFilter === 'inactive') {
+      matchesStatus = company.isActive === false;
+    } else if (statusFilter === 'online') {
+      matchesStatus = onlineCompanies.has(company.id);
+    }
+
+    return matchesSearch && matchesStatus;
   });
 
   // Pagination
@@ -244,20 +357,99 @@ const ServiceAdmin = () => {
 
   const getTotalPages = (dataLength) => Math.ceil(dataLength / itemsPerPage);
 
-  // Filter and search functions
+  // Set up real-time listeners when component mounts
+  useEffect(() => {
+    setupRealtimeListeners();
+    
+    // Cleanup on unmount
+    return () => {
+      cleanupListeners();
+    };
+  }, [setupRealtimeListeners, cleanupListeners]);
+
+  // Setup activity logs listener after companies are loaded
+  useEffect(() => {
+    if (companies.length === 0) return;
+
+    // Load real activity logs from Firebase with error handling
+    try {
+      const activityQuery = query(
+        collection(db, 'service_activity_logs'),
+        orderBy('timestamp', 'desc'),
+        limit(100)
+      );
+
+      const unsubscribeActivity = onSnapshot(
+        activityQuery,
+        (snapshot) => {
+          try {
+            const realLogs = snapshot.docs.map(doc => {
+              const data = doc.data();
+              
+              // Find company name from companies list
+              const company = companies.find(c => c.id === data.companyId);
+              const companyName = company?.companyName || company?.name || company?.businessName || data.companyName || 'Unknown Company';
+              
+              return {
+                id: doc.id,
+                ...data,
+                companyName: companyName, // Add company name from real data
+                // Ensure timestamp is properly converted
+                timestamp: data.timestamp?.toDate ? data.timestamp.toDate() : data.timestamp,
+                // Ensure success field has a default value
+                success: data.success !== false,
+                // Extract device info properly
+                device: data.deviceInfo?.device || data.device || 'Unknown',
+                ipAddress: data.deviceInfo?.ip || data.ipAddress || 'N/A'
+              };
+            });
+            setActivityLogs(realLogs);
+            console.log('Loaded real activity logs:', realLogs.length);
+          } catch (error) {
+            console.error('Error processing activity logs data:', error);
+            setActivityLogs([]); // Set empty array instead of generating demo data
+          }
+        },
+        (error) => {
+          console.error('Activity logs listener error:', error);
+          setActivityLogs([]); // Set empty array instead of generating demo data
+        }
+      );
+      
+      // Store unsubscribe function
+      unsubscribeRefs.current.activity = unsubscribeActivity;
+
+      // Cleanup function
+      return () => {
+        if (unsubscribeActivity) {
+          unsubscribeActivity();
+        }
+      };
+    } catch (error) {
+      console.log('Activity logs collection not available:', error);
+      setActivityLogs([]); // Set empty array instead of generating demo data
+    }
+  }, [companies]); // Re-run when companies change
+
+  // Enhanced analytics with online status
   const analytics = {
     totalCompanies: companies.length,
     activeCompanies: companies.filter(c => c.isActive).length,
     inactiveCompanies: companies.filter(c => !c.isActive).length,
-    onlineCompanies: companies.filter(c => c.isOnline).length,
+    onlineCompanies: onlineCompanies.size,
     totalServices: services.length,
     activeServices: services.filter(s => s.isActive).length,
     totalCategories: categories.length,
     recentActivity: activityLogs.filter(log => {
-      const logDate = new Date(log.timestamp);
+      if (!log.timestamp) return false;
+      const logDate = typeof log.timestamp === 'object' ? 
+        new Date(log.timestamp.seconds ? log.timestamp.seconds * 1000 : log.timestamp) :
+        new Date(log.timestamp);
       const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
       return logDate > dayAgo;
     }).length,
+    connectionStatus,
+    lastUpdated
   };
 
   if (loading) {
@@ -298,7 +490,7 @@ const ServiceAdmin = () => {
               <span style={{ color: darkMode ? '#94a3b8' : '#64748b' }}>Live Data</span>
             </div>
             <div style={{ fontSize: '12px', color: darkMode ? '#94a3b8' : '#64748b' }}>
-              Last updated: {lastUpdated.toLocaleTimeString()}
+              Last updated: {lastUpdated.toLocaleTimeString()} {lastUpdated.toLocaleDateString()}
             </div>
             <button
               onClick={refreshData}
@@ -542,6 +734,7 @@ const ServiceAdmin = () => {
               services={services}
               darkMode={darkMode}
               totalCompanies={filteredCompanies.length}
+              onViewActivity={(company) => setSelectedCompany(company)}
             />
 
             {/* Pagination */}
@@ -715,6 +908,16 @@ const ServiceAdmin = () => {
           </div>
         )}
       </div>
+
+      {/* Company Activity Details Modal */}
+      {selectedCompany && (
+        <CompanyActivityDetails
+          companyId={selectedCompany.id}
+          companyName={selectedCompany.companyName || selectedCompany.name || selectedCompany.businessName || 'Unknown Company'}
+          onClose={() => setSelectedCompany(null)}
+          darkMode={darkMode}
+        />
+      )}
     </div>
   );
 };
@@ -768,7 +971,7 @@ const StatsCard = ({ title, value, subtitle, icon, darkMode, trend }) => {
 };
 
 // Companies Table Component
-const CompaniesTable = ({ companies, services, darkMode, totalCompanies }) => {
+const CompaniesTable = ({ companies, services, darkMode, totalCompanies, onViewActivity }) => {
   if (companies.length === 0) {
     return (
       <div style={{
@@ -835,6 +1038,10 @@ const CompaniesTable = ({ companies, services, darkMode, totalCompanies }) => {
                 ...styles.th,
                 color: darkMode ? '#e2e8f0' : '#374151'
               }}>Last Active</th>
+              <th style={{
+                ...styles.th,
+                color: darkMode ? '#e2e8f0' : '#374151'
+              }}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -908,6 +1115,23 @@ const CompaniesTable = ({ companies, services, darkMode, totalCompanies }) => {
                   }}>
                     {company.lastActive ? new Date(company.lastActive).toLocaleDateString() : 'Never'}
                   </span>
+                </td>
+                <td style={styles.td}>
+                  <button
+                    onClick={() => onViewActivity(company)}
+                    style={{
+                      padding: '6px 12px',
+                      backgroundColor: '#3b82f6',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      fontWeight: '500'
+                    }}
+                  >
+                    📊 View Activity
+                  </button>
                 </td>
               </tr>
             ))}
@@ -989,7 +1213,43 @@ const ServicesTable = ({ services, categories, companies, darkMode }) => {
             {services.map(service => {
               const company = companies.find(c => c.id === service.companyId);
               
-              // Try multiple ways to find the category
+              // Smart categorization based on service name
+              const getServiceCategory = (serviceName) => {
+                const name = (serviceName || '').toLowerCase();
+                
+                // Pet grooming services
+                if (name.includes('breed') || name.includes('bath') || name.includes('grooming') || 
+                    name.includes('nail') || name.includes('paw') || name.includes('ear') || 
+                    name.includes('hygiene') || name.includes('cleaning')) {
+                  return 'Pet Grooming';
+                }
+                
+                // Dance services
+                if (name.includes('dance') || name.includes('choreography') || name.includes('workshop') || 
+                    name.includes('masterclass') || name.includes('hip-hop') || name.includes('contemporary') || 
+                    name.includes('bollywood') || name.includes('freestyle') || name.includes('kathak') || 
+                    name.includes('bharatanatyam') || name.includes('classical') || name.includes('camp')) {
+                  return 'Dance & Fitness';
+                }
+                
+                // Plumbing services
+                if (name.includes('fitting') || name.includes('tank') || name.includes('basin') || 
+                    name.includes('sink') || name.includes('washroom') || name.includes('pipe') || 
+                    name.includes('tap') || name.includes('flush') || name.includes('leakage') || 
+                    name.includes('plumbing')) {
+                  return 'Plumbing & Fitting';
+                }
+                
+                // Health & Fitness
+                if (name.includes('weight') || name.includes('fitness') || name.includes('health') || 
+                    name.includes('exercise') || name.includes('training')) {
+                  return 'Health & Fitness';
+                }
+                
+                return 'General Service';
+              };
+              
+              // Try to find category from loaded categories first
               let category = null;
               if (service.categoryId) {
                 category = categories.find(c => c.id === service.categoryId);
@@ -998,10 +1258,24 @@ const ServicesTable = ({ services, categories, companies, darkMode }) => {
                 category = categories.find(c => c.name === service.category || c.id === service.category);
               }
               if (!category && service.categoryName) {
-                category = categories.find(c => c.name === service.categoryName);
+                category = categories.find(c => c.name === service.categoryName || c.categoryName === service.categoryName);
               }
               
-              const categoryName = category?.name || category?.categoryName || service.categoryName || service.category || 'Uncategorized';
+              // Use smart categorization if no category found
+              const categoryName = category?.name || category?.categoryName || category?.title || 
+                                 getServiceCategory(service.serviceName || service.name || service.title || '');
+              
+              // Debug: Show category matching
+              if (service.serviceName?.includes('Water Tank') || service.serviceName?.includes('Medium Breed')) {
+                console.log('Category matching for:', service.serviceName, {
+                  serviceCategoryId: service.categoryId,
+                  serviceCategory: service.category,
+                  serviceCategoryName: service.categoryName,
+                  foundCategory: category,
+                  finalCategoryName: categoryName,
+                  totalCategories: categories.length
+                });
+              }
               
               return (
                 <tr key={service.id} style={{
@@ -1069,6 +1343,11 @@ const ServicesTable = ({ services, categories, companies, darkMode }) => {
 
 // Activity Table Component
 const ActivityTable = ({ logs, darkMode }) => {
+  // Debug: Log the first few logs to see their structure
+  if (logs.length > 0) {
+    console.log('ActivityTable rendering logs:', logs.slice(0, 3));
+  }
+  
   if (logs.length === 0) {
     return (
       <div style={{
@@ -1087,7 +1366,7 @@ const ActivityTable = ({ logs, darkMode }) => {
             ...styles.emptyText,
             color: darkMode ? '#94a3b8' : '#64748b'
           }}>
-            No activity matches your current search criteria.
+            No activity logs available yet. Activity will appear here when companies perform actions.
           </p>
         </div>
       </div>
@@ -1135,68 +1414,93 @@ const ActivityTable = ({ logs, darkMode }) => {
             </tr>
           </thead>
           <tbody>
-            {logs.map(log => (
-              <tr key={log.id} style={{
-                borderBottom: `1px solid ${darkMode ? '#334155' : '#e2e8f0'}`
-              }}>
-                <td style={styles.td}>
-                  <div>
-                    <p style={{
-                      ...styles.cellTitle,
-                      color: darkMode ? '#ffffff' : '#1e293b'
-                    }}>
-                      {log.companyName}
-                    </p>
-                    <p style={{
-                      ...styles.cellSubtitle,
-                      color: darkMode ? '#94a3b8' : '#64748b'
-                    }}>
-                      {log.ipAddress}
-                    </p>
-                  </div>
-                </td>
-                <td style={styles.td}>
-                  <div>
-                    <span style={{
-                      ...styles.cellTitle,
-                      color: darkMode ? '#ffffff' : '#1e293b'
-                    }}>
-                      {log.action}
-                    </span>
-                    <p style={{
-                      ...styles.cellSubtitle,
-                      color: darkMode ? '#94a3b8' : '#64748b'
-                    }}>
-                      {log.details}
-                    </p>
-                  </div>
-                </td>
-                <td style={{
-                  ...styles.td,
-                  color: darkMode ? '#94a3b8' : '#64748b'
+            {logs.map(log => {
+              // Extract action text from details or action field
+              const actionText = log.details?.action || log.action || 'Unknown Action';
+              
+              // Format timestamp properly
+              let formattedTime = 'Just now';
+              if (log.timestamp) {
+                try {
+                  const date = log.timestamp instanceof Date ? 
+                    log.timestamp : 
+                    (log.timestamp.seconds ? new Date(log.timestamp.seconds * 1000) : new Date(log.timestamp));
+                  formattedTime = date.toLocaleString();
+                } catch (e) {
+                  console.error('Error formatting timestamp:', e);
+                }
+              }
+              
+              // Extract device info
+              const deviceName = log.deviceInfo?.device || log.device || 'Unknown Device';
+              const ipAddress = log.deviceInfo?.ip || log.ipAddress || 'N/A';
+              
+              return (
+                <tr key={log.id} style={{
+                  borderBottom: `1px solid ${darkMode ? '#334155' : '#e2e8f0'}`
                 }}>
-                  {new Date(log.timestamp).toLocaleString()}
-                </td>
-                <td style={styles.td}>
-                  <span style={{
-                    ...styles.deviceBadge,
-                    backgroundColor: log.device === 'Mobile' ? '#dbeafe' : '#f3e8ff',
-                    color: log.device === 'Mobile' ? '#1e40af' : '#7c3aed'
+                  <td style={styles.td}>
+                    <div>
+                      <p style={{
+                        ...styles.cellTitle,
+                        color: darkMode ? '#ffffff' : '#1e293b'
+                      }}>
+                        {log.companyName || 'Unknown Company'}
+                      </p>
+                      <p style={{
+                        ...styles.cellSubtitle,
+                        color: darkMode ? '#94a3b8' : '#64748b'
+                      }}>
+                        {ipAddress}
+                      </p>
+                    </div>
+                  </td>
+                  <td style={styles.td}>
+                    <div>
+                      <span style={{
+                        ...styles.cellTitle,
+                        color: darkMode ? '#ffffff' : '#1e293b'
+                      }}>
+                        {actionText}
+                      </span>
+                      <p style={{
+                        ...styles.cellSubtitle,
+                        color: darkMode ? '#94a3b8' : '#64748b'
+                      }}>
+                        {log.details?.timestamp ? 
+                          new Date(log.details.timestamp).toLocaleString() : 
+                          'System action'
+                        }
+                      </p>
+                    </div>
+                  </td>
+                  <td style={{
+                    ...styles.td,
+                    color: darkMode ? '#94a3b8' : '#64748b'
                   }}>
-                    {log.device}
-                  </span>
-                </td>
-                <td style={styles.td}>
-                  <span style={{
-                    ...styles.statusBadge,
-                    backgroundColor: log.success ? '#dcfce7' : '#fef2f2',
-                    color: log.success ? '#166534' : '#991b1b'
-                  }}>
-                    {log.success ? 'Success' : 'Failed'}
-                  </span>
-                </td>
-              </tr>
-            ))}
+                    {formattedTime}
+                  </td>
+                  <td style={styles.td}>
+                    <span style={{
+                      ...styles.deviceBadge,
+                      backgroundColor: deviceName.toLowerCase().includes('mobile') ? '#dbeafe' : '#f3e8ff',
+                      color: deviceName.toLowerCase().includes('mobile') ? '#1e40af' : '#7c3aed'
+                    }}>
+                      {deviceName}
+                    </span>
+                  </td>
+                  <td style={styles.td}>
+                    <span style={{
+                      ...styles.statusBadge,
+                      backgroundColor: log.success ? '#dcfce7' : '#fef2f2',
+                      color: log.success ? '#166534' : '#991b1b'
+                    }}>
+                      {log.success ? 'Success' : 'Failed'}
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

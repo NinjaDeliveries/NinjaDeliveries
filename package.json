@@ -17,7 +17,7 @@
     "chart.js": "^4.4.7",
     "date-fns": "^4.1.0",
     "file-saver": "^2.0.5",
-    "firebase": "^12.2.1",
+    "firebase": "^12.9.0",
     "framer-motion": "^12.1.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^3.0.4",
@@ -39,7 +39,7 @@
     "react-scripts": "^5.0.1",
     "react-time-picker": "^7.0.0",
     "react-toastify": "^10.0.6",
-    "recharts": "^2.15.3",
+    "recharts": "^2.15.4",
     "styled-components": "^6.3.8",
     "web-vitals": "^2.1.4",
     "xlsx": "^0.18.5"
@@ -74,6 +74,6 @@
     "autoprefixer": "^10.4.21",
     "gh-pages": "^6.2.0",
     "postcss": "^8.5.3",
-    "tailwindcss": "^4.1.7"
+    "tailwindcss": "^3.4.17"
   }
 }
