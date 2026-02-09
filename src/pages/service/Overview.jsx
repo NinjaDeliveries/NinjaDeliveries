@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { auth, db } from "../../context/Firebase";
 import { doc, collection, query, where, onSnapshot, orderBy, limit } from "firebase/firestore";
 import "../../style/ServiceDashboard.css";
-import BannerManagement from "./BannerManagement";
+import BannerManagement from "../Banner";
 import { useNotifications } from "../../context/NotificationContext";
 
 // Booking Details Modal Component
