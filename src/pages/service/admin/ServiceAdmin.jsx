@@ -23,7 +23,8 @@ const ServiceAdmin = () => {
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [onlineCompanies, setOnlineCompanies] = useState(new Set());
   const [connectionStatus, setConnectionStatus] = useState('connected');
-  const [selectedCompany, setSelectedCompany] = useState(null); // For activity details modal
+  const [selectedCompany, setSelectedCompany] = useState(null);
+  const [showActivityModal, setShowActivityModal] = useState(false);
 
   // Refs for cleanup
   const unsubscribeRefs = useRef({});
@@ -45,17 +46,8 @@ const ServiceAdmin = () => {
   const logActivity = useCallback(async (action, companyId, details = {}) => {
     try {
       const deviceInfo = detectDevice(navigator.userAgent);
-      
-      // Find company name from companies list
-      let companyName = 'Admin';
-      if (companyId && companyId !== 'admin') {
-        const company = companies.find(c => c.id === companyId);
-        companyName = company?.companyName || company?.name || company?.businessName || details.companyName || 'Unknown Company';
-      }
-      
       const activityData = {
         companyId,
-        companyName, // Store company name directly in the log
         userId: 'admin',
         action,
         details: {
@@ -65,10 +57,8 @@ const ServiceAdmin = () => {
         },
         deviceInfo: {
           userAgent: navigator.userAgent,
-          device: deviceInfo.device || 'Desktop',
-          browser: deviceInfo.browser || 'Unknown',
-          os: deviceInfo.os || 'Unknown',
-          ip: details.ip || '192.168.1.1' // Get from server or use Cloud Function
+          ...deviceInfo,
+          ip: '192.168.1.1' // Get from server or use Cloud Function
         },
         timestamp: serverTimestamp(),
         type: 'admin',
@@ -76,12 +66,12 @@ const ServiceAdmin = () => {
       };
 
       const docRef = await addDoc(collection(db, 'service_activity_logs'), activityData);
-      console.log('Activity logged successfully:', docRef.id, activityData);
+      console.log('Activity logged successfully:', docRef.id);
       return docRef;
     } catch (error) {
       console.error('Failed to log activity:', error);
     }
-  }, [companies]);
+  }, []);
 
   const refreshData = useCallback(async () => {
     console.log('Refresh button clicked');
@@ -288,6 +278,56 @@ const ServiceAdmin = () => {
         realtimeRefs.current.online = unsubscribeOnline;
       } catch (error) {
         console.error('Error setting up online status listener:', error);
+      }
+
+      // Load real activity logs from Firebase with error handling
+      try {
+        const activityQuery = query(
+          collection(db, 'service_activity_logs'),
+          orderBy('timestamp', 'desc'),
+          limit(100)
+        );
+
+        const unsubscribeActivity = onSnapshot(
+          activityQuery,
+          (snapshot) => {
+            try {
+              const realLogs = snapshot.docs.map(doc => {
+                const data = doc.data();
+                
+                // Find company name from companies list
+                const company = companies.find(c => c.id === data.companyId);
+                const companyName = company?.companyName || company?.name || company?.businessName || data.companyName || 'Unknown Company';
+                
+                return {
+                  id: doc.id,
+                  ...data,
+                  companyName: companyName, // Add company name from real data
+                  // Ensure timestamp is properly converted
+                  timestamp: data.timestamp?.toDate ? data.timestamp.toDate() : data.timestamp,
+                  // Ensure success field has a default value
+                  success: data.success !== false,
+                  // Extract device info properly
+                  device: data.deviceInfo?.device || data.device || 'Unknown',
+                  ipAddress: data.deviceInfo?.ip || data.ipAddress || 'N/A'
+                };
+              });
+              setActivityLogs(realLogs);
+              console.log('Loaded real activity logs:', realLogs.length);
+            } catch (error) {
+              console.error('Error processing activity logs data:', error);
+              setActivityLogs([]); // Set empty array instead of generating demo data
+            }
+          },
+          (error) => {
+            console.error('Activity logs listener error:', error);
+            setActivityLogs([]); // Set empty array instead of generating demo data
+          }
+        );
+        unsubscribeRefs.current.activity = unsubscribeActivity;
+      } catch (error) {
+        console.log('Activity logs collection not available:', error);
+        setActivityLogs([]); // Set empty array instead of generating demo data
       }
 
       setConnectionStatus('connected');
@@ -734,7 +774,11 @@ const ServiceAdmin = () => {
               services={services}
               darkMode={darkMode}
               totalCompanies={filteredCompanies.length}
-              onViewActivity={(company) => setSelectedCompany(company)}
+              onlineCompanies={onlineCompanies}
+              onCompanyClick={(company) => {
+                setSelectedCompany(company);
+                setShowActivityModal(true);
+              }}
             />
 
             {/* Pagination */}
@@ -910,11 +954,14 @@ const ServiceAdmin = () => {
       </div>
 
       {/* Company Activity Details Modal */}
-      {selectedCompany && (
+      {showActivityModal && selectedCompany && (
         <CompanyActivityDetails
           companyId={selectedCompany.id}
           companyName={selectedCompany.companyName || selectedCompany.name || selectedCompany.businessName || 'Unknown Company'}
-          onClose={() => setSelectedCompany(null)}
+          onClose={() => {
+            setShowActivityModal(false);
+            setSelectedCompany(null);
+          }}
           darkMode={darkMode}
         />
       )}
@@ -971,7 +1018,7 @@ const StatsCard = ({ title, value, subtitle, icon, darkMode, trend }) => {
 };
 
 // Companies Table Component
-const CompaniesTable = ({ companies, services, darkMode, totalCompanies, onViewActivity }) => {
+const CompaniesTable = ({ companies, services, darkMode, totalCompanies, onlineCompanies, onCompanyClick }) => {
   if (companies.length === 0) {
     return (
       <div style={{
@@ -1047,8 +1094,17 @@ const CompaniesTable = ({ companies, services, darkMode, totalCompanies, onViewA
           <tbody>
             {companies.map(company => (
               <tr key={company.id} style={{
-                borderBottom: `1px solid ${darkMode ? '#334155' : '#e2e8f0'}`
-              }}>
+                borderBottom: `1px solid ${darkMode ? '#334155' : '#e2e8f0'}`,
+                cursor: 'pointer',
+                transition: 'background-color 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = darkMode ? '#334155' : '#f8fafc';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
+              >
                 <td style={styles.td}>
                   <div>
                     <h4 style={{
@@ -1093,9 +1149,9 @@ const CompaniesTable = ({ companies, services, darkMode, totalCompanies, onViewA
                     <div style={{ marginTop: '4px' }}>
                       <span style={{
                         fontSize: '12px',
-                        color: company.isOnline ? '#10b981' : '#ef4444'
+                        color: onlineCompanies && onlineCompanies.has(company.id) ? '#10b981' : '#ef4444'
                       }}>
-                        {company.isOnline ? '🟢 Online' : '🔴 Offline'}
+                        {onlineCompanies && onlineCompanies.has(company.id) ? '🟢 Online' : '🔴 Offline'}
                       </span>
                     </div>
                   </div>
@@ -1118,16 +1174,25 @@ const CompaniesTable = ({ companies, services, darkMode, totalCompanies, onViewA
                 </td>
                 <td style={styles.td}>
                   <button
-                    onClick={() => onViewActivity(company)}
+                    onClick={() => onCompanyClick && onCompanyClick(company)}
                     style={{
-                      padding: '6px 12px',
+                      padding: '8px 16px',
                       backgroundColor: '#3b82f6',
-                      color: '#ffffff',
+                      color: 'white',
                       border: 'none',
                       borderRadius: '6px',
                       cursor: 'pointer',
-                      fontSize: '12px',
-                      fontWeight: '500'
+                      fontSize: '13px',
+                      fontWeight: '500',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#2563eb';
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '#3b82f6';
+                      e.currentTarget.style.transform = 'translateY(0)';
                     }}
                   >
                     📊 View Activity
