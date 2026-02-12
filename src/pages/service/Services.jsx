@@ -382,7 +382,7 @@ const formatAvailability = (availability, unit) => {
     return "No specific hours set";
   }
   
-  const { days, timeSlots } = availability;
+  const { days, offDays, timeSlots } = availability;
   
   // Format time slots
   let timeRanges = "";
@@ -397,9 +397,26 @@ const formatAvailability = (availability, unit) => {
     timeRanges = `${startTime} - ${endTime}`;
   }
   
-  // For monthly packages, only show time
+  // For monthly packages, show time and off days
   if (unit === "month") {
-    return `Available ${timeRanges}`;
+    let result = `Available ${timeRanges}`;
+    
+    // Add off days if specified
+    if (offDays && offDays.length > 0) {
+      const dayNames = {
+        monday: 'Mon',
+        tuesday: 'Tue', 
+        wednesday: 'Wed',
+        thursday: 'Thu',
+        friday: 'Fri',
+        saturday: 'Sat',
+        sunday: 'Sun'
+      };
+      const formattedOffDays = offDays.map(day => dayNames[day]).join(', ');
+      result += ` | Off: ${formattedOffDays}`;
+    }
+    
+    return result;
   }
   
   // For day/week packages, show days and time
@@ -438,7 +455,9 @@ const formatAvailability = (availability, unit) => {
   // Calculate stats
   const activeCount = services.filter(s => s.isActive ?? true).length;
   const inactiveCount = services.filter(s => !(s.isActive ?? true)).length;
-  const withPackagesCount = services.filter(s => s.hasPackage || s.globalPackageId).length;
+  const withPackagesCount = services.filter(s => 
+    (s.packages && s.packages.length > 0) || s.globalPackageId
+  ).length;
   return (
     <div className="sd-main">
       {/* Page Header */}
@@ -697,7 +716,10 @@ const formatAvailability = (availability, unit) => {
                             {service.packages.map((pkg, index) => (
                               <div key={index} className="services-package-item-detailed">
                                 <span className="services-package-basic">
-                                  {pkg.duration} {pkg.unit}(s) - <span className="rupee-symbol-small">₹</span>{pkg.price.toLocaleString()}
+                                  {pkg.duration} {pkg.unit}(s)
+                                  {pkg.unit === 'month' && pkg.totalDays && ` (${pkg.totalDays} days)`}
+                                  {' - '}
+                                  <span className="rupee-symbol-small">₹</span>{pkg.price.toLocaleString()}
                                 </span>
                                 {pkg.availability && (
                                   <div className="services-availability-info">
