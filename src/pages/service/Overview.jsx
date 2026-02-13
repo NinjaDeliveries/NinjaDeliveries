@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { auth, db } from "../../context/Firebase";
 import { doc, collection, query, where, onSnapshot, orderBy, limit } from "firebase/firestore";
 import "../../style/ServiceDashboard.css";
-import BannerManagement from "../Banner";
+import ServiceBannerManagement from "./ServiceBannerManagement";
 import WeeklyRevenueChart from "../../components/WeeklyRevenueChart";
 import { useNotifications } from "../../context/NotificationContext";
 
@@ -1207,7 +1207,7 @@ const Overview = () => {
           </div>
         </>
       ) : (
-        <BannerManagement onBack={() => setActiveTab('dashboard')} />
+        <ServiceBannerManagement onBack={() => setActiveTab('dashboard')} />
       )}
 
       {/* Booking Details Modal */}
