@@ -427,25 +427,66 @@ const Bookings = () => {
     };
   }, []);
 
-  const handleRejectBooking = async (booking) => {
-    if (!window.confirm("Are you sure you want to reject this booking?")) return;
+  // const handleRejectBooking = async (booking) => {
+  //   if (!window.confirm("Are you sure you want to reject this booking?")) return;
 
-    try {
-      await updateDoc(
-        doc(db, "service_bookings", booking.id),
-        {
-          status: "rejected",
-          rejectedAt: new Date(),
-        }
-      );
+  //   try {
+  //     await updateDoc(
+  //       doc(db, "service_bookings", booking.id),
+  //       {
+  //         status: "rejected",
+  //         rejectedAt: new Date(),
+  //       }
+  //     );
 
-      // No need to call fetchBookings() - real-time listener will update automatically
-      alert("Booking rejected successfully");
-    } catch (err) {
-      console.error("Reject booking failed:", err);
-      alert("Failed to reject booking. Please try again.");
-    }
-  };
+  //     // No need to call fetchBookings() - real-time listener will update automatically
+  //     alert("Booking rejected successfully");
+  //   } catch (err) {
+  //     console.error("Reject booking failed:", err);
+  //     alert("Failed to reject booking. Please try again.");
+  //   }
+  // };
+
+const handleRejectBooking = async (booking) => {
+  if (!window.confirm("Are you sure you want to reject this booking?")) return;
+
+  try {
+    // 1️⃣ Update Firestore status
+    await updateDoc(
+      doc(db, "service_bookings", booking.id),
+      {
+        status: "rejected",
+        rejectedAt: new Date(),
+      }
+    );
+
+    // 2️⃣ Call WhatsApp Cloud Function
+    await fetch(
+      "https://us-central1-ninjadeliveries-91007.cloudfunctions.net/sendWhatsAppMessage",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          bookingId: booking.id,
+          customerName: booking.customerName,
+          customerPhone: booking.customerPhone,
+          service: booking.workName || booking.serviceName,
+          amount: booking.totalPrice || booking.price || 0,
+          date: booking.date,
+          time: booking.time,
+          address: booking.customerAddress || booking.location,
+        }),
+      }
+    );
+
+    alert("Booking rejected & WhatsApp sent");
+  } catch (err) {
+    console.error("Reject booking failed:", err);
+    alert("Failed to reject booking.");
+  }
+};
 
   const generateOtp = () => {
     return Math.floor(100000 + Math.random() * 900000).toString();
