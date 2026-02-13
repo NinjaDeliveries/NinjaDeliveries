@@ -726,11 +726,18 @@ const Overview = () => {
     });
 
     const unsubRecentBookings = onSnapshot(recentBookingsQ, (snap) => {
-      const bookings = snap.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate()
-      }));
+      const bookings = snap.docs.map(doc => {
+        const data = doc.data();
+        const createdAt = data.createdAt?.toDate ? data.createdAt.toDate() : 
+                         data.createdAt instanceof Date ? data.createdAt : 
+                         data.createdAt ? new Date(data.createdAt) : null;
+        
+        return {
+          id: doc.id,
+          ...data,
+          createdAt
+        };
+      });
       setRecentBookings(bookings);
     });
 
@@ -771,7 +778,9 @@ const Overview = () => {
 
     bookingDocs.forEach(doc => {
       const booking = doc.data();
-      const bookingDate = booking.createdAt?.toDate();
+      const bookingDate = booking.createdAt?.toDate ? booking.createdAt.toDate() : 
+                         booking.createdAt instanceof Date ? booking.createdAt : 
+                         booking.createdAt ? new Date(booking.createdAt) : null;
       
       // Skip rejected and cancelled bookings
       if (booking.status === 'rejected' || booking.status === 'cancelled') {
