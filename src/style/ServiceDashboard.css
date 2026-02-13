@@ -23253,3 +23253,541 @@ input:checked + .settings-toggle-slider:before {
     width: 100%;
   }
 }
+
+
+/* ============================================
+   MODERN SERVICE MODAL - IMPROVED UI
+   ============================================ */
+
+.modern-service-modal {
+  max-width: 800px !important;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: modalSlideUp 0.3s ease-out;
+}
+
+@keyframes modalSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.sd-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 24px 28px;
+  border-bottom: 1px solid #e5e7eb;
+  background: linear-gradient(to bottom, #ffffff, #f9fafb);
+}
+
+.sd-modal-header h2 {
+  margin: 0 0 6px 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.sd-modal-subtitle {
+  margin: 0;
+  font-size: 14px;
+  color: #6b7280;
+  font-weight: 400;
+}
+
+.sd-modal-close {
+  background: none;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sd-modal-close:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.sd-modal-close:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.modern-service-modal .sd-modal-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 28px;
+}
+
+/* Form Groups with Better Spacing */
+.modern-service-modal .sd-form-group {
+  margin-bottom: 24px;
+}
+
+.modern-service-modal .sd-form-group label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+.modern-service-modal .sd-form-group input,
+.modern-service-modal .sd-form-group select,
+.modern-service-modal .sd-form-group textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #111827;
+  transition: all 0.2s;
+  background: #ffffff;
+}
+
+.modern-service-modal .sd-form-group input:focus,
+.modern-service-modal .sd-form-group select:focus,
+.modern-service-modal .sd-form-group textarea:focus {
+  outline: none;
+  border-color: #4b3cc4;
+  box-shadow: 0 0 0 3px rgba(75, 60, 196, 0.1);
+}
+
+.modern-service-modal .sd-form-group input::placeholder,
+.modern-service-modal .sd-form-group select::placeholder {
+  color: #9ca3af;
+}
+
+/* Category Section with Card Style */
+.sd-category-section {
+  background: #f9fafb;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.sd-loading-select {
+  padding: 12px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.sd-no-categories-message,
+.sd-no-services-message {
+  padding: 16px;
+  background: #fef3c7;
+  border: 1px solid #fbbf24;
+  border-radius: 8px;
+  margin-top: 12px;
+}
+
+.sd-no-categories-message p,
+.sd-no-services-message p {
+  margin: 0;
+  color: #92400e;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Link Button Style */
+.sd-link-btn {
+  background: none;
+  border: none;
+  color: #4b3cc4;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 8px 0;
+  margin-top: 8px;
+  transition: color 0.2s;
+}
+
+.sd-link-btn:hover {
+  color: #3730a3;
+  text-decoration: underline;
+}
+
+/* Image Upload Section */
+.sd-image-upload {
+  margin-top: 8px;
+}
+
+.sd-image-preview {
+  position: relative;
+  width: 100%;
+  max-width: 300px;
+  height: 200px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 2px solid #e5e7eb;
+}
+
+.sd-image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sd-remove-image-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.sd-remove-image-btn:hover {
+  background: rgba(0, 0, 0, 0.9);
+}
+
+.sd-image-placeholder {
+  width: 100%;
+  max-width: 300px;
+  height: 200px;
+  border: 2px dashed #d1d5db;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  font-size: 14px;
+  background: #f9fafb;
+}
+
+.sd-file-input {
+  display: none;
+}
+
+.sd-file-label {
+  display: inline-block;
+  margin-top: 12px;
+  padding: 10px 20px;
+  background: #4b3cc4;
+  color: white;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.sd-file-label:hover {
+  background: #3730a3;
+}
+
+/* Package Rows */
+.sd-package-row {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.sd-package-basic-info {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr 1fr auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.sd-remove-btn {
+  padding: 8px 16px;
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.sd-remove-btn:hover {
+  background: #dc2626;
+}
+
+/* Availability Section */
+.sd-availability-section {
+  margin-top: 16px;
+  padding: 16px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.sd-availability-section h4 {
+  margin: 0 0 12px 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.sd-availability-toggle {
+  margin-bottom: 16px;
+}
+
+.sd-availability-toggle label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #4b5563;
+  cursor: pointer;
+}
+
+.sd-time-slots-section {
+  margin-bottom: 16px;
+}
+
+.sd-time-slots-section > label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+.sd-time-slot-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.sd-time-slot-row input[type="time"] {
+  padding: 8px 12px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.sd-time-slot-row span {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.sd-remove-time-slot-btn {
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.sd-remove-time-slot-btn:hover {
+  background: #dc2626;
+}
+
+.sd-add-time-slot-btn {
+  padding: 8px 16px;
+  background: #10b981;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.sd-add-time-slot-btn:hover {
+  background: #059669;
+}
+
+/* Days Selection Grid */
+.sd-days-selection {
+  margin-top: 16px;
+}
+
+.sd-days-selection > label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+.sd-days-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+}
+
+.sd-day-checkbox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 8px;
+  background: white;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 13px;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.sd-day-checkbox:hover {
+  border-color: #4b3cc4;
+  background: #f5f3ff;
+}
+
+.sd-day-checkbox input[type="checkbox"] {
+  margin-bottom: 4px;
+}
+
+.sd-day-checkbox input[type="checkbox"]:checked + span {
+  color: #4b3cc4;
+}
+
+.sd-day-checkbox:has(input:checked) {
+  background: #ede9fe;
+  border-color: #4b3cc4;
+}
+
+/* Monthly Note */
+.sd-monthly-note {
+  margin-top: 16px;
+  padding: 12px;
+  background: #dbeafe;
+  border: 1px solid #3b82f6;
+  border-radius: 6px;
+}
+
+.sd-monthly-note p {
+  margin: 0;
+  font-size: 13px;
+  color: #1e40af;
+  line-height: 1.5;
+}
+
+/* Add Package Button */
+.sd-add-package-btn {
+  width: 100%;
+  padding: 12px;
+  background: white;
+  border: 2px dashed #d1d5db;
+  border-radius: 8px;
+  color: #4b3cc4;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 12px;
+}
+
+.sd-add-package-btn:hover {
+  background: #f5f3ff;
+  border-color: #4b3cc4;
+}
+
+/* Modal Actions */
+.modern-service-modal .sd-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 20px 28px;
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
+
+.sd-cancel-btn {
+  padding: 10px 24px;
+  background: white;
+  color: #374151;
+  border: 1.5px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sd-cancel-btn:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.sd-cancel-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sd-save-btn {
+  padding: 10px 24px;
+  background: #4b3cc4;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.sd-save-btn:hover {
+  background: #3730a3;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.sd-save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .modern-service-modal {
+    max-width: 100%;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+
+  .sd-modal-header,
+  .modern-service-modal .sd-modal-content,
+  .modern-service-modal .sd-modal-actions {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .sd-package-basic-info {
+    grid-template-columns: 1fr;
+  }
+
+  .sd-days-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
