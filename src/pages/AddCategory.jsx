@@ -54,6 +54,14 @@ function AddCategory() {
   const AddNewCategory = async (e) => {
     e.preventDefault();
 
+    if (!user?.storeId) {
+      toast("User not authenticated", {
+        type: "error",
+        position: "top-center",
+      });
+      return;
+    }
+
     try {
       const imageUrl = await uploadImage(
         categoryImage,
@@ -75,6 +83,14 @@ function AddCategory() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!user?.storeId) {
+      toast("User not authenticated", {
+        type: "error",
+        position: "top-center",
+      });
+      return;
+    }
 
     try {
       const imageUrl = await uploadImage(
@@ -98,6 +114,11 @@ function AddCategory() {
   };
 
   useEffect(() => {
+    if (!user?.storeId) {
+      setLoading(false);
+      return;
+    }
+
     const q = query(
       collection(db, "categories"),
       where("storeId", "==", user.storeId)
@@ -119,7 +140,7 @@ function AddCategory() {
     );
 
     return unsubscribe;
-  }, []);
+  }, [user?.storeId]);
 
   return (
     <div>
