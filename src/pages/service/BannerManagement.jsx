@@ -28,7 +28,7 @@ function BannerManagement({ onBack }) {
   const [uploading, setUploading] = useState(false);
   const [actionLoading, setActionLoading] = useState(null);
 
-  // Get user and fetch data
+  // Get user and fetch data and fix 
   useEffect(() => {
     console.log('🎯 BannerManagement component mounted');
     const u = auth.currentUser;

@@ -19,7 +19,7 @@ import { Autocomplete, TextField } from "@mui/material";
 
 const BannerManagement = () => {
   const { user } = useUser(); // to get user.storeId
-  const storeId = user?.storeId; // Add null check with optional chaining
+  const storeId = user?.storeId; // Add null check with optional chaining..
 
   // Which /banner document are we using?
   const [configDocId, setConfigDocId] = useState(null);

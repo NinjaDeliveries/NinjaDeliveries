@@ -33,7 +33,7 @@ const Services = () => {
   // const fetchServices = async () => {
   //   try {
   //     const user = auth.currentUser;
-  //     if (!user) return;
+  //     if (!user) return;.....
 
   //     const q = query(
   //       collection(db, "service_services"),

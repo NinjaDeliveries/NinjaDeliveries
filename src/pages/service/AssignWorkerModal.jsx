@@ -21,7 +21,7 @@ const AssignWorkerModal = ({ booking, categories = [], onClose, onAssigned }) =>
     return cat ? cat.name : "";
   };
 
-  // Fetch services to understand service-category relationship
+  // Fetch services to understand service-category relationship,,,,
   const fetchServices = async () => {
     try {
       const user = auth.currentUser;

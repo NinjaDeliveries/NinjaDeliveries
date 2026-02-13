@@ -41,7 +41,7 @@ const RiderDataFetch = () => {
 
   return (
     <div className="riders-page-container">
-      {/* Inline Styles */}
+      {/* Inline Styles ...*/}
       <style>
         {`
 .riders-page-container {

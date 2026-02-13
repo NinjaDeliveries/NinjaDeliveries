@@ -1,7 +1,7 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const WeeklyRevenueChart = ({ weeklyData }) => {
-  // Custom tooltip
+  // Custom tooltip .....
   const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
       return (

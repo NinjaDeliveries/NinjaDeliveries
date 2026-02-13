@@ -497,7 +497,7 @@ const AdminCategoriesServices = () => {
     try {
       console.log(`🔄 Starting cascade update for service: ${service.name} to ${newStatus ? 'ACTIVE' : 'INACTIVE'}`);
       
-      // 1. Update service_services_master
+      // 1. Update service_services_master---
       await updateDoc(doc(db, "service_services_master", serviceId), {
         isActive: newStatus,
         updatedAt: serverTimestamp(),

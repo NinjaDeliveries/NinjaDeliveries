@@ -2,7 +2,7 @@ import { collection, getDocs, updateDoc, doc, serverTimestamp } from "firebase/f
 import { db } from "../context/Firebase";
 
 /**
- * Fix orphaned services that have old category names
+ * Fix orphaned services that have old category names....
  * This happens when a category is renamed but services weren't updated
  */
 export const fixOrphanedServices = async (oldCategoryName, newCategoryName) => {

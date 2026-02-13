@@ -102,7 +102,7 @@ const Bookings = () => {
       className: "bookings-status-cancelled",
     },
   };
-  //fetch booking with real-time listener
+  //fetch booking with real-time listener....
   const setupBookingsListener = () => {
     const user = auth.currentUser;
     if (!user) {

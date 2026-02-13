@@ -7,7 +7,7 @@ const AddServiceModal = ({ onClose, onSaved, editService }) => {
   const [name, setName] = useState("");
   // const [categoryId, setCategoryId] = useState("");
   const [categoryMasterId, setCategoryMasterId] = useState(""); // Empty = no category selected
-  const [selectedCompanyCategoryId, setSelectedCompanyCategoryId] = useState(""); // Empty = no company category selected
+  const [selectedCompanyCategoryId, setSelectedCompanyCategoryId] = useState(""); // Empty = no company category selected....
   const [categories, setCategories] = useState([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [servicesLoading, setServicesLoading] = useState(false);

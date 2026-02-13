@@ -30,7 +30,7 @@ export default function FetchAddTransaction() {
       setData(newData);
     });
 
-    // Cleanup subscription on unmount
+    // Cleanup subscription on unmount...
     return () => unsubscribe();
   }, [user?.storeId]);
 

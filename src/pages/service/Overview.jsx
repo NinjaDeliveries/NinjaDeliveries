@@ -717,7 +717,7 @@ const Overview = () => {
         completionRate: completionRate
       }));
 
-      // Process weekly data (will also exclude rejected/cancelled)
+      // Process weekly data (will also exclude rejected/cancelled) fix bugs
       const weeklyStats = processWeeklyData(validBookings);
       setWeeklyData(weeklyStats);
 
