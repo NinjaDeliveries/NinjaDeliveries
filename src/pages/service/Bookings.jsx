@@ -8,6 +8,7 @@ import {
   updateDoc,
   doc,
   onSnapshot,
+  setDoc,
 } from "firebase/firestore";
 import AssignWorkerModal from "./AssignWorkerModal";
 import "../../style/ServiceDashboard.css";
@@ -431,13 +432,67 @@ const Bookings = () => {
     if (!window.confirm("Are you sure you want to reject this booking?")) return;
 
     try {
+      const user = auth.currentUser;
+      
+      // 1️⃣ Update Firestore booking status with user tracking
       await updateDoc(
         doc(db, "service_bookings", booking.id),
         {
           status: "rejected",
           rejectedAt: new Date(),
+          rejectedBy: user?.uid,
         }
       );
+
+      // 2️⃣ Create a rejection record for admin tracking
+      const rejectionData = {
+        bookingId: booking.id,
+        companyId: booking.companyId,
+        companyName: booking.companyName || "Unknown Company",
+        serviceName: booking.serviceName,
+        workName: booking.workName,
+        customerName: booking.customerName,
+        customerPhone: booking.customerPhone,
+        bookingDate: booking.date,
+        bookingTime: booking.time,
+        amount: booking.totalPrice || booking.price || booking.amount || 0,
+        rejectedAt: new Date(),
+        rejectedBy: user?.uid,
+        status: "pending_review", // Admin can review this
+      };
+
+      // Add to rejected_bookings collection for admin review
+      await setDoc(
+        doc(db, "rejected_bookings", booking.id),
+        rejectionData
+      );
+
+      // 3️⃣ Send WhatsApp notification via Cloud Function
+      try {
+        await fetch(
+          "https://us-central1-ninjadeliveries-91007.cloudfunctions.net/sendWhatsAppMessage",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              bookingId: booking.id,
+              customerName: booking.customerName,
+              customerPhone: booking.customerPhone,
+              service: booking.workName || booking.serviceName,
+              amount: booking.totalPrice || booking.price || 0,
+              date: booking.date,
+              time: booking.time,
+              address: booking.customerAddress || booking.location,
+            }),
+          }
+        );
+        console.log("WhatsApp notification sent successfully");
+      } catch (whatsappError) {
+        console.error("WhatsApp notification failed:", whatsappError);
+        // Don't fail the whole operation if WhatsApp fails
+      }
 
       // No need to call fetchBookings() - real-time listener will update automatically
       alert("Booking rejected successfully");
@@ -500,7 +555,6 @@ const Bookings = () => {
   const handleStartWork = async (booking) => {
     try {
       const otp = generateOtp();
-
       await updateDoc(
         doc(db, "service_bookings", booking.id),
         {

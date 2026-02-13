@@ -15,6 +15,8 @@ export default function FetchAddTransaction() {
   const [editbox, seteditbox] = useState(false);
 
   useEffect(() => {
+    if (!user?.storeId) return;
+
     const q = query(
       collection(db, "riderDetails"),
       where("storeId", "==", user.storeId)
@@ -30,7 +32,7 @@ export default function FetchAddTransaction() {
 
     // Cleanup subscription on unmount
     return () => unsubscribe();
-  }, []);
+  }, [user?.storeId]);
 
   const getData = (data) => {
     seteditbox(true);

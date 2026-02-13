@@ -361,10 +361,8 @@ const fetchAdminServices = async (catId) => {
       duration: 1, 
       unit: "month", 
       price: "",
-      totalDays: 30, // NEW: Total days in package (for monthly packages)
       availability: {
         days: [], // Empty for monthly packages by default
-        offDays: [], // NEW: Weekly off days (e.g., ['saturday', 'sunday'])
         timeSlots: [{ startTime: "09:00", endTime: "17:00" }], // Array of time slots
         isAvailable: true
       },
@@ -1362,64 +1360,7 @@ if (isCustomService) {
         {/* Time-only availability for monthly packages */}
         {p.unit === "month" && (
           <div className="sd-availability-section">
-            <h4>Monthly Package Configuration</h4>
-            
-            {/* NEW: Total Days Input */}
-            <div className="sd-form-group" style={{ marginBottom: '20px' }}>
-              <label>Total Days in Package:</label>
-              <input
-                type="number"
-                placeholder="e.g., 15, 17, 30"
-                value={p.totalDays || 30}
-                onChange={e => updatePackage(i, "totalDays", parseInt(e.target.value) || 30)}
-                style={{
-                  width: '150px',
-                  padding: '8px 12px',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '6px',
-                  fontSize: '14px'
-                }}
-                min="1"
-                max="365"
-              />
-              <small style={{ display: 'block', marginTop: '4px', color: '#64748b' }}>
-                Specify the total number of days for this package (e.g., 15 days, 17 days, 30 days)
-              </small>
-            </div>
-
-            {/* NEW: Weekly Off Days Selection */}
-            <div className="sd-form-group" style={{ marginBottom: '20px' }}>
-              <label>Weekly Off Days (Optional):</label>
-              <div className="sd-days-grid">
-                {[
-                  { key: 'monday', label: 'Mon' },
-                  { key: 'tuesday', label: 'Tue' },
-                  { key: 'wednesday', label: 'Wed' },
-                  { key: 'thursday', label: 'Thu' },
-                  { key: 'friday', label: 'Fri' },
-                  { key: 'saturday', label: 'Sat' },
-                  { key: 'sunday', label: 'Sun' }
-                ].map(day => (
-                  <label key={day.key} className="sd-day-checkbox">
-                    <input
-                      type="checkbox"
-                      checked={(p.availability?.offDays || []).includes(day.key)}
-                      onChange={e => {
-                        const currentOffDays = p.availability?.offDays || [];
-                        const newOffDays = e.target.checked
-                          ? [...currentOffDays, day.key]
-                          : currentOffDays.filter(d => d !== day.key);
-                        updatePackage(i, "availability.offDays", newOffDays);
-                      }}
-                    />
-                    {day.label}
-                  </label>
-                ))}
-              </div>
-              <small style={{ display: 'block', marginTop: '8px', color: '#64748b' }}>
-                Select days when service will NOT be available (e.g., Saturday & Sunday off)
-              </small>
-            </div>
+            <h4>Service Hours</h4>
             
             <div className="sd-availability-toggle">
               <label>
@@ -1470,12 +1411,7 @@ if (isCustomService) {
             )}
             
             <div className="sd-monthly-note">
-              <p>
-                📅 Package Duration: {p.totalDays || 30} days
-                {(p.availability?.offDays || []).length > 0 && (
-                  <span> | 🚫 Off Days: {(p.availability?.offDays || []).map(d => d.charAt(0).toUpperCase() + d.slice(1, 3)).join(', ')}</span>
-                )}
-              </p>
+              <p>Monthly packages are available all days. Only specify your working hours.</p>
             </div>
           </div>
         )}

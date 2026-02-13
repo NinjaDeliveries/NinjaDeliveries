@@ -19,7 +19,7 @@ import { Autocomplete, TextField } from "@mui/material";
 
 const BannerManagement = () => {
   const { user } = useUser(); // to get user.storeId
-  const storeId = user?.storeId; // Add null check with optional chaining
+  const storeId = user.storeId;
 
   // Which /banner document are we using?
   const [configDocId, setConfigDocId] = useState(null);
@@ -29,7 +29,7 @@ const BannerManagement = () => {
     showSales: false,
     showSliderBanner: false,
     salesBanner: "",
-    storeId: storeId || "",
+    storeId,
   });
 
   const [sliderBanners, setSliderBanners] = useState([]);
@@ -429,39 +429,6 @@ const BannerManagement = () => {
   // -------------------------------------------------------
   // RENDER
   // -------------------------------------------------------
-  
-  // Show loading state while user data is being fetched
-  if (!user || !storeId) {
-    return (
-      <div className="banner-management">
-        <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: '400px',
-          flexDirection: 'column',
-          gap: '20px'
-        }}>
-          <div style={{
-            width: '50px',
-            height: '50px',
-            border: '4px solid #f3f3f3',
-            borderTop: '4px solid #6a11cb',
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite'
-          }}></div>
-          <p style={{ color: '#666', fontSize: '16px' }}>Loading banner management...</p>
-          <style>{`
-            @keyframes spin {
-              0% { transform: rotate(0deg); }
-              100% { transform: rotate(360deg); }
-            }
-          `}</style>
-        </div>
-      </div>
-    );
-  }
-  
   return (
     <div className="banner-management">
       <header className="app-header">
