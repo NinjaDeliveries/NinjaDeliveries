@@ -3,7 +3,8 @@ import { createPortal } from "react-dom";
 import { auth, db } from "../../context/Firebase";
 import { doc, collection, query, where, onSnapshot, orderBy, limit } from "firebase/firestore";
 import "../../style/ServiceDashboard.css";
-import BannerManagement from "../Banner";
+import BannerManagement from "./BannerManagement";
+import WeeklyRevenueChart from "../../components/WeeklyRevenueChart";
 import { useNotifications } from "../../context/NotificationContext";
 
 // Booking Details Modal Component
@@ -1026,79 +1027,8 @@ const Overview = () => {
 
           {/* Charts & Activity Row */}
           <div className="modern-charts-row">
-            {/* Weekly Revenue Chart */}
-            <div className="modern-chart-card" style={{ animationDelay: '0.5s' }}>
-              <div className="modern-chart-header">
-                <div className="modern-chart-title-section">
-                  <div className="modern-chart-icon">
-                    �
-                  </div>
-                  <div>
-                    <h3 className="modern-chart-title">Weekly Revenue</h3>
-                    <p className="modern-chart-subtitle">Last 7 days performance</p>
-                  </div>
-                </div>
-                <div className="modern-trend-badge positive">
-                  📈 Live Data
-                </div>
-              </div>
-
-              <div className="modern-chart-content">
-                <div className="modern-bar-chart">
-                  {weeklyData.map((data, index) => (
-                    <div
-                      key={data.day}
-                      className="modern-bar-container"
-                      onMouseEnter={() => setHoveredBar(index)}
-                      onMouseLeave={() => setHoveredBar(null)}
-                    >
-                      {hoveredBar === index && (
-                        <div className="modern-chart-tooltip">
-                          <p className="price-display">
-                            <span className="rupee-symbol">₹</span>
-                            <span className="price-amount">{data.revenue.toLocaleString()}</span>
-                          </p>
-                          <p className="modern-tooltip-bookings">{data.bookings} bookings</p>
-                        </div>
-                      )}
-                      <div
-                        className={`modern-bar ${hoveredBar === index ? 'hovered' : ''}`}
-                        style={{
-                          height: `${maxRevenue > 0 ? (data.revenue / maxRevenue) * 180 : 0}px`,
-                          animationDelay: `${0.5 + index * 0.1}s`
-                        }}
-                      >
-                        <div className="modern-bar-shimmer"></div>
-                      </div>
-                      <span className={`modern-bar-label ${hoveredBar === index ? 'active' : ''}`}>
-                        {data.day}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="modern-chart-summary">
-                  <div className="modern-summary-stats">
-                    <div className="modern-summary-item">
-                      <p className="modern-summary-label">Total Revenue</p>
-                      <p className="modern-summary-value">
-                        <span className="price-display">
-                          <span className="rupee-symbol">₹</span>
-                          <span className="price-amount">{weeklyData.reduce((sum, d) => sum + d.revenue, 0).toLocaleString()}</span>
-                        </span>
-                      </p>
-                    </div>
-                    <div className="modern-summary-item">
-                      <p className="modern-summary-label">Total Bookings</p>
-                      <p className="modern-summary-value">{weeklyData.reduce((sum, d) => sum + d.bookings, 0)}</p>
-                    </div>
-                  </div>
-                  <button className="modern-report-btn">
-                    View Full Report
-                  </button>
-                </div>
-              </div>
-            </div>
+            {/* Weekly Revenue Chart Component */}
+            <WeeklyRevenueChart weeklyData={weeklyData} />
 
             {/* Activity Feed */}
             <div className="modern-activity-card" style={{ animationDelay: '0.6s' }}>

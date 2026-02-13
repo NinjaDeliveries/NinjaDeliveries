@@ -12,6 +12,7 @@ import {
   where,
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { fixOrphanedServices, findOrphanedServices } from "../../utils/fixOrphanedServices";
 import "../../style/ServiceDashboard.css";
 
 const AdminCategoriesServices = () => {
@@ -234,6 +235,88 @@ const AdminCategoriesServices = () => {
         if (mode === "edit" && editingCategory) {
           // Update existing category
           await updateDoc(doc(db, "service_categories_master", editingCategory.id), categoryData);
+          
+          // 🔥 FIX: If category name changed, update all services that reference this category
+          const oldCategoryName = editingCategory.name;
+          const newCategoryName = name.trim();
+          
+          if (oldCategoryName !== newCategoryName) {
+            console.log(`🔄 Category name changed from "${oldCategoryName}" to "${newCategoryName}"`);
+            console.log(`📝 Updating all services with old category name...`);
+            
+            // Update services in service_services_master
+            const masterServicesSnap = await getDocs(collection(db, "service_services_master"));
+            const masterServicesToUpdate = masterServicesSnap.docs.filter(
+              d => d.data().categoryName === oldCategoryName
+            );
+            
+            for (const serviceDoc of masterServicesToUpdate) {
+              await updateDoc(doc(db, "service_services_master", serviceDoc.id), {
+                categoryName: newCategoryName,
+                updatedAt: serverTimestamp(),
+              });
+            }
+            console.log(`✅ Updated ${masterServicesToUpdate.length} services in service_services_master`);
+            
+            // Update services in service_services (company services)
+            const companyServicesSnap = await getDocs(collection(db, "service_services"));
+            const companyServicesToUpdate = companyServicesSnap.docs.filter(
+              d => d.data().categoryName === oldCategoryName
+            );
+            
+            for (const serviceDoc of companyServicesToUpdate) {
+              await updateDoc(doc(db, "service_services", serviceDoc.id), {
+                categoryName: newCategoryName,
+                updatedAt: serverTimestamp(),
+              });
+            }
+            console.log(`✅ Updated ${companyServicesToUpdate.length} services in service_services`);
+            
+            // Update services in app_services
+            const appServicesSnap = await getDocs(collection(db, "app_services"));
+            const appServicesToUpdate = appServicesSnap.docs.filter(
+              d => d.data().categoryName === oldCategoryName
+            );
+            
+            for (const serviceDoc of appServicesToUpdate) {
+              await updateDoc(doc(db, "app_services", serviceDoc.id), {
+                categoryName: newCategoryName,
+                updatedAt: serverTimestamp(),
+              });
+            }
+            console.log(`✅ Updated ${appServicesToUpdate.length} services in app_services`);
+            
+            // Update categories in service_categories (company categories)
+            const companyCategoriesSnap = await getDocs(collection(db, "service_categories"));
+            const companyCategoriesToUpdate = companyCategoriesSnap.docs.filter(
+              d => d.data().name === oldCategoryName
+            );
+            
+            for (const catDoc of companyCategoriesToUpdate) {
+              await updateDoc(doc(db, "service_categories", catDoc.id), {
+                name: newCategoryName,
+                updatedAt: serverTimestamp(),
+              });
+            }
+            console.log(`✅ Updated ${companyCategoriesToUpdate.length} categories in service_categories`);
+            
+            // Update categories in app_categories
+            const appCategoriesSnap = await getDocs(collection(db, "app_categories"));
+            const appCategoriesToUpdate = appCategoriesSnap.docs.filter(
+              d => d.data().name === oldCategoryName
+            );
+            
+            for (const catDoc of appCategoriesToUpdate) {
+              await updateDoc(doc(db, "app_categories", catDoc.id), {
+                name: newCategoryName,
+                updatedAt: serverTimestamp(),
+              });
+            }
+            console.log(`✅ Updated ${appCategoriesToUpdate.length} categories in app_categories`);
+            
+            console.log(`🎉 Category name update cascade completed successfully!`);
+            alert(`Category renamed successfully! All ${masterServicesToUpdate.length} services have been updated across all collections.`);
+          }
         } else {
           // Create new category
           await addDoc(collection(db, "service_categories_master"), {
@@ -533,6 +616,70 @@ const AdminCategoriesServices = () => {
     }
   };
 
+  // ================= FIX ORPHANED SERVICES =================
+  const handleFixOrphanedServices = async () => {
+    const oldName = prompt("Enter OLD category name (e.g., 'Car wash'):");
+    if (!oldName) return;
+    
+    const newName = prompt("Enter NEW category name (e.g., 'Auto Mobile Washing'):");
+    if (!newName) return;
+    
+    const confirmed = window.confirm(
+      `Fix orphaned services?\n\n` +
+      `Old category: "${oldName}"\n` +
+      `New category: "${newName}"\n\n` +
+      `This will update all services with the old category name to use the new name.`
+    );
+    
+    if (!confirmed) return;
+    
+    try {
+      const result = await fixOrphanedServices(oldName.trim(), newName.trim());
+      
+      if (result.success) {
+        alert(
+          `✅ Fix completed successfully!\n\n` +
+          `Total items updated: ${result.totalUpdated}\n\n` +
+          `Services:\n` +
+          `- Master services: ${result.details.master}\n` +
+          `- Company services: ${result.details.company}\n` +
+          `- App services: ${result.details.app}\n\n` +
+          `Categories:\n` +
+          `- Company categories: ${result.details.companyCategories}\n` +
+          `- App categories: ${result.details.appCategories}`
+        );
+        
+        // Refresh the data
+        await fetchServices();
+        await fetchCategories();
+      } else {
+        alert(`❌ Error: ${result.error}`);
+      }
+    } catch (error) {
+      console.error("Error fixing orphaned services:", error);
+      alert(`Error: ${error.message}`);
+    }
+  };
+  
+  const handleFindOrphanedServices = async () => {
+    try {
+      const orphaned = await findOrphanedServices();
+      
+      if (orphaned.length === 0) {
+        alert("✅ No orphaned services found! All services are properly linked to categories.");
+      } else {
+        const message = `⚠️ Found ${orphaned.length} orphaned service(s):\n\n` +
+          orphaned.map(s => `• ${s.name} (category: "${s.categoryName}")`).join('\n') +
+          `\n\nCheck the console for more details.`;
+        
+        alert(message);
+      }
+    } catch (error) {
+      console.error("Error finding orphaned services:", error);
+      alert(`Error: ${error.message}`);
+    }
+  };
+
   // ================= STATS =================
   const getStats = () => {
     const totalCategories = categories.length;
@@ -565,9 +712,25 @@ const AdminCategoriesServices = () => {
           <h1>Categories & Services</h1>
           <p>Manage service categories and their associated services</p>
         </div>
-        <button className="sd-primary-btn" onClick={openAddCategory}>
-          + Add Category
-        </button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button 
+            className="sd-secondary-btn" 
+            onClick={handleFindOrphanedServices}
+            title="Find services with invalid category names"
+          >
+            🔍 Find Orphaned
+          </button>
+          <button 
+            className="sd-secondary-btn" 
+            onClick={handleFixOrphanedServices}
+            title="Fix services with old category names"
+          >
+            🔧 Fix Orphaned
+          </button>
+          <button className="sd-primary-btn" onClick={openAddCategory}>
+            + Add Category
+          </button>
+        </div>
       </div>
 
       {/* Stats Cards */}

@@ -1546,6 +1546,15 @@ const Bookings = () => {
                             </span>
                           </div>
                         )}
+                        {/* NEW: Total Days */}
+                        {selectedBooking.totalDays && (
+                          <div className="package-info-item">
+                            <span style={{fontSize: '12px', color: '#64748b', display: 'block'}}>Total Days</span>
+                            <span style={{fontSize: '14px', fontWeight: '600', color: '#0f172a'}}>
+                              {selectedBooking.totalDays} days
+                            </span>
+                          </div>
+                        )}
                         {selectedBooking.packagePrice && (
                           <div className="package-info-item">
                             <span style={{fontSize: '12px', color: '#64748b', display: 'block'}}>Package Price</span>
@@ -1555,6 +1564,29 @@ const Bookings = () => {
                           </div>
                         )}
                       </div>
+                      
+                      {/* NEW: Off Days */}
+                      {selectedBooking.offDays && selectedBooking.offDays.length > 0 && (
+                        <div style={{marginTop: '12px'}}>
+                          <span style={{fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '6px'}}>Weekly Off Days</span>
+                          <div style={{display: 'flex', flexWrap: 'wrap', gap: '6px'}}>
+                            {selectedBooking.offDays.map((day, index) => (
+                              <span key={index} style={{
+                                background: '#fee2e2',
+                                border: '1px solid #fca5a5',
+                                color: '#dc2626',
+                                padding: '4px 10px',
+                                borderRadius: '16px',
+                                fontSize: '12px',
+                                fontWeight: '500',
+                                textTransform: 'capitalize'
+                              }}>
+                                🚫 {day}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                       
                       {/* Working Days */}
                       {selectedBooking.workingDays && selectedBooking.workingDays.length > 0 && (
