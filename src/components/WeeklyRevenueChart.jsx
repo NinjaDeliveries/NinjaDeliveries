@@ -1,3 +1,4 @@
+import { useState, useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const WeeklyRevenueChart = ({ weeklyData }) => {
@@ -98,6 +99,7 @@ const WeeklyRevenueChart = ({ weeklyData }) => {
         </ResponsiveContainer>
       </div>
 
+
       {/* Daily Breakdown Card */}
       <div style={{
         background: 'white',
@@ -128,46 +130,79 @@ const WeeklyRevenueChart = ({ weeklyData }) => {
           {weeklyData.map((day) => {
             const maxRevenue = Math.max(...weeklyData.map(d => d.revenue));
             const percentage = maxRevenue > 0 ? (day.revenue / maxRevenue) * 100 : 0;
+            const isHighest = day.revenue === maxRevenue;
             
             return (
               <div key={day.day} style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '16px'
+                gap: '16px',
+                padding: '12px',
+                background: isHighest ? '#f0fdf4' : 'transparent',
+                borderRadius: '8px',
+                border: isHighest ? '1px solid #86efac' : '1px solid transparent',
+                transition: 'all 0.2s ease'
               }}>
                 <div style={{
                   width: '48px',
                   fontSize: '14px',
                   fontWeight: '500',
-                  color: '#64748b'
+                  color: isHighest ? '#059669' : '#64748b'
                 }}>
                   {day.day}
                 </div>
                 
                 <div style={{ flex: 1 }}>
                   <div style={{
-                    height: '8px',
+                    height: '10px',
                     background: '#e2e8f0',
                     borderRadius: '9999px',
-                    overflow: 'hidden'
+                    overflow: 'hidden',
+                    position: 'relative'
                   }}>
                     <div style={{
                       height: '100%',
-                      background: 'hsl(262.1, 83.3%, 57.8%)',
+                      background: isHighest 
+                        ? 'linear-gradient(90deg, #10b981 0%, #059669 100%)'
+                        : 'hsl(262.1, 83.3%, 57.8%)',
                       borderRadius: '9999px',
                       width: `${percentage}%`,
-                      transition: 'width 0.3s ease'
+                      transition: 'width 0.5s ease',
+                      boxShadow: isHighest ? '0 0 8px rgba(16, 185, 129, 0.4)' : 'none'
                     }} />
+                  </div>
+                  <div style={{
+                    fontSize: '11px',
+                    color: '#94a3b8',
+                    marginTop: '4px'
+                  }}>
+                    {day.bookings || 0} bookings
                   </div>
                 </div>
                 
                 <div style={{
                   fontSize: '14px',
                   fontWeight: '600',
-                  color: '#0f172a',
+                  color: isHighest ? '#059669' : '#0f172a',
                   minWidth: '100px',
-                  textAlign: 'right'
+                  textAlign: 'right',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'flex-end',
+                  gap: '6px'
                 }}>
+                  {isHighest && (
+                    <span style={{
+                      background: '#10b981',
+                      color: 'white',
+                      fontSize: '10px',
+                      padding: '2px 6px',
+                      borderRadius: '4px',
+                      fontWeight: '600'
+                    }}>
+                      TOP
+                    </span>
+                  )}
                   ₹{day.revenue.toLocaleString()}
                 </div>
               </div>
