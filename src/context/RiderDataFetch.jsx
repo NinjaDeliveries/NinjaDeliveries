@@ -17,6 +17,11 @@ const RiderDataFetch = () => {
   };
 
   useEffect(() => {
+    if (!user?.storeId) {
+      setLoading(false);
+      return;
+    }
+
     const q = query(
       collection(db, "riderDetails"),
       where("storeId", "==", user.storeId)
@@ -32,7 +37,7 @@ const RiderDataFetch = () => {
     });
 
     return () => unsubscribe();
-  }, [user.storeId]);
+  }, [user?.storeId]);
 
   return (
     <div className="riders-page-container">
