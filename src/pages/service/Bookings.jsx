@@ -8,6 +8,7 @@ import {
   updateDoc,
   doc,
   onSnapshot,
+  setDoc,
 } from "firebase/firestore";
 import AssignWorkerModal from "./AssignWorkerModal";
 import "../../style/ServiceDashboard.css";
@@ -427,66 +428,79 @@ const Bookings = () => {
     };
   }, []);
 
-  // const handleRejectBooking = async (booking) => {
-  //   if (!window.confirm("Are you sure you want to reject this booking?")) return;
+  const handleRejectBooking = async (booking) => {
+    if (!window.confirm("Are you sure you want to reject this booking?")) return;
 
-  //   try {
-  //     await updateDoc(
-  //       doc(db, "service_bookings", booking.id),
-  //       {
-  //         status: "rejected",
-  //         rejectedAt: new Date(),
-  //       }
-  //     );
+    try {
+      const user = auth.currentUser;
+      
+      // 1️⃣ Update Firestore booking status with user tracking
+      await updateDoc(
+        doc(db, "service_bookings", booking.id),
+        {
+          status: "rejected",
+          rejectedAt: new Date(),
+          rejectedBy: user?.uid,
+        }
+      );
 
-  //     // No need to call fetchBookings() - real-time listener will update automatically
-  //     alert("Booking rejected successfully");
-  //   } catch (err) {
-  //     console.error("Reject booking failed:", err);
-  //     alert("Failed to reject booking. Please try again.");
-  //   }
-  // };
-
-const handleRejectBooking = async (booking) => {
-  if (!window.confirm("Are you sure you want to reject this booking?")) return;
-
-  try {
-    // 1️⃣ Update Firestore status
-    await updateDoc(
-      doc(db, "service_bookings", booking.id),
-      {
-        status: "rejected",
+      // 2️⃣ Create a rejection record for admin tracking
+      const rejectionData = {
+        bookingId: booking.id,
+        companyId: booking.companyId,
+        companyName: booking.companyName || "Unknown Company",
+        serviceName: booking.serviceName,
+        workName: booking.workName,
+        customerName: booking.customerName,
+        customerPhone: booking.customerPhone,
+        bookingDate: booking.date,
+        bookingTime: booking.time,
+        amount: booking.totalPrice || booking.price || booking.amount || 0,
         rejectedAt: new Date(),
-      }
-    );
+        rejectedBy: user?.uid,
+        status: "pending_review", // Admin can review this
+      };
 
-    // 2️⃣ Call WhatsApp Cloud Function
-    await fetch(
-      "https://us-central1-ninjadeliveries-91007.cloudfunctions.net/sendWhatsAppMessage",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          bookingId: booking.id,
-          customerName: booking.customerName,
-          customerPhone: booking.customerPhone,
-          service: booking.workName || booking.serviceName,
-          amount: booking.totalPrice || booking.price || 0,
-          date: booking.date,
-          time: booking.time,
-          address: booking.customerAddress || booking.location,
-        }),
-      }
-    );
+      // Add to rejected_bookings collection for admin review
+      await setDoc(
+        doc(db, "rejected_bookings", booking.id),
+        rejectionData
+      );
 
-    alert("Booking rejected & WhatsApp sent");
-  } catch (err) {
-    console.error("Reject booking failed:", err);
-    alert("Failed to reject booking.");
-  }
-};
+      // 3️⃣ Send WhatsApp notification via Cloud Function
+      try {
+        await fetch(
+          "https://us-central1-ninjadeliveries-91007.cloudfunctions.net/sendWhatsAppMessage",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              bookingId: booking.id,
+              customerName: booking.customerName,
+              customerPhone: booking.customerPhone,
+              service: booking.workName || booking.serviceName,
+              amount: booking.totalPrice || booking.price || 0,
+              date: booking.date,
+              time: booking.time,
+              address: booking.customerAddress || booking.location,
+            }),
+          }
+        );
+        console.log("WhatsApp notification sent successfully");
+      } catch (whatsappError) {
+        console.error("WhatsApp notification failed:", whatsappError);
+        // Don't fail the whole operation if WhatsApp fails
+      }
+
+      // No need to call fetchBookings() - real-time listener will update automatically
+      alert("Booking rejected successfully");
+    } catch (err) {
+      console.error("Reject booking failed:", err);
+      alert("Failed to reject booking. Please try again.");
+    }
+  };
 
   const generateOtp = () => {
     return Math.floor(100000 + Math.random() * 900000).toString();
@@ -541,7 +555,6 @@ const handleRejectBooking = async (booking) => {
   const handleStartWork = async (booking) => {
     try {
       const otp = generateOtp();
-
       await updateDoc(
         doc(db, "service_bookings", booking.id),
         {
@@ -1559,6 +1572,15 @@ const handleRejectBooking = async (booking) => {
                             </span>
                           </div>
                         )}
+                        {/* NEW: Total Days */}
+                        {selectedBooking.totalDays && (
+                          <div className="package-info-item">
+                            <span style={{fontSize: '12px', color: '#64748b', display: 'block'}}>Total Days</span>
+                            <span style={{fontSize: '14px', fontWeight: '600', color: '#0f172a'}}>
+                              {selectedBooking.totalDays} days
+                            </span>
+                          </div>
+                        )}
                         {selectedBooking.packagePrice && (
                           <div className="package-info-item">
                             <span style={{fontSize: '12px', color: '#64748b', display: 'block'}}>Package Price</span>
@@ -1568,6 +1590,29 @@ const handleRejectBooking = async (booking) => {
                           </div>
                         )}
                       </div>
+                      
+                      {/* NEW: Off Days */}
+                      {selectedBooking.offDays && selectedBooking.offDays.length > 0 && (
+                        <div style={{marginTop: '12px'}}>
+                          <span style={{fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '6px'}}>Weekly Off Days</span>
+                          <div style={{display: 'flex', flexWrap: 'wrap', gap: '6px'}}>
+                            {selectedBooking.offDays.map((day, index) => (
+                              <span key={index} style={{
+                                background: '#fee2e2',
+                                border: '1px solid #fca5a5',
+                                color: '#dc2626',
+                                padding: '4px 10px',
+                                borderRadius: '16px',
+                                fontSize: '12px',
+                                fontWeight: '500',
+                                textTransform: 'capitalize'
+                              }}>
+                                🚫 {day}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                       
                       {/* Working Days */}
                       {selectedBooking.workingDays && selectedBooking.workingDays.length > 0 && (
