@@ -162,6 +162,10 @@ useEffect(() => {
   const [activeUsers, setActiveUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
 const [selectedUserLogs, setSelectedUserLogs] = useState([]);
+  
+  /* 🔹 Rejected Bookings */
+  const [rejectedBookings, setRejectedBookings] = useState([]);
+  const [rejectedLoading, setRejectedLoading] = useState(false);
 /* ================= FETCH ALL ADMIN USERS ================= */
 useEffect(() => {
   const fetchAllAdmins = async () => {
@@ -217,6 +221,39 @@ setActiveUsers(
       toast.error("Failed to load activity logs");
     } finally {
       setLogsLoading(false);
+    }
+  };
+
+  /* ================= FETCH REJECTED BOOKINGS ================= */
+  const fetchRejectedBookings = async () => {
+    try {
+      setRejectedLoading(true);
+      const q = query(
+        collection(db, "rejected_bookings"),
+        orderBy("rejectedAt", "desc")
+      );
+      const snap = await getDocs(q);
+      const bookings = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      setRejectedBookings(bookings);
+    } catch (err) {
+      console.error("Error fetching rejected bookings:", err);
+      toast.error("Failed to load rejected bookings");
+    } finally {
+      setRejectedLoading(false);
+    }
+  };
+
+  /* ================= DELETE REJECTED BOOKING ================= */
+  const handleDeleteRejectedBooking = async (bookingId) => {
+    if (!window.confirm("Are you sure you want to delete this rejected booking record?")) return;
+    
+    try {
+      await deleteDoc(doc(db, "rejected_bookings", bookingId));
+      setRejectedBookings(prev => prev.filter(b => b.id !== bookingId));
+      toast.success("Rejected booking deleted successfully");
+    } catch (err) {
+      console.error("Error deleting rejected booking:", err);
+      toast.error("Failed to delete rejected booking");
     }
   };
 
@@ -877,8 +914,71 @@ const AVAILABLE_FEATURES = [
 
 
       {/* Rejected Bookings Section */}
-      {/* <RejectedBookingsSection /> */}
-      {/* TODO: Implement RejectedBookingsSection component */}
+      <div style={styles.card}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <h3>Rejected Bookings</h3>
+          <button onClick={fetchRejectedBookings} style={styles.inviteButton}>
+            {rejectedLoading ? "Loading..." : "Refresh"}
+          </button>
+        </div>
+
+        {rejectedBookings.length === 0 && !rejectedLoading && (
+          <p style={{ marginTop: "10px", color: "#666" }}>No rejected bookings found.</p>
+        )}
+
+        {rejectedBookings.length > 0 && (
+          <div style={{ marginTop: "15px", maxHeight: "400px", overflowY: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+              <thead>
+                <tr>
+                  <th style={styles.logTh}>Rejected At</th>
+                  <th style={styles.logTh}>Company</th>
+                  <th style={styles.logTh}>Service</th>
+                  <th style={styles.logTh}>Work</th>
+                  <th style={styles.logTh}>Customer</th>
+                  <th style={styles.logTh}>Phone</th>
+                  <th style={styles.logTh}>Date</th>
+                  <th style={styles.logTh}>Time</th>
+                  <th style={styles.logTh}>Amount</th>
+                  <th style={styles.logTh}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rejectedBookings.map((booking) => (
+                  <tr key={booking.id}>
+                    <td style={styles.logTd}>
+                      {booking.rejectedAt
+                        ? new Date(booking.rejectedAt.seconds * 1000).toLocaleString()
+                        : "-"}
+                    </td>
+                    <td style={styles.logTd}>{booking.companyName || "-"}</td>
+                    <td style={styles.logTd}>{booking.serviceName || "-"}</td>
+                    <td style={styles.logTd}>{booking.workName || "-"}</td>
+                    <td style={styles.logTd}>{booking.customerName || "-"}</td>
+                    <td style={styles.logTd}>{booking.customerPhone || "-"}</td>
+                    <td style={styles.logTd}>{booking.bookingDate || "-"}</td>
+                    <td style={styles.logTd}>{booking.bookingTime || "-"}</td>
+                    <td style={styles.logTd}>₹{booking.amount || 0}</td>
+                    <td style={styles.logTd}>
+                      <button
+                        onClick={() => handleDeleteRejectedBooking(booking.id)}
+                        style={{
+                          ...styles.inviteButton,
+                          backgroundColor: "#ef4444",
+                          padding: "4px 8px",
+                          fontSize: "12px",
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
       {/* Activity Logs */}
       <div style={styles.card}>
