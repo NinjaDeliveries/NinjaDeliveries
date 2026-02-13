@@ -876,6 +876,10 @@ const AVAILABLE_FEATURES = [
 
 
 
+      {/* Rejected Bookings Section */}
+      {/* <RejectedBookingsSection /> */}
+      {/* TODO: Implement RejectedBookingsSection component */}
+
       {/* Activity Logs */}
       <div style={styles.card}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>

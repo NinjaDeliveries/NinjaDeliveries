@@ -8,6 +8,7 @@ import {
   updateDoc,
   doc,
   onSnapshot,
+  setDoc,
 } from "firebase/firestore";
 import AssignWorkerModal from "./AssignWorkerModal";
 import "../../style/ServiceDashboard.css";
@@ -431,12 +432,39 @@ const Bookings = () => {
     if (!window.confirm("Are you sure you want to reject this booking?")) return;
 
     try {
+      const user = auth.currentUser;
+      
+      // Update booking status
       await updateDoc(
         doc(db, "service_bookings", booking.id),
         {
           status: "rejected",
           rejectedAt: new Date(),
+          rejectedBy: user?.uid,
         }
+      );
+
+      // Create a rejection record for admin tracking
+      const rejectionData = {
+        bookingId: booking.id,
+        companyId: booking.companyId,
+        companyName: booking.companyName || "Unknown Company",
+        serviceName: booking.serviceName,
+        workName: booking.workName,
+        customerName: booking.customerName,
+        customerPhone: booking.customerPhone,
+        bookingDate: booking.date,
+        bookingTime: booking.time,
+        amount: booking.totalPrice || booking.price || booking.amount || 0,
+        rejectedAt: new Date(),
+        rejectedBy: user?.uid,
+        status: "pending_review", // Admin can review this
+      };
+
+      // Add to rejected_bookings collection for admin review
+      await setDoc(
+        doc(db, "rejected_bookings", booking.id),
+        rejectionData
       );
 
       // No need to call fetchBookings() - real-time listener will update automatically
