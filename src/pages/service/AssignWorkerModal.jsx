@@ -20,7 +20,6 @@ const AssignWorkerModal = ({ booking, categories = [], onClose, onAssigned }) =>
     const cat = categories.find(c => c.id === categoryId);
     return cat ? cat.name : "";
   };
-
   // Fetch services to understand service-category relationship
   const fetchServices = async () => {
     try {
