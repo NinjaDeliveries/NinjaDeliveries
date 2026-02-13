@@ -370,7 +370,7 @@ function BannerManagement({ onBack }) {
         </div>
       </div>
 
-      {/* Modern Search */}
+      {/* Modern component */}
       <div className="modern-search-section">
         <div className="modern-search-box">
           <svg className="modern-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
