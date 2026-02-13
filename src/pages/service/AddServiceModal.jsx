@@ -7,7 +7,7 @@ const AddServiceModal = ({ onClose, onSaved, editService }) => {
   const [name, setName] = useState("");
   // const [categoryId, setCategoryId] = useState("");
   const [categoryMasterId, setCategoryMasterId] = useState(""); // Empty = no category selected
-  const [selectedCompanyCategoryId, setSelectedCompanyCategoryId] = useState(""); // Empty = no company category selected....
+  const [selectedCompanyCategoryId, setSelectedCompanyCategoryId] = useState(""); // Empty = no company category selected
   const [categories, setCategories] = useState([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [servicesLoading, setServicesLoading] = useState(false);
@@ -20,7 +20,9 @@ const AddServiceModal = ({ onClose, onSaved, editService }) => {
         days: [], // Empty for monthly packages
         timeSlots: [{ startTime: "09:00", endTime: "17:00" }], // Array of time slots
         isAvailable: true
-      }
+      },
+      // NEW: Quantity offers for this package
+      quantityOffers: []
     },
   ]);
   const [serviceImage, setServiceImage] = useState(null);
@@ -63,6 +65,9 @@ const [isCustomService, setIsCustomService] = useState(false);
 const isAdminService = !isCustomService;
 // pricing (ADMIN service only)
 const [fixedPrice, setFixedPrice] = useState("");
+
+// NEW: Quantity-based offers state
+const [quantityOffers, setQuantityOffers] = useState([]);
 
 
 // pricing
@@ -216,13 +221,17 @@ const fetchAdminServices = async (catId) => {
           days: availability.days || (pkg.unit === "month" ? [] : ['monday', 'tuesday', 'wednesday', 'thursday', 'friday']),
           timeSlots: availability.timeSlots || [{ startTime: "09:00", endTime: "17:00" }],
           isAvailable: availability.isAvailable ?? true
-        }
+        },
+        // Load quantity offers if they exist
+        quantityOffers: pkg.quantityOffers || []
       };
     });
     setPackages(packagesWithAvailability);
   } else {
     setIsCustomService(false);
     setFixedPrice(editService.price?.toString() || "");
+    // Load quantity offers if they exist
+    setQuantityOffers(editService.quantityOffers || []);
   }
 }, [editService, categories]); // Add categories as dependency
 
@@ -358,7 +367,9 @@ const fetchAdminServices = async (catId) => {
         offDays: [], // NEW: Weekly off days (e.g., ['saturday', 'sunday'])
         timeSlots: [{ startTime: "09:00", endTime: "17:00" }], // Array of time slots
         isAvailable: true
-      }
+      },
+      // NEW: Quantity offers for this package
+      quantityOffers: []
     }]);
   };
 
@@ -422,6 +433,82 @@ const fetchAdminServices = async (catId) => {
   const updateTimeSlot = (packageIndex, slotIndex, field, value) => {
     const copy = [...packages];
     copy[packageIndex].availability.timeSlots[slotIndex][field] = value;
+    setPackages(copy);
+  };
+
+  // NEW: Quantity offer management functions (for admin services)
+  const addQuantityOffer = () => {
+    setQuantityOffers([
+      ...quantityOffers,
+      {
+        minQuantity: 3,
+        discountType: "percentage",
+        discountValue: 10,
+        newPricePerUnit: "",
+        isActive: true
+      }
+    ]);
+  };
+
+  const removeQuantityOffer = (index) => {
+    setQuantityOffers(quantityOffers.filter((_, i) => i !== index));
+  };
+
+  const updateQuantityOffer = (index, field, value) => {
+    const copy = [...quantityOffers];
+    copy[index][field] = value;
+    
+    // Auto-calculate newPricePerUnit when discount changes
+    if (field === "discountValue" || field === "discountType") {
+      const basePrice = Number(fixedPrice) || 0;
+      if (copy[index].discountType === "percentage") {
+        copy[index].newPricePerUnit = basePrice - (basePrice * Number(value) / 100);
+      } else if (copy[index].discountType === "fixed") {
+        copy[index].newPricePerUnit = basePrice - Number(value);
+      }
+    }
+    
+    setQuantityOffers(copy);
+  };
+
+  // NEW: Package-specific quantity offer management
+  const addPackageQuantityOffer = (packageIndex) => {
+    const copy = [...packages];
+    if (!copy[packageIndex].quantityOffers) {
+      copy[packageIndex].quantityOffers = [];
+    }
+    copy[packageIndex].quantityOffers.push({
+      minQuantity: 3,
+      discountType: "percentage",
+      discountValue: 10,
+      newPricePerUnit: "",
+      isActive: true
+    });
+    setPackages(copy);
+  };
+
+  const removePackageQuantityOffer = (packageIndex, offerIndex) => {
+    const copy = [...packages];
+    copy[packageIndex].quantityOffers = copy[packageIndex].quantityOffers.filter((_, i) => i !== offerIndex);
+    setPackages(copy);
+  };
+
+  const updatePackageQuantityOffer = (packageIndex, offerIndex, field, value) => {
+    const copy = [...packages];
+    copy[packageIndex].quantityOffers[offerIndex][field] = value;
+    
+    // Auto-calculate newPricePerUnit when discount changes
+    if (field === "discountValue" || field === "discountType") {
+      const basePrice = Number(copy[packageIndex].price) || 0;
+      if (copy[packageIndex].quantityOffers[offerIndex].discountType === "percentage") {
+        copy[packageIndex].quantityOffers[offerIndex].newPricePerUnit = 
+          basePrice - (basePrice * Number(value) / 100);
+      } else if (copy[packageIndex].quantityOffers[offerIndex].discountType === "fixed") {
+        copy[packageIndex].quantityOffers[offerIndex].newPricePerUnit = 
+          basePrice - Number(value);
+      }
+    }
+    
     setPackages(copy);
   };
 
@@ -522,6 +609,12 @@ if (isAdminService) {
   }
   payload.price = Number(fixedPrice);
   payload.packages = [];
+  
+  // Add quantity offers if any
+  payload.quantityOffers = quantityOffers.filter(offer => 
+    offer.minQuantity > 0 && 
+    (offer.discountValue > 0 || offer.newPricePerUnit > 0)
+  );
 }
 
 // ✅ CUSTOM SERVICE → PACKAGES ONLY
@@ -569,7 +662,12 @@ if (isCustomService) {
       days: p.unit === "month" ? [] : ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'], // Empty days for monthly
       timeSlots: [{ startTime: "09:00", endTime: "17:00" }],
       isAvailable: true
-    }
+    },
+    // Include quantity offers for this package
+    quantityOffers: (p.quantityOffers || []).filter(offer => 
+      offer.minQuantity > 0 && 
+      (offer.discountValue > 0 || offer.newPricePerUnit > 0)
+    )
   }));
 }
 
@@ -608,68 +706,24 @@ if (isCustomService) {
 
   return (
     <div className="sd-modal-backdrop">
-      <div className="sd-modal">
-        <h2>{isEditMode ? "Edit Service" : "Create Service"}</h2>
+      <div className="sd-modal modern-service-modal">
+        <div className="sd-modal-header">
+          <div>
+            <h2>{isEditMode ? "Edit Service" : "Create Service"}</h2>
+            <p className="sd-modal-subtitle">
+              {isEditMode ? "Update service details and pricing" : "Add a new service to your offerings"}
+            </p>
+          </div>
+          <button className="sd-modal-close" onClick={onClose} disabled={uploading}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M18 6L6 18M6 6l12 12" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+          </button>
+        </div>
 
-        {/* <div className="sd-form-group">
-          <label>Service Name</label>
-          <input
-            placeholder="Service Name"
-            value={name}
-            onChange={e => setName(e.target.value)}
-          />
-        </div> */}
-        {/* <div className="sd-form-group">
-  <label>Service</label>
-
-  {!isCustomService ? (
-    <select
-      value={selectedServiceId}
-      onChange={(e) => {
-        const val = e.target.value;
-
-        if (val === "custom") {
-          setIsCustomService(true);
-          setSelectedServiceId("");
-          setName("");
-        } else {
-          setSelectedServiceId(val);
-          const svc = adminServices.find(s => s.id === val);
-          if (svc) setName(svc.name);
-        }
-      }}
-    >
-      <option value="">Select Service</option>
-
-      {adminServices.map(svc => (
-        <option key={svc.id} value={svc.id}>
-          {svc.name}
-        </option>
-      ))}
-
-      <option value="custom">➕ Add Custom Service</option>
-    </select>
-  ) : (
-    <>
-      <input
-        placeholder="Enter service name"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-      />
-      <button
-        type="button"
-        className="sd-link-btn"
-        onClick={() => {
-          setIsCustomService(false);
-          setName("");
-        }}
-      >
-        ← Back to predefined services
-      </button>
-    </>
-  )}
-</div> */}
-<div className="sd-form-group">
+        <div className="sd-modal-content">
+        
+        <div className="sd-form-group">
           <label>Category</label>
           <div className="sd-category-section">
     
@@ -834,15 +888,195 @@ if (isCustomService) {
   </div>
 )}
 {isAdminService && (
-  <div className="sd-form-group">
-    <label>Price</label>
-    <input
-      type="number"
-      placeholder="Enter fixed price"
-      value={fixedPrice}
-      onChange={(e) => setFixedPrice(e.target.value)}
-    />
-  </div>
+  <>
+    <div className="sd-form-group">
+      <label>Price (per unit)</label>
+      <input
+        type="number"
+        placeholder="Enter fixed price"
+        value={fixedPrice}
+        onChange={(e) => setFixedPrice(e.target.value)}
+      />
+    </div>
+
+    {/* NEW: Quantity-based Offers Section */}
+    <div className="sd-form-group">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+        <label>Quantity-Based Offers (Optional)</label>
+        <button
+          type="button"
+          className="sd-add-offer-btn"
+          onClick={addQuantityOffer}
+          style={{
+            padding: '6px 12px',
+            fontSize: '13px',
+            background: '#10b981',
+            color: 'white',
+            border: 'none',
+            borderRadius: '6px',
+            cursor: 'pointer'
+          }}
+        >
+          + Add Offer
+        </button>
+      </div>
+
+      {quantityOffers.length === 0 && (
+        <div style={{
+          padding: '15px',
+          background: '#f8fafc',
+          border: '1px dashed #cbd5e1',
+          borderRadius: '8px',
+          textAlign: 'center',
+          color: '#64748b',
+          fontSize: '14px'
+        }}>
+          No offers added. Click "+ Add Offer" to create quantity-based discounts.
+        </div>
+      )}
+
+      {quantityOffers.map((offer, index) => (
+        <div key={index} className="sd-offer-row" style={{
+          padding: '15px',
+          background: '#f8fafc',
+          border: '1px solid #e2e8f0',
+          borderRadius: '8px',
+          marginBottom: '10px'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: '#334155' }}>
+              Offer #{index + 1}
+            </h4>
+            <button
+              type="button"
+              onClick={() => removeQuantityOffer(index)}
+              style={{
+                padding: '4px 8px',
+                fontSize: '12px',
+                background: '#ef4444',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer'
+              }}
+            >
+              Remove
+            </button>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+            <div>
+              <label style={{ fontSize: '13px', color: '#64748b', display: 'block', marginBottom: '4px' }}>
+                Minimum Quantity
+              </label>
+              <input
+                type="number"
+                min="1"
+                placeholder="e.g., 3"
+                value={offer.minQuantity}
+                onChange={(e) => updateQuantityOffer(index, 'minQuantity', Number(e.target.value))}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '6px',
+                  fontSize: '14px'
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ fontSize: '13px', color: '#64748b', display: 'block', marginBottom: '4px' }}>
+                Discount Type
+              </label>
+              <select
+                value={offer.discountType}
+                onChange={(e) => updateQuantityOffer(index, 'discountType', e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '6px',
+                  fontSize: '14px'
+                }}
+              >
+                <option value="percentage">Percentage Off (%)</option>
+                <option value="fixed">Fixed Amount Off (₹)</option>
+                <option value="newPrice">New Price Per Unit (₹)</option>
+              </select>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            {offer.discountType !== 'newPrice' && (
+              <div>
+                <label style={{ fontSize: '13px', color: '#64748b', display: 'block', marginBottom: '4px' }}>
+                  {offer.discountType === 'percentage' ? 'Discount (%)' : 'Discount Amount (₹)'}
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step={offer.discountType === 'percentage' ? '1' : '0.01'}
+                  placeholder={offer.discountType === 'percentage' ? 'e.g., 10' : 'e.g., 10'}
+                  value={offer.discountValue}
+                  onChange={(e) => updateQuantityOffer(index, 'discountValue', Number(e.target.value))}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '6px',
+                    fontSize: '14px'
+                  }}
+                />
+              </div>
+            )}
+
+            <div>
+              <label style={{ fontSize: '13px', color: '#64748b', display: 'block', marginBottom: '4px' }}>
+                {offer.discountType === 'newPrice' ? 'New Price Per Unit (₹)' : 'Final Price Per Unit (₹)'}
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="e.g., 90"
+                value={offer.newPricePerUnit}
+                onChange={(e) => updateQuantityOffer(index, 'newPricePerUnit', Number(e.target.value))}
+                disabled={offer.discountType !== 'newPrice'}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  background: offer.discountType !== 'newPrice' ? '#f1f5f9' : 'white'
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Preview */}
+          {fixedPrice && offer.minQuantity > 0 && (
+            <div style={{
+              marginTop: '10px',
+              padding: '10px',
+              background: '#ecfdf5',
+              border: '1px solid #a7f3d0',
+              borderRadius: '6px',
+              fontSize: '13px',
+              color: '#065f46'
+            }}>
+              <strong>Preview:</strong> Buy {offer.minQuantity}+ units, get{' '}
+              {offer.discountType === 'percentage' && `${offer.discountValue}% off`}
+              {offer.discountType === 'fixed' && `₹${offer.discountValue} off per unit`}
+              {offer.discountType === 'newPrice' && `at ₹${offer.newPricePerUnit} per unit`}
+              {offer.newPricePerUnit > 0 && ` (₹${offer.newPricePerUnit}/unit)`}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  </>
 )}  
 
         {/* <div className="sd-form-group">
@@ -1170,6 +1404,191 @@ if (isCustomService) {
             </div>
           </div>
         )}
+
+        {/* NEW: Quantity-based Offers for Package */}
+        <div className="sd-package-offers-section" style={{
+          marginTop: '20px',
+          padding: '15px',
+          background: '#f8fafc',
+          border: '1px solid #e2e8f0',
+          borderRadius: '8px'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: '#334155' }}>
+              Quantity-Based Offers for this Package
+            </h4>
+            <button
+              type="button"
+              onClick={() => addPackageQuantityOffer(i)}
+              style={{
+                padding: '6px 12px',
+                fontSize: '12px',
+                background: '#10b981',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer'
+              }}
+            >
+              + Add Offer
+            </button>
+          </div>
+
+          {(!p.quantityOffers || p.quantityOffers.length === 0) && (
+            <div style={{
+              padding: '12px',
+              background: 'white',
+              border: '1px dashed #cbd5e1',
+              borderRadius: '6px',
+              textAlign: 'center',
+              color: '#64748b',
+              fontSize: '13px'
+            }}>
+              No offers for this package. Click "+ Add Offer" to create quantity discounts.
+            </div>
+          )}
+
+          {(p.quantityOffers || []).map((offer, offerIndex) => (
+            <div key={offerIndex} style={{
+              padding: '12px',
+              background: 'white',
+              border: '1px solid #e2e8f0',
+              borderRadius: '6px',
+              marginTop: '10px'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <span style={{ fontSize: '13px', fontWeight: '600', color: '#334155' }}>
+                  Offer #{offerIndex + 1}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => removePackageQuantityOffer(i, offerIndex)}
+                  style={{
+                    padding: '4px 8px',
+                    fontSize: '11px',
+                    background: '#ef4444',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Remove
+                </button>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px' }}>
+                    Min Quantity
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    placeholder="e.g., 3"
+                    value={offer.minQuantity}
+                    onChange={(e) => updatePackageQuantityOffer(i, offerIndex, 'minQuantity', Number(e.target.value))}
+                    style={{
+                      width: '100%',
+                      padding: '6px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '4px',
+                      fontSize: '13px'
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px' }}>
+                    Discount Type
+                  </label>
+                  <select
+                    value={offer.discountType}
+                    onChange={(e) => updatePackageQuantityOffer(i, offerIndex, 'discountType', e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '6px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '4px',
+                      fontSize: '13px'
+                    }}
+                  >
+                    <option value="percentage">Percentage Off (%)</option>
+                    <option value="fixed">Fixed Amount Off (₹)</option>
+                    <option value="newPrice">New Price (₹)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                {offer.discountType !== 'newPrice' && (
+                  <div>
+                    <label style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px' }}>
+                      {offer.discountType === 'percentage' ? 'Discount (%)' : 'Discount (₹)'}
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step={offer.discountType === 'percentage' ? '1' : '0.01'}
+                      placeholder={offer.discountType === 'percentage' ? 'e.g., 10' : 'e.g., 50'}
+                      value={offer.discountValue}
+                      onChange={(e) => updatePackageQuantityOffer(i, offerIndex, 'discountValue', Number(e.target.value))}
+                      style={{
+                        width: '100%',
+                        padding: '6px',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '4px',
+                        fontSize: '13px'
+                      }}
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <label style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px' }}>
+                    {offer.discountType === 'newPrice' ? 'New Price (₹)' : 'Final Price (₹)'}
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="e.g., 450"
+                    value={offer.newPricePerUnit}
+                    onChange={(e) => updatePackageQuantityOffer(i, offerIndex, 'newPricePerUnit', Number(e.target.value))}
+                    disabled={offer.discountType !== 'newPrice'}
+                    style={{
+                      width: '100%',
+                      padding: '6px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '4px',
+                      fontSize: '13px',
+                      background: offer.discountType !== 'newPrice' ? '#f1f5f9' : 'white'
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Preview */}
+              {p.price && offer.minQuantity > 0 && (
+                <div style={{
+                  marginTop: '8px',
+                  padding: '8px',
+                  background: '#ecfdf5',
+                  border: '1px solid #a7f3d0',
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  color: '#065f46'
+                }}>
+                  <strong>Preview:</strong> Buy {offer.minQuantity}+ packages, get{' '}
+                  {offer.discountType === 'percentage' && `${offer.discountValue}% off`}
+                  {offer.discountType === 'fixed' && `₹${offer.discountValue} off per package`}
+                  {offer.discountType === 'newPrice' && `at ₹${offer.newPricePerUnit} per package`}
+                  {offer.newPricePerUnit > 0 && ` (₹${offer.newPricePerUnit}/package)`}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
     ))}
 
@@ -1182,6 +1601,8 @@ if (isCustomService) {
     </button>
   </div>
 )}
+        </div>
+        
         <div className="sd-modal-actions">
           <button className="sd-cancel-btn" onClick={onClose} disabled={uploading}>
             Cancel

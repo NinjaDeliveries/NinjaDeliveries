@@ -1038,17 +1038,239 @@
 .sd-modal {
   background: white;
   border-radius: 12px;
-  padding: 24px;
+  padding: 0;
   width: 90%;
-  max-width: 500px;
-  max-height: 80vh;
+  max-width: 700px;
+  max-height: 85vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.sd-modal-header {
+  padding: 24px;
+  flex-shrink: 0;
+}
+
+.sd-modal-content {
+  padding: 0 24px 24px 24px;
   overflow-y: auto;
+  flex: 1;
+}
+
+.sd-modal-actions {
+  padding: 16px 24px;
+  flex-shrink: 0;
 }
 
 .sd-modal h2 {
   margin: 0 0 20px 0;
   font-size: 24px;
   color: #1f2937;
+}
+
+/* ========== MODAL HEADER ========== */
+.sd-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.sd-modal-header h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.2;
+}
+
+.sd-modal-subtitle {
+  margin: 4px 0 0 0;
+  font-size: 14px;
+  color: #6b7280;
+  font-weight: 400;
+}
+
+.sd-modal-close {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  color: #6b7280;
+  transition: all 0.2s ease;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sd-modal-close:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.sd-modal-close:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ========== MODAL CONTENT ========== */
+.sd-modal-content {
+  padding: 0;
+}
+
+/* ========== CATEGORY SECTION ========== */
+.sd-category-section {
+  position: relative;
+}
+
+.sd-loading-select {
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #f9fafb;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.sd-no-categories-message,
+.sd-no-services-message {
+  padding: 12px;
+  background: #fef3c7;
+  border: 1px solid #fbbf24;
+  border-radius: 8px;
+  margin-top: 8px;
+}
+
+.sd-no-categories-message p,
+.sd-no-services-message p {
+  margin: 0;
+  font-size: 13px;
+  color: #92400e;
+  line-height: 1.5;
+}
+
+/* ========== LINK BUTTON ========== */
+.sd-link-btn {
+  background: transparent;
+  border: none;
+  color: #4f46e5;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 8px 0;
+  margin-top: 8px;
+  text-decoration: underline;
+  transition: color 0.2s ease;
+}
+
+.sd-link-btn:hover {
+  color: #4338ca;
+}
+
+/* ========== IMAGE UPLOAD ========== */
+.sd-image-upload {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sd-image-preview {
+  position: relative;
+  width: 100%;
+  max-width: 200px;
+  height: 150px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 2px solid #e5e7eb;
+}
+
+.sd-image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sd-remove-image-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: #ef4444;
+  color: white;
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.sd-remove-image-btn:hover {
+  background: #dc2626;
+  transform: scale(1.1);
+}
+
+.sd-image-placeholder {
+  width: 100%;
+  max-width: 200px;
+  height: 150px;
+  border: 2px dashed #d1d5db;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f9fafb;
+}
+
+.sd-image-placeholder span {
+  color: #9ca3af;
+  font-size: 13px;
+}
+
+.sd-file-input {
+  display: none;
+}
+
+.sd-file-label {
+  display: inline-block;
+  padding: 8px 16px;
+  background: #4f46e5;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.sd-file-label:hover {
+  background: #4338ca;
+  transform: translateY(-1px);
+}
+
+/* ========== ADD OFFER BUTTON ========== */
+.sd-add-offer-btn {
+  padding: 6px 12px;
+  font-size: 13px;
+  background: #10b981;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.sd-add-offer-btn:hover {
+  background: #059669;
+  transform: translateY(-1px);
 }
 
 .sd-form-group {
