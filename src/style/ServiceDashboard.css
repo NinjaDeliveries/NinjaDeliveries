@@ -1033,6 +1033,8 @@
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  padding: 20px;
+  overflow-y: auto;
 }
 
 .sd-modal {
@@ -1041,11 +1043,12 @@
   padding: 0;
   width: 90%;
   max-width: 700px;
-  max-height: 85vh;
+  max-height: 90vh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  margin: auto;
 }
 
 .sd-modal-header {
@@ -1057,11 +1060,14 @@
   padding: 0 24px 24px 24px;
   overflow-y: auto;
   flex: 1;
+  min-height: 0;
 }
 
 .sd-modal-actions {
   padding: 16px 24px;
   flex-shrink: 0;
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
 }
 
 .sd-modal h2 {
@@ -9877,20 +9883,29 @@ input:checked + .settings-toggle-slider:before {
 
 /* Modal Enhancements */
 .technicians-modal {
-  max-width: 600px;
+  max-width: 650px;
   width: 90%;
+  max-height: 90vh;
+}
+
+.technicians-modal h2 {
+  margin: 0 0 8px 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: #111827;
 }
 
 .technicians-modal-desc {
   color: #6b7280;
   font-size: 14px;
-  margin: 8px 0 24px 0;
+  margin: 0;
 }
 
 .technicians-modal-form {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  padding: 24px 0;
 }
 
 .technicians-form-row {
@@ -18966,6 +18981,310 @@ input:checked + .settings-toggle-slider:before {
   padding: 0 24px 24px 24px;
 }
 
+/* Better scrollbar for modal content */
+.sd-modal-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.sd-modal-content::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.sd-modal-content::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.sd-modal-content::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Improved form groups */
+.sd-form-group {
+  margin-bottom: 20px;
+}
+
+.sd-form-group label {
+  display: block;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.sd-form-group input,
+.sd-form-group select,
+.sd-form-group textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.sd-form-group input:focus,
+.sd-form-group select:focus,
+.sd-form-group textarea:focus {
+  outline: none;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+/* Package rows styling */
+.sd-package-row {
+  background: #f9fafb;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+  transition: all 0.2s ease;
+}
+
+.sd-package-row:hover {
+  border-color: #a855f7;
+  box-shadow: 0 4px 12px rgba(168, 85, 247, 0.1);
+}
+
+/* Offer rows styling */
+.sd-offer-row {
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 12px;
+  transition: all 0.2s ease;
+}
+
+.sd-offer-row:hover {
+  border-color: #10b981;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.1);
+}
+
+/* Button improvements */
+.sd-primary-btn,
+.sd-save-btn {
+  background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+}
+
+.sd-primary-btn:hover,
+.sd-save-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(79, 70, 229, 0.4);
+}
+
+.sd-cancel-btn {
+  background: white;
+  color: #374151;
+  border: 2px solid #e5e7eb;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sd-cancel-btn:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+/* Remove button styling */
+.sd-remove-btn {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sd-remove-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+/* Add button styling */
+.sd-add-btn {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sd-add-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+/* Loading states */
+.sd-loading-select {
+  padding: 12px;
+  background: #f9fafb;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  color: #6b7280;
+  text-align: center;
+  font-size: 14px;
+}
+
+/* Empty states */
+.sd-no-categories-message,
+.sd-no-services-message {
+  padding: 16px;
+  background: #fef3c7;
+  border: 2px solid #fbbf24;
+  border-radius: 8px;
+  margin-top: 12px;
+}
+
+.sd-no-categories-message p,
+.sd-no-services-message p {
+  margin: 0;
+  font-size: 14px;
+  color: #78350f;
+  line-height: 1.5;
+}
+
+/* Availability section */
+.sd-availability-section {
+  background: #f8fafc;
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.sd-availability-section h4 {
+  margin: 0 0 12px 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #334155;
+}
+
+/* Time slots */
+.sd-time-slot-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+.sd-time-slot-row input[type="time"] {
+  padding: 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+/* Days grid */
+.sd-days-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.sd-day-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.sd-day-checkbox:hover {
+  background: #f0f9ff;
+  border-color: #0ea5e9;
+}
+
+.sd-day-checkbox input[type="checkbox"]:checked + span {
+  color: #0ea5e9;
+  font-weight: 600;
+}
+
+/* Image upload section */
+.sd-image-upload {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sd-image-preview {
+  position: relative;
+  width: 100%;
+  max-width: 200px;
+  height: 150px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 2px solid #e5e7eb;
+}
+
+.sd-image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sd-remove-image-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: #ef4444;
+  color: white;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.sd-remove-image-btn:hover {
+  background: #dc2626;
+  transform: scale(1.1);
+}
+
+/* ========== MODAL CONTENT SPACING (OLD) ========== */
+.sd-modal-content {
+  padding: 0 24px 24px 24px;
+}
+
 .sd-modal h2 {
   margin: 0 0 24px 0;
   font-size: 24px;
@@ -19076,6 +19395,56 @@ input:checked + .settings-toggle-slider:before {
   font-weight: 600;
   color: #4f46e5;
 }
+
+/* ========== SERVICE FORM STEP SECTIONS ========== */
+.service-form-step {
+  animation: slideInUp 0.3s ease-out;
+  transition: all 0.3s ease;
+}
+
+.service-form-step:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1) !important;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Step number badges */
+.service-form-step > div:first-child > div:first-child {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+/* Form inputs within steps */
+.service-form-step input,
+.service-form-step select {
+  transition: all 0.2s ease;
+}
+
+.service-form-step input:focus,
+.service-form-step select:focus {
+  outline: none;
+  border-color: currentColor;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
 /* ========== SERVICES PAGE STYLING ========== */
 .services-stats-grid {
   display: grid;
