@@ -427,8 +427,8 @@ const Feedback = () => {
       {/* Page Header */}
       <div className="sd-header">
         <div>
-          <h1>Service & Category Feedback</h1>
-          <p>View customer reviews and ratings for your services and categories</p>
+          <h1>Customer Feedback & Ratings</h1>
+          <p>View customer ratings and feedback for your services</p>
           <div className="feedback-live-indicator">
             <div className="feedback-live-dot"></div>
             Live Data
@@ -483,7 +483,7 @@ const Feedback = () => {
         <div className="feedback-stat-card positive">
           <div className="feedback-stat-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path d="M14 9V5a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2H9V5a3 3 0 0 1 6 0v4h2a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2"/>
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
             </svg>
           </div>
           <div className="feedback-stat-content">
@@ -553,14 +553,14 @@ const Feedback = () => {
           <div className="feedback-empty-state">
             <div className="feedback-empty-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
               </svg>
             </div>
-            <h3>No feedback found</h3>
+            <h3>No ratings found</h3>
             <p>
               {searchQuery || ratingFilter !== "all"
                 ? "Try adjusting your search or filters"
-                : "Service and category feedback will appear here once customers rate your services"}
+                : "Customer ratings and feedback will appear here once customers rate your services"}
             </p>
           </div>
         ) : (
