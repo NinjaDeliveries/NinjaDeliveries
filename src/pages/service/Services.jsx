@@ -693,13 +693,53 @@ const formatAvailability = (availability, unit) => {
                               <circle cx="12" cy="12" r="10"/>
                               <polyline points="12,6 12,12 16,14"/>
                             </svg>
-                            <span>{service.duration}</span>
+                            <span>
+                              {service.duration} {service.durationUnit || 'hour'}{service.duration > 1 ? 's' : ''}
+                            </span>
+                          </div>
+                        )}
+                        
+                        {service.quantityOffers && service.quantityOffers.length > 0 && (
+                          <div className="services-offers-badge">
+                            <svg className="services-offers-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                              <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+                              <line x1="7" y1="7" x2="7.01" y2="7"/>
+                            </svg>
+                            <span>{service.quantityOffers.length} Offer{service.quantityOffers.length > 1 ? 's' : ''} Available</span>
                           </div>
                         )}
                       </div>
 
                       {service.description && (
                         <p className="services-description">{service.description}</p>
+                      )}
+
+                      {/* Quantity Offers Display */}
+                      {service.quantityOffers && service.quantityOffers.length > 0 && (
+                        <div className="services-offers-details">
+                          <p className="services-offers-label">
+                            <svg className="services-offers-label-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                              <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                              <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
+                            </svg>
+                            Bulk Discounts:
+                          </p>
+                          <div className="services-offers-list">
+                            {service.quantityOffers.map((offer, index) => (
+                              <div key={index} className="services-offer-item">
+                                <span className="services-offer-qty">Buy {offer.minQuantity}+</span>
+                                <span className="services-offer-arrow">→</span>
+                                <span className="services-offer-discount">
+                                  {offer.discountType === 'percentage' 
+                                    ? `${offer.discountValue}% OFF` 
+                                    : offer.discountType === 'fixed'
+                                    ? `₹${offer.discountValue} OFF`
+                                    : `₹${offer.newPricePerUnit}/unit`}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                       )}
 
                       {/* Package Details */}
