@@ -965,10 +965,23 @@ if (isCustomService) {
     <div className="sd-form-group">
       <label>Price (per unit)</label>
       <input
-        type="number"
+        type="text"
+        inputMode="decimal"
         placeholder="Enter fixed price"
-        value={fixedPrice}
-        onChange={(e) => setFixedPrice(e.target.value)}
+        value={fixedPrice || ''}
+        onChange={(e) => {
+          const value = e.target.value;
+          // Allow empty string, numbers, and decimal point
+          if (value === '' || /^\d*\.?\d*$/.test(value)) {
+            setFixedPrice(value);
+          }
+        }}
+        onBlur={(e) => {
+          // Set to 0 if empty on blur
+          if (e.target.value === '') {
+            setFixedPrice('0');
+          }
+        }}
       />
     </div>
 
@@ -977,11 +990,23 @@ if (isCustomService) {
       <div className="sd-form-group">
         <label>Service Duration</label>
         <input
-          type="number"
+          type="text"
+          inputMode="numeric"
           placeholder="Duration"
-          value={packages[0]?.duration || 1}
-          onChange={(e) => updatePackage(0, 'duration', e.target.value)}
-          min="1"
+          value={packages[0]?.duration || ''}
+          onChange={(e) => {
+            const value = e.target.value;
+            // Allow empty string or valid numbers only
+            if (value === '' || /^\d+$/.test(value)) {
+              updatePackage(0, 'duration', value === '' ? '' : value);
+            }
+          }}
+          onBlur={(e) => {
+            // Set to 1 if empty on blur
+            if (e.target.value === '') {
+              updatePackage(0, 'duration', '1');
+            }
+          }}
         />
       </div>
       <div className="sd-form-group">
@@ -1261,29 +1286,63 @@ if (isCustomService) {
 
     {packages.map((p, i) => (
       <div key={i} className="sd-package-row">
-        <div className="sd-package-basic-info">
-          <input
-            type="number"
-            placeholder="Duration"
-            value={p.duration}
-            onChange={e => updatePackage(i, "duration", e.target.value)}
-          />
+        {/* Package Header with Duration and Price */}
+        <div className="sd-package-header">
+          <div className="sd-package-duration-price">
+            <div className="sd-input-group">
+              <label>Duration</label>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="Duration"
+                  value={p.duration || ''}
+                  onChange={e => {
+                    const value = e.target.value;
+                    if (value === '' || /^\d+$/.test(value)) {
+                      updatePackage(i, "duration", value === '' ? '' : value);
+                    }
+                  }}
+                  onBlur={e => {
+                    if (e.target.value === '') {
+                      updatePackage(i, "duration", '1');
+                    }
+                  }}
+                  style={{ flex: 1 }}
+                />
+                <select
+                  value={p.unit}
+                  onChange={e => updatePackage(i, "unit", e.target.value)}
+                  style={{ flex: 1 }}
+                >
+                  <option value="month">month(s)</option>
+                  <option value="week">week(s)</option>
+                  <option value="day">day(s)</option>
+                </select>
+              </div>
+            </div>
 
-          <select
-            value={p.unit}
-            onChange={e => updatePackage(i, "unit", e.target.value)}
-          >
-            <option value="month">month(s)</option>
-            <option value="week">week(s)</option>
-            <option value="day">day(s)</option>
-          </select>
-
-          <input
-            type="number"
-            placeholder="Price"
-            value={p.price}
-            onChange={e => updatePackage(i, "price", e.target.value)}
-          />
+            <div className="sd-input-group">
+              <label>Price (₹)</label>
+              <input
+                type="text"
+                inputMode="decimal"
+                placeholder="Price"
+                value={p.price || ''}
+                onChange={e => {
+                  const value = e.target.value;
+                  if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                    updatePackage(i, "price", value);
+                  }
+                }}
+                onBlur={e => {
+                  if (e.target.value === '') {
+                    updatePackage(i, "price", '0');
+                  }
+                }}
+              />
+            </div>
+          </div>
 
           {packages.length > 1 && (
             <button

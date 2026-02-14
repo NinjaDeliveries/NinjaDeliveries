@@ -10,11 +10,15 @@ import {
   serverTimestamp, 
 } from "firebase/firestore";
 import "../../style/ServiceDashboard.css";
+import "./AssignWorkerModal.css";
 
 const AssignWorkerModal = ({ booking, categories = [], onClose, onAssigned }) => {
   const [workers, setWorkers] = useState([]);
   const [selectedWorker, setSelectedWorker] = useState("");
   const [loading, setLoading] = useState(true);
+  const [autoAssigning, setAutoAssigning] = useState(false);
+  const [showWorkerDetails, setShowWorkerDetails] = useState(false);
+  const [selectedWorkerDetails, setSelectedWorkerDetails] = useState(null);
   
   const getCategoryName = (categoryId) => {
     const cat = categories.find(c => c.id === categoryId);
@@ -215,24 +219,75 @@ const AssignWorkerModal = ({ booking, categories = [], onClose, onAssigned }) =>
     }
   };
 
-  // 🔹 Assign worker
-  const handleAssign = async () => {
-    if (booking.status === "assigned"){
-      alert("Worker already assigned to this booking");
-      return;
-    }
-    if (!selectedWorker) {
-      alert("Please select a worker");
-      return;
-    }
+  // 🔹 Auto-assign best available worker
+  const handleAutoAssign = async () => {
+    setAutoAssigning(true);
+    try {
+      const availableWorkers = workers.filter(w => w.availability?.available);
+      
+      if (availableWorkers.length === 0) {
+        alert("No workers available for auto-assignment");
+        return;
+      }
 
-    const worker = workers.find((w) => w.id === selectedWorker);
-    if (!worker) return;
+      // Auto-assignment logic: Priority order
+      // 1. Worker with specific service assignment
+      // 2. Worker with most completed jobs (experience)
+      // 3. Worker with least current assignments (load balancing)
+      
+      let bestWorker = null;
+      
+      // Priority 1: Find worker with specific service assignment
+      const serviceSpecificWorkers = availableWorkers.filter(w => 
+        w.assignedServices && booking.serviceId && 
+        w.assignedServices.includes(booking.serviceId)
+      );
+      
+      if (serviceSpecificWorkers.length > 0) {
+        // Among service-specific workers, pick the one with most experience
+        bestWorker = serviceSpecificWorkers.reduce((best, current) => 
+          (current.completedJobs || 0) > (best.completedJobs || 0) ? current : best
+        );
+        console.log("🎯 Auto-assigned based on service specialization:", bestWorker.name);
+      } else {
+        // Priority 2: Pick worker with most completed jobs
+        bestWorker = availableWorkers.reduce((best, current) => 
+          (current.completedJobs || 0) > (best.completedJobs || 0) ? current : best
+        );
+        console.log("🎯 Auto-assigned based on experience:", bestWorker.name);
+      }
+
+      if (bestWorker) {
+        setSelectedWorker(bestWorker.id);
+        
+        // Auto-confirm assignment after 2 seconds
+        setTimeout(async () => {
+          await assignWorker(bestWorker);
+        }, 2000);
+      }
+    } catch (error) {
+      console.error("Auto-assignment error:", error);
+      alert("Failed to auto-assign worker");
+    } finally {
+      setAutoAssigning(false);
+    }
+  };
+
+  // 🔹 Show worker details modal
+  const showWorkerDetailsModal = (worker) => {
+    setSelectedWorkerDetails(worker);
+    setShowWorkerDetails(true);
+  };
+
+  // 🔹 Assign worker (extracted for reuse)
+  const assignWorker = async (worker = null) => {
+    const workerToAssign = worker || workers.find((w) => w.id === selectedWorker);
+    if (!workerToAssign) return;
 
     // Check if worker is available before assigning
-    if (!worker.availability?.available) {
-      if (worker.availability?.reason === 'busy') {
-        alert(`Worker is busy with another booking: ${worker.availability.conflictingService} for ${worker.availability.conflictingCustomer}`);
+    if (!workerToAssign.availability?.available) {
+      if (workerToAssign.availability?.reason === 'busy') {
+        alert(`Worker is busy with another booking: ${workerToAssign.availability.conflictingService} for ${workerToAssign.availability.conflictingCustomer}`);
       } else {
         alert("Selected worker is not available for this time slot");
       }
@@ -243,10 +298,11 @@ const AssignWorkerModal = ({ booking, categories = [], onClose, onAssigned }) =>
       const ref = doc(db, "service_bookings", booking.id);
 
       await updateDoc(ref, {
-        workerId: worker.id,
-        workerName: worker.name,
+        workerId: workerToAssign.id,
+        workerName: workerToAssign.name,
         status: "assigned",
         assignedAt: serverTimestamp(),
+        assignmentMethod: worker ? "auto" : "manual", // Track assignment method
       });
 
       onAssigned(); // refresh bookings
@@ -255,6 +311,20 @@ const AssignWorkerModal = ({ booking, categories = [], onClose, onAssigned }) =>
       console.error("Assign worker error:", err);
       alert("Failed to assign worker");
     }
+  };
+
+  // 🔹 Manual assign handler
+  const handleAssign = async () => {
+    if (booking.status === "assigned"){
+      alert("Worker already assigned to this booking");
+      return;
+    }
+    if (!selectedWorker) {
+      alert("Please select a worker");
+      return;
+    }
+
+    await assignWorker();
   };
 
   useEffect(() => {
@@ -275,112 +345,281 @@ const AssignWorkerModal = ({ booking, categories = [], onClose, onAssigned }) =>
 
   return (
     <div className="sd-modal-backdrop">
-      <div className="sd-modal">
-
-        <h2>Assign Worker</h2>
-
-        {/* Booking Info */}
-        <div className="sd-info-box">
-          <p><strong>Customer:</strong> {booking.customerName}</p>
-          <p><strong>Service:</strong> {booking.workName || booking.serviceName || "Service Request"}</p>
-          {booking.serviceName && booking.workName && booking.serviceName !== booking.workName && (
-            <p><strong>Category:</strong> {booking.serviceName}</p>
-          )}
-          <p><strong>Date:</strong> {booking.date} • {booking.time}</p>
+      <div className="sd-modal assign-worker-modal">
+        <div className="sd-modal-header">
+          <div>
+            <h2>Assign Worker</h2>
+            <p className="sd-modal-subtitle">Select an available worker for this booking</p>
+          </div>
+          <button className="sd-modal-close" onClick={onClose}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M18 6L6 18M6 6l12 12" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+          </button>
         </div>
 
-        {loading ? (
-          <p>Loading workers...</p>
-        ) : workers.length === 0 ? (
-          <div className="no-workers-message">
-            <p>No workers available for this service</p>
-            {booking.serviceName && (
-              <small>Looking for workers in: {booking.serviceName}</small>
-            )}
-          </div>
-        ) : (
-          <>
-            <div className="worker-filter-info">
-              <small>
-                Showing workers for: {booking.serviceName} - {booking.workName} ({workers.length} total, {workers.filter(w => w.availability?.available).length} available)
-              </small>
+        <div className="sd-modal-content">
+          {/* Booking Info Card */}
+          <div className="booking-info-card">
+            <div className="info-row">
+              <span className="info-label">👤 Customer:</span>
+              <span className="info-value">{booking.customerName}</span>
             </div>
-            <select
-              className="sd-select"
-              value={selectedWorker}
-              onChange={(e) => setSelectedWorker(e.target.value)}
-            >
-              <option value="">Select Worker</option>
-              
-                {workers.map((w) => (
-                  <option 
-                    key={w.id} 
-                    value={w.id}
-                    disabled={!w.availability?.available}
-                    style={{
-                      color: !w.availability?.available ? '#9ca3af' : 'inherit',
-                      fontStyle: !w.availability?.available ? 'italic' : 'normal'
-                    }}
-                  >
-                    {w.name}
-                    {(w.assignedCategories && w.assignedCategories.length > 0) ? 
-                      ` (${w.assignedCategories.map(catId => getCategoryName(catId)).join(", ")})` :
-                      w.role ? ` (${getCategoryName(w.role)})` : ""
-                    }
-                    {w.specialization ? ` - ${w.specialization}` : ""}
-                    {!w.availability?.available && w.availability?.reason === 'busy' ? 
-                      ` - BUSY (${w.availability.conflictingService})` : 
-                      !w.availability?.available ? ' - NOT AVAILABLE' : ' - AVAILABLE'
-                    }
-                    </option>
-              ))}
-            </select>
-
-            {/* Worker Availability Status */}
-            {selectedWorker && (
-              <div className={`worker-availability-info ${
-                workers.find(w => w.id === selectedWorker)?.availability?.available ? 'available' : 
-                workers.find(w => w.id === selectedWorker)?.availability?.reason === 'busy' ? 'busy' : 'unavailable'
-              }`}>
-                {(() => {
-                  const worker = workers.find(w => w.id === selectedWorker);
-                  if (!worker) return null;
-                  
-                  if (worker.availability?.available) {
-                    return (
-                      <>
-                        ✅ <strong>{worker.name}</strong> is available for this time slot
-                      </>
-                    );
-                  } else if (worker.availability?.reason === 'busy') {
-                    return (
-                      <>
-                        ⚠️ <strong>{worker.name}</strong> is busy with another booking: 
-                        <br />
-                        📋 {worker.availability.conflictingService} for {worker.availability.conflictingCustomer}
-                      </>
-                    );
-                  } else {
-                    return (
-                      <>
-                        ❌ <strong>{worker.name}</strong> is not available for this time slot
-                      </>
-                    );
-                  }
-                })()}
+            <div className="info-row">
+              <span className="info-label">🔧 Service:</span>
+              <span className="info-value">{booking.workName || booking.serviceName || "Service Request"}</span>
+            </div>
+            {booking.serviceName && booking.workName && booking.serviceName !== booking.workName && (
+              <div className="info-row">
+                <span className="info-label">📂 Category:</span>
+                <span className="info-value">{booking.serviceName}</span>
               </div>
             )}
-          </>
+            <div className="info-row">
+              <span className="info-label">📅 Date & Time:</span>
+              <span className="info-value">{booking.date} • {booking.time}</span>
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="loading-state">
+              <div className="spinner"></div>
+              <p>Loading workers...</p>
+            </div>
+          ) : workers.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-icon">👷</div>
+              <h3>No Workers Available</h3>
+              <p>No workers found for this service</p>
+              {booking.serviceName && (
+                <small>Looking for workers in: {booking.serviceName}</small>
+              )}
+            </div>
+          ) : (
+            <>
+              <div className="worker-stats">
+                <div className="stat-badge">
+                  <span className="stat-number">{workers.length}</span>
+                  <span className="stat-label">Total Workers</span>
+                </div>
+                <div className="stat-badge available">
+                  <span className="stat-number">{workers.filter(w => w.availability?.available).length}</span>
+                  <span className="stat-label">Available</span>
+                </div>
+                <div className="stat-badge busy">
+                  <span className="stat-number">{workers.filter(w => !w.availability?.available).length}</span>
+                  <span className="stat-label">Busy</span>
+                </div>
+              </div>
+
+              {/* Auto-assign button */}
+              {workers.filter(w => w.availability?.available).length > 0 && (
+                <div className="auto-assign-section">
+                  <button 
+                    className="auto-assign-btn"
+                    onClick={handleAutoAssign}
+                    disabled={autoAssigning}
+                  >
+                    {autoAssigning ? (
+                      <>
+                        <div className="spinner-small"></div>
+                        Auto-assigning...
+                      </>
+                    ) : (
+                      <>
+                        🤖 Auto-assign Best Worker
+                      </>
+                    )}
+                  </button>
+                  <p className="auto-assign-hint">
+                    Automatically selects the best available worker based on experience and specialization
+                  </p>
+                </div>
+              )}
+
+              <div className="sd-form-group">
+                <label>Select Worker</label>
+                <select
+                  value={selectedWorker}
+                  onChange={(e) => setSelectedWorker(e.target.value)}
+                  className="worker-select"
+                >
+                  <option value="">Choose a worker...</option>
+                  {workers.map((w) => (
+                    <option 
+                      key={w.id} 
+                      value={w.id}
+                      disabled={!w.availability?.available}
+                    >
+                      {w.name}
+                      {(w.assignedCategories && w.assignedCategories.length > 0) ? 
+                        ` (${w.assignedCategories.map(catId => getCategoryName(catId)).join(", ")})` :
+                        w.role ? ` (${getCategoryName(w.role)})` : ""
+                      }
+                      {w.specialization ? ` - ${w.specialization}` : ""}
+                      {!w.availability?.available && w.availability?.reason === 'busy' ? 
+                        ` - BUSY` : 
+                        !w.availability?.available ? ' - NOT AVAILABLE' : ' ✓'
+                      }
+                      {w.completedJobs ? ` (${w.completedJobs} jobs)` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Worker Availability Status */}
+              {selectedWorker && (
+                <div className={`availability-alert ${
+                  workers.find(w => w.id === selectedWorker)?.availability?.available ? 'success' : 
+                  workers.find(w => w.id === selectedWorker)?.availability?.reason === 'busy' ? 'warning' : 'error'
+                }`}>
+                  {(() => {
+                    const worker = workers.find(w => w.id === selectedWorker);
+                    if (!worker) return null;
+                    
+                    if (worker.availability?.available) {
+                      return (
+                        <div className="alert-content">
+                          <span className="alert-icon">✅</span>
+                          <div>
+                            <strong>{worker.name}</strong> is available for this time slot
+                          </div>
+                        </div>
+                      );
+                    } else if (worker.availability?.reason === 'busy') {
+                      return (
+                        <div className="alert-content">
+                          <span className="alert-icon">⚠️</span>
+                          <div>
+                            <strong>{worker.name}</strong> is busy with another booking
+                            <div className="conflict-details">
+                              📋 {worker.availability.conflictingService} for {worker.availability.conflictingCustomer}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    } else {
+                      return (
+                        <div className="alert-content">
+                          <span className="alert-icon">❌</span>
+                          <div>
+                            <strong>{worker.name}</strong> is not available for this time slot
+                          </div>
+                        </div>
+                      );
+                    }
+                  })()}
+                </div>
+              )}
+
+              {/* Worker List with Details */}
+              <div className="worker-list-section">
+                <h4>Available Workers ({workers.filter(w => w.availability?.available).length})</h4>
+                <div className="worker-cards">
+                  {workers.filter(w => w.availability?.available).map((worker) => (
+                    <div 
+                      key={worker.id} 
+                      className={`worker-card ${selectedWorker === worker.id ? 'selected' : ''}`}
+                      onClick={() => setSelectedWorker(worker.id)}
+                    >
+                      <div className="worker-info">
+                        <div className="worker-name">
+                          <strong>{worker.name}</strong>
+                          <span className="available-badge">✓ Available</span>
+                        </div>
+                        <div className="worker-details">
+                          <span className="worker-phone">📞 {worker.phone}</span>
+                          <span className="worker-experience">🏆 {worker.completedJobs || 0} jobs completed</span>
+                        </div>
+                        <div className="worker-skills">
+                          {(worker.assignedCategories && worker.assignedCategories.length > 0) ? 
+                            worker.assignedCategories.map(catId => getCategoryName(catId)).join(", ") :
+                            worker.role ? getCategoryName(worker.role) : "General"
+                          }
+                          {worker.specialization && <span className="specialization"> • {worker.specialization}</span>}
+                        </div>
+                      </div>
+                      <button 
+                        className="worker-details-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          showWorkerDetailsModal(worker);
+                        }}
+                      >
+                        View Details
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Worker Details Modal */}
+        {showWorkerDetails && selectedWorkerDetails && (
+          <div className="worker-details-modal">
+            <div className="worker-details-content">
+              <div className="worker-details-header">
+                <h3>{selectedWorkerDetails.name}</h3>
+                <button onClick={() => setShowWorkerDetails(false)}>×</button>
+              </div>
+              <div className="worker-details-body">
+                <div className="detail-row">
+                  <span className="detail-label">Phone:</span>
+                  <span className="detail-value">{selectedWorkerDetails.phone}</span>
+                </div>
+                <div className="detail-row">
+                  <span className="detail-label">Experience:</span>
+                  <span className="detail-value">{selectedWorkerDetails.completedJobs || 0} jobs completed</span>
+                </div>
+                <div className="detail-row">
+                  <span className="detail-label">Categories:</span>
+                  <span className="detail-value">
+                    {(selectedWorkerDetails.assignedCategories && selectedWorkerDetails.assignedCategories.length > 0) ? 
+                      selectedWorkerDetails.assignedCategories.map(catId => getCategoryName(catId)).join(", ") :
+                      selectedWorkerDetails.role ? getCategoryName(selectedWorkerDetails.role) : "General"
+                    }
+                  </span>
+                </div>
+                {selectedWorkerDetails.specialization && (
+                  <div className="detail-row">
+                    <span className="detail-label">Specialization:</span>
+                    <span className="detail-value">{selectedWorkerDetails.specialization}</span>
+                  </div>
+                )}
+                <div className="detail-row">
+                  <span className="detail-label">Status:</span>
+                  <span className="detail-value">
+                    {selectedWorkerDetails.availability?.available ? 
+                      <span className="status-available">✅ Available</span> : 
+                      <span className="status-busy">⚠️ Busy</span>
+                    }
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
 
         <div className="sd-modal-actions">
-          <button className="sd-secondary-btn" onClick={onClose}>
+          <button className="sd-cancel-btn" onClick={onClose}>
             Cancel
           </button>
+          {workers.filter(w => w.availability?.available).length > 0 && (
+            <button 
+              className="sd-save-btn auto-assign-quick" 
+              onClick={handleAutoAssign}
+              disabled={autoAssigning}
+              style={{ marginRight: '8px' }}
+            >
+              {autoAssigning ? 'Auto-assigning...' : '🤖 Auto-assign'}
+            </button>
+          )}
           <button 
-          className="sd-primary-btn" 
-          onClick={handleAssign}
-          disabled={!selectedWorker || booking.status === "assigned" || (selectedWorker && !workers.find(w => w.id === selectedWorker)?.availability?.available)}
+            className="sd-save-btn" 
+            onClick={handleAssign}
+            disabled={!selectedWorker || booking.status === "assigned" || (selectedWorker && !workers.find(w => w.id === selectedWorker)?.availability?.available)}
           >
             {!selectedWorker ? 'Select Worker' :
              booking.status === "assigned" ? 'Already Assigned' :
