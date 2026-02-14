@@ -5,12 +5,13 @@ import {
   query,
   where,
   getDocs,
+  getDoc,
   updateDoc,
   doc,
   onSnapshot,
   setDoc,
 } from "firebase/firestore";
-
+import { useRef } from "react";
 import AssignWorkerModal from "./AssignWorkerModal";
 import "../../style/ServiceDashboard.css";
 const Bookings = () => {
@@ -26,6 +27,49 @@ const Bookings = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState(""); // New date filter state
   const [showAllBookings, setShowAllBookings] = useState(false); // Toggle for showing all bookings vs today only
+  const notifiedBookings = useRef(new Set()) // for whatapps notifications
+
+  const sendNewBookingWhatsApp = async (bookingId, booking) => {
+  try {
+    // Get company phone from companies collection
+    const companyRef = doc(db, "service_company", booking.companyId);
+    const companySnap = await getDocs(
+      query(collection(db, "service_company"), where("__name__", "==", booking.companyId))
+    );
+
+    if (companySnap.empty) return;
+
+    const companyData = companySnap.docs[0].data();
+    const companyPhone = companyData.phone;
+    const companyName = companyData.companyName;
+
+    await fetch(
+      "https://us-central1-ninjadeliveries-91007.cloudfunctions.net/sendNewBookingWhatsApp",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          companyName,
+          companyPhone,
+          bookingId,
+          customerName: booking.customerName,
+          customerPhone: booking.customerPhone,
+          service: booking.workName || booking.serviceName,
+          amount: booking.totalPrice || booking.price || 0,
+          date: booking.date,
+          time: booking.time,
+          address: booking.customerAddress || booking.location,
+        }),
+      }
+    );
+
+    console.log("New booking WhatsApp sent");
+  } catch (error) {
+    console.error("New booking WhatsApp failed:", error);
+  }
+};
 
   const statusConfig = {
     pending: {
@@ -140,6 +184,16 @@ const Bookings = () => {
           snapshot.docs.forEach((docSnap) => {
             try {
               const data = docSnap.data();
+              // 📩 Send WhatsApp when new booking arrives
+              // if (!notifiedBookings.has(docSnap.id)) {
+              //   notifiedBookings.add(docSnap.id);
+              if (!notifiedBookings.current.has(docSnap.id)) {
+                  notifiedBookings.current.add(docSnap.id);
+                // Only for new pending bookings
+                  if (data.status === "pending") {
+                    sendNewBookingWhatsApp(docSnap.id, data);
+                }
+              }
 
               // Auto-expire logic - check if booking should be expired
               let shouldExpire = false;
@@ -469,25 +523,53 @@ const Bookings = () => {
 
       // 3️⃣ Send WhatsApp notification via Cloud Function
       try {
-        await fetch(
-          "https://us-central1-ninjadeliveries-91007.cloudfunctions.net/sendWhatsAppMessage",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              bookingId: booking.id,
-              customerName: booking.customerName,
-              customerPhone: booking.customerPhone,
-              service: booking.workName || booking.serviceName,
-              amount: booking.totalPrice || booking.price || 0,
-              date: booking.date,
-              time: booking.time,
-              address: booking.customerAddress || booking.location,
-            }),
-          }
-        );
+        // await fetch(
+        //   "https://us-central1-ninjadeliveries-91007.cloudfunctions.net/sendWhatsAppMessage",
+        //   {
+        //     method: "POST",
+        //     headers: {
+        //       "Content-Type": "application/json",
+        //     },
+        //     body: JSON.stringify({
+        //       bookingId: booking.id,
+        //       companyName: booking.companyName || "Unknown Company",
+        //       customerName: booking.customerName,
+        //       customerPhone: booking.customerPhone,
+        //       service: booking.workName || booking.serviceName,
+        //       amount: booking.totalPrice || booking.price || 0,
+        //       date: booking.date,
+        //       time: booking.time,
+        //       address: booking.customerAddress || booking.location,
+        //     }),
+        //   }
+        // );
+        try {
+  const response = await fetch(
+    "https://us-central1-ninjadeliveries-91007.cloudfunctions.net/sendWhatsAppMessage",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        bookingId: booking.id,
+        companyName: booking.companyName || "Unknown Company",
+        customerName: booking.customerName,
+        customerPhone: booking.customerPhone,
+        service: booking.workName || booking.serviceName,
+        amount: booking.totalPrice || booking.price || 0,
+        date: booking.date,
+        time: booking.time,
+        address: booking.customerAddress || booking.location,
+      }),
+    }
+  );
+
+  const text = await response.text();
+  console.log("Reject WhatsApp API:", text);
+} catch (err) {
+  console.error("Reject WhatsApp error:", err);
+}
         console.log("WhatsApp notification sent successfully");
       } catch (whatsappError) {
         console.error("WhatsApp notification failed:", whatsappError);
