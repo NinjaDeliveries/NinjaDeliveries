@@ -12,6 +12,7 @@ import {
   onSnapshot,
 } from "firebase/firestore";
 import "../../style/ServiceDashboard.css";
+import "./Slots.css";
 import AssignWorkerModal from "./AssignWorkerModal";
 export default function Slots() {
   const [loading, setLoading] = useState(true);
@@ -45,6 +46,9 @@ export default function Slots() {
   const [showAssignWorker, setShowAssignWorker] = useState(false);
   const [bookingToAssign, setBookingToAssign] = useState(null);
   const [categories, setCategories] = useState([]);
+  
+  // Offline form state
+  const [showOfflineForm, setShowOfflineForm] = useState(false);
 
   // Fetch bookings from service_bookings collection with real-time listener
   const setupBookingsListener = () => {
@@ -335,6 +339,11 @@ export default function Slots() {
     return () => clearInterval(interval);
   }, [offlineWindows, isOnline]);
 
+  // Toggle online status wrapper
+  const toggleOnlineStatus = async (status) => {
+    await updateStatus(status);
+  };
+
   // Update online/offline status in service_company collection (isActive field for service availability only)
   const updateStatus = async (status) => {
     try {
@@ -404,6 +413,20 @@ export default function Slots() {
     if (!user) return;
 
     const updated = offlineWindows.filter((w) => w.id !== id);
+    setOfflineWindows(updated);
+
+    await updateDoc(doc(db, "service_availability", user.uid), {
+      offlineWindows: updated,
+      updatedAt: new Date(),
+    });
+  };
+
+  // Remove offline window by index (for new UI)
+  const removeOfflineWindow = async (index) => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const updated = offlineWindows.filter((_, i) => i !== index);
     setOfflineWindows(updated);
 
     await updateDoc(doc(db, "service_availability", user.uid), {
@@ -801,6 +824,60 @@ export default function Slots() {
   };
 
   // Assign worker button styles
+  // Helper function to get bookings count for a date
+  const getBookingsCountForDate = (date) => {
+    const dateStr = date.toISOString().split('T')[0];
+    return bookings.filter(b => b.date === dateStr).length;
+  };
+
+  // Helper function to render calendar
+  const renderCalendar = () => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDayOfWeek = firstDay.getDay();
+    
+    const days = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Add empty cells for days before month starts
+    for (let i = 0; i < startingDayOfWeek; i++) {
+      const prevMonthDay = new Date(year, month, -startingDayOfWeek + i + 1);
+      days.push(
+        <div key={`empty-${i}`} className="calendar-day other-month">
+          <span className="calendar-day-number">{prevMonthDay.getDate()}</span>
+        </div>
+      );
+    }
+    
+    // Add days of current month
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = new Date(year, month, day);
+      const dateStr = date.toISOString().split('T')[0];
+      const isSelected = dateStr === selectedDate;
+      const isToday = date.toDateString() === today.toDateString();
+      const bookingsCount = getBookingsCountForDate(date);
+      
+      days.push(
+        <div
+          key={day}
+          className={`calendar-day ${isSelected ? 'selected' : ''} ${isToday ? 'today' : ''}`}
+          onClick={() => setSelectedDate(dateStr)}
+        >
+          <span className="calendar-day-number">{day}</span>
+          {bookingsCount > 0 && (
+            <span className="calendar-day-badge">{bookingsCount}</span>
+          )}
+        </div>
+      );
+    }
+    
+    return days;
+  };
+
   const assignButtonStyle = {
     backgroundColor: '#10b981',
     color: 'white',
@@ -815,601 +892,434 @@ export default function Slots() {
   };
 
   return (
-    <div className="sd-main">
-      <div className="sd-header">
-        <div>
-          <h1>📅 Slots & Availability</h1>
+    <div className="slots-container">
+      {/* Modern Header */}
+      <div className="slots-header">
+        <div className="slots-title-section">
+          <h1>📅 Calendar & Slots</h1>
           <p>Manage your availability and view customer bookings</p>
         </div>
-        <div className="slots-header-actions">
+        <div className="slots-actions">
+          {/* View Toggle */}
           <div className="view-toggle">
             <button 
-              className={`toggle-btn ${viewMode === 'calendar' ? 'active' : ''}`}
+              className={`view-toggle-btn ${viewMode === 'calendar' ? 'active' : ''}`}
               onClick={() => setViewMode('calendar')}
             >
               📅 Calendar
             </button>
             <button 
-              className={`toggle-btn ${viewMode === 'list' ? 'active' : ''}`}
+              className={`view-toggle-btn ${viewMode === 'list' ? 'active' : ''}`}
               onClick={() => setViewMode('list')}
             >
               📋 List
             </button>
           </div>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <button
-              onClick={async () => {
-                setLoading(true);
-                try {
-                  await fetchBookings();
-                } catch (error) {
-                  console.error("Manual refresh failed:", error);
-                } finally {
-                  setLoading(false);
-                }
-              }}
-              style={{
-                backgroundColor: '#10b981',
-                color: 'white',
-                border: 'none',
-                padding: '8px 12px',
-                borderRadius: '6px',
-                fontSize: '12px',
-                fontWeight: '500',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px'
-              }}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <polyline points="23 4 23 10 17 10"/>
-                <polyline points="1 20 1 14 7 14"/>
-                <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
-              </svg>
-              Refresh
-            </button>
-            {!isToday(selectedDate) && (
-              <button 
-                style={{
-                  backgroundColor: '#3b82f6',
-                  color: 'white',
-                  border: 'none',
-                  padding: '8px 16px',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  marginLeft: '4px'
-                }}
-                onClick={() => {
-                  const todayStr = getTodayDateString();
-                  setSelectedDate(todayStr);
-                  setCurrentMonth(new Date());
-                }}
-              >
-                📅 Today
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Company Status Card */}
-      <div className="company-status-card">
-        <div className="status-section">
-          <div className="status-info">
-            <h3>Company Status</h3>
-            <div className={`status-badge ${isOnline ? 'online' : 'offline'}`}>
+          
+          {/* Status Toggle */}
+          <div className="status-toggle">
+            <div className="status-indicator">
               <span className={`status-dot ${isOnline ? 'online' : 'offline'}`}></span>
-              {isOnline ? 'ONLINE' : 'OFFLINE'}
+              <span>{isOnline ? 'ONLINE' : 'OFFLINE'}</span>
             </div>
-          </div>
-          <div className="status-buttons">
-            <button
-              className={`status-btn online ${isOnline ? 'active' : ''}`}
-              onClick={() => updateStatus(true)}
-              disabled={updating || isOnline}
-            >
-              {updating && !isOnline ? "Going Online..." : "Go Online"}
-            </button>
-            <button
-              className={`status-btn offline ${!isOnline ? 'active' : ''}`}
-              onClick={() => updateStatus(false)}
-              disabled={updating || !isOnline}
-            >
-              {updating && isOnline ? "Going Offline..." : "Go Offline"}
-            </button>
+            <div className="status-buttons">
+              <button 
+                className="status-btn online"
+                onClick={() => toggleOnlineStatus(true)}
+                disabled={isOnline || updating}
+              >
+                GO ONLINE
+              </button>
+              <button 
+                className="status-btn offline"
+                onClick={() => toggleOnlineStatus(false)}
+                disabled={!isOnline || updating}
+              >
+                GO OFFLINE
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Stats and Calendar Row */}
-      <div className="slots-main-content">
-        {/* Left Side - Stats and Offline Windows */}
-        <div className="slots-sidebar">
-          {/* Month Stats */}
-          <div className="slots-stats-card">
-            <h3>This Month</h3>
-            <div className="stats-grid">
-              <div className="stat-item">
-                <span className="stat-number">{monthStats.total}</span>
-                <span className="stat-label">Total</span>
-              </div>
-              <div className="stat-item">
-                <span className="stat-number">{monthStats.pending}</span>
-                <span className="stat-label">Pending</span>
-              </div>
-              <div className="stat-item">
-                <span className="stat-number">{monthStats.assigned}</span>
-                <span className="stat-label">Assigned</span>
-              </div>
-              <div className="stat-item">
-                <span className="stat-number">{monthStats.completed}</span>
-                <span className="stat-label">Completed</span>
+      {/* Calendar View */}
+      {viewMode === 'calendar' && (
+        <div className="slots-content">
+          {/* Calendar Section */}
+          <div className="calendar-section">
+            <div className="calendar-header">
+              <h2>{currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</h2>
+              <div className="calendar-nav">
+                <button 
+                  className="calendar-nav-btn"
+                  onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
+                >
+                  ‹
+                </button>
+                <button 
+                  className="calendar-nav-btn"
+                  onClick={() => setCurrentMonth(new Date())}
+                >
+                  Today
+                </button>
+                <button 
+                  className="calendar-nav-btn"
+                  onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
+                >
+                  ›
+                </button>
               </div>
             </div>
-          </div>
-
-          {/* Offline Windows */}
-          <div className="offline-windows-card">
-            <h3>Offline Windows</h3>
             
-            {/* Add New Window Form */}
-            <div className="add-window-form-compact">
-              <input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="compact-input"
-              />
-              <input
-                type="time"
-                value={start}
-                onChange={(e) => setStart(e.target.value)}
-                className="compact-input"
-              />
-              <input
-                type="time"
-                value={end}
-                onChange={(e) => setEnd(e.target.value)}
-                className="compact-input"
-              />
-              <button className="add-btn-compact" onClick={addOfflineWindow}>
-                Add
-              </button>
-            </div>
-
-            {/* Scheduled Windows */}
-            <div className="windows-list-compact">
-              {offlineWindows.length > 0 ? (
-                offlineWindows.map((window) => (
-                  <div key={window.id || `${window.date}-${window.start}`} className="window-item-compact">
-                    <div className="window-info-compact">
-                      <div className="window-date-compact">📅 {window.date}</div>
-                      <div className="window-time-compact">⏰ {window.startTime || formatAMPM(window.start)} – {window.endTime || formatAMPM(window.end)}</div>
-                    </div>
-                    <button
-                      className="remove-btn-compact"
-                      onClick={() => removeWindow(window.id || offlineWindows.indexOf(window))}
-                    >
-                      ✕
-                    </button>
-                  </div>
-                ))
-              ) : (
-                <p className="empty-message-compact">No offline times</p>
-              )}
+            <div className="calendar-grid">
+              {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
+                <div key={i} className="calendar-day-header">{day}</div>
+              ))}
+              {renderCalendar()}
             </div>
           </div>
-        </div>
 
-        {/* Right Side - Calendar */}
-        <div className="slots-calendar-section">
-          {viewMode === 'calendar' ? (
-            <div className="compact-calendar-container">
-              {/* Calendar Header */}
-              <div className="compact-calendar-header">
-                <button className="nav-btn-compact" onClick={() => navigateMonth(-1)}>‹</button>
-                <h3 className="calendar-title-compact">
-                  {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                </h3>
-                <button className="nav-btn-compact" onClick={() => navigateMonth(1)}>›</button>
-              </div>
-
-              {/* Calendar Grid */}
-              <div className="compact-calendar-grid">
-                {/* Day Headers */}
-                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(day => (
-                  <div key={day} className="compact-day-header">{day}</div>
-                ))}
-
-                {/* Calendar Days */}
-                {calendarDays.map((day, index) => (
-                  <div
-                    key={index}
-                    className={`compact-calendar-day ${!day.isCurrentMonth ? 'other-month' : ''} ${day.isToday ? 'today' : ''} ${day.isSelected ? 'selected' : ''} ${day.bookings.length > 0 ? 'has-bookings' : ''}`}
-                    onClick={() => {
-                      console.log(`Calendar day clicked: ${day.dateStr}`);
-                      setSelectedDate(day.dateStr);
-                    }}
-                  >
-                    <span className="compact-day-number">{day.date.getDate()}</span>
-                    {day.bookings.length > 0 && (
-                      <div className="compact-booking-indicator">
-                        <span className="compact-booking-count">{day.bookings.length}</span>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {/* Selected Date Details */}
-              <div className="compact-selected-details">
-                <h4>
-                  {isToday(selectedDate) ? "Today's Schedule" : 
-                   new Date(selectedDate).toLocaleDateString('en-US', { 
-                     month: 'short', 
-                     day: 'numeric' 
-                   }) + " Bookings"
-                  }
-                </h4>
-                
-                {selectedDateBookings.length > 0 ? (
-                  <div className="compact-bookings-list">
-                    {selectedDateBookings.map(booking => (
-                      <div key={booking.id} className="compact-booking-item">
-                        <div className="compact-booking-time">
-                          {formatTime(booking.time)}
-                        </div>
-                        <div className="compact-booking-info">
-                          <div className="compact-customer">{booking.customerName}</div>
-                          <div className="compact-service">{booking.workName || booking.serviceName}</div>
-                        </div>
-                        <div className="compact-booking-actions">
-                          <button 
-                            style={viewButtonStyle}
-                            onClick={() => handleViewBooking(booking)}
-                            title="View booking details"
-                          >
-                            View
-                          </button>
-                          {booking.status === 'completed' ? (
-                            <span style={{
-                              backgroundColor: '#27ae60',
-                              color: 'white',
-                              padding: '4px 8px',
-                              borderRadius: '4px',
-                              fontSize: '11px',
-                              fontWeight: '600',
-                              marginLeft: '4px'
-                            }}>
-                              COMPLETED
-                            </span>
-                          ) : booking.status === 'cancelled' ? (
-                            <span style={{
-                              backgroundColor: '#e74c3c',
-                              color: 'white',
-                              padding: '4px 8px',
-                              borderRadius: '4px',
-                              fontSize: '11px',
-                              fontWeight: '600',
-                              marginLeft: '4px'
-                            }}>
-                              CANCELLED
-                            </span>
-                          ) : booking.status === 'assigned' || booking.workerId || booking.workerName ? (
-                            <span style={{
-                              backgroundColor: '#3498db',
-                              color: 'white',
-                              padding: '4px 8px',
-                              borderRadius: '4px',
-                              fontSize: '11px',
-                              fontWeight: '600',
-                              marginLeft: '4px'
-                            }}>
-                              ASSIGNED
-                            </span>
-                          ) : isBookingInPast(booking) ? (
-                            <span style={{
-                              backgroundColor: '#95a5a6',
-                              color: 'white',
-                              padding: '4px 8px',
-                              borderRadius: '4px',
-                              fontSize: '11px',
-                              fontWeight: '600',
-                              marginLeft: '4px'
-                            }}>
-                              EXPIRED
-                            </span>
-                          ) : canAssignWorker(booking) ? (
-                            <button 
-                              style={assignButtonStyle}
-                              onClick={() => handleAssignWorker(booking)}
-                              title="Assign worker to this booking"
-                            >
-                              Assign
-                            </button>
-                          ) : null}
-                          <div 
-                            className="compact-status-dot"
-                            style={{ backgroundColor: getStatusColor(booking.status) }}
-                            title={booking.status}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="no-bookings-compact">
-                    {isToday(selectedDate) ? "No bookings scheduled for today" : "No bookings"}
-                  </p>
-                )}
-              </div>
+          {/* Today's Schedule Section */}
+          <div className="schedule-section">
+            <div className="schedule-header">
+              <h3>Today's Schedule</h3>
+              <p className="schedule-date">
+                {new Date(selectedDate).toLocaleDateString('en-US', { 
+                  weekday: 'long', 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}
+              </p>
             </div>
-          ) : (
-            /* List View */
-            <div className="slots-list-container">
-              <div className="list-header">
-                <h3>All Bookings ({bookings.length})</h3>
-              </div>
-              
-              {bookings.length > 0 ? (
-                <div className="bookings-list">
-                  {bookings.slice(0, 20).map(booking => (
-                    <div key={booking.id} className="list-booking-card">
-                      <div className="list-booking-header">
-                        <div className="list-booking-date">
-                          📅 {new Date(booking.date).toLocaleDateString()}
-                        </div>
-                        <div className="list-booking-time">
-                          🕐 {formatTime(booking.time)}
-                        </div>
-                        <div className="list-booking-header-actions">
-                          <button 
-                            style={viewButtonStyle}
-                            onClick={() => handleViewBooking(booking)}
-                          >
-                            View
-                          </button>
-                          {booking.status === 'completed' ? (
-                            <span style={{
-                              backgroundColor: '#27ae60',
-                              color: 'white',
-                              padding: '4px 8px',
-                              borderRadius: '4px',
-                              fontSize: '11px',
-                              fontWeight: '600',
-                              marginLeft: '4px'
-                            }}>
-                              COMPLETED
-                            </span>
-                          ) : booking.status === 'cancelled' ? (
-                            <span style={{
-                              backgroundColor: '#e74c3c',
-                              color: 'white',
-                              padding: '4px 8px',
-                              borderRadius: '4px',
-                              fontSize: '11px',
-                              fontWeight: '600',
-                              marginLeft: '4px'
-                            }}>
-                              CANCELLED
-                            </span>
-                          ) : booking.status === 'assigned' || booking.workerId || booking.workerName ? (
-                            <span style={{
-                              backgroundColor: '#3498db',
-                              color: 'white',
-                              padding: '4px 8px',
-                              borderRadius: '4px',
-                              fontSize: '11px',
-                              fontWeight: '600',
-                              marginLeft: '4px'
-                            }}>
-                              ASSIGNED
-                            </span>
-                          ) : isBookingInPast(booking) ? (
-                            <span style={{
-                              backgroundColor: '#95a5a6',
-                              color: 'white',
-                              padding: '4px 8px',
-                              borderRadius: '4px',
-                              fontSize: '11px',
-                              fontWeight: '600',
-                              marginLeft: '4px'
-                            }}>
-                              EXPIRED
-                            </span>
-                          ) : canAssignWorker(booking) ? (
-                            <button 
-                              style={assignButtonStyle}
-                              onClick={() => handleAssignWorker(booking)}
-                              title="Assign worker to this booking"
-                            >
-                              Assign
-                            </button>
-                          ) : null}
-                          <div 
-                            className="list-booking-status"
-                            style={{ backgroundColor: getStatusColor(booking.status) }}
-                          >
-                            {booking.status}
-                          </div>
-                        </div>
+
+            <div className="schedule-list">
+              {bookings.filter(b => b.date === selectedDate).length === 0 ? (
+                <div className="empty-schedule">
+                  <div className="empty-schedule-icon">📭</div>
+                  <h4>No bookings for this day</h4>
+                  <p>You're free on this date</p>
+                </div>
+              ) : (
+                bookings
+                  .filter(b => b.date === selectedDate)
+                  .sort((a, b) => (a.time || '').localeCompare(b.time || ''))
+                  .map(booking => (
+                    <div key={booking.id} className="schedule-item">
+                      <div className="schedule-item-header">
+                        <span className="schedule-time">{booking.time || 'No time'}</span>
+                        <span className={`schedule-status ${booking.status || 'pending'}`}>
+                          {booking.status || 'pending'}
+                        </span>
                       </div>
-                      <div className="list-booking-details">
-                        <div className="list-booking-customer">
-                          👤 <strong>{booking.customerName}</strong>
+                      <div className="schedule-item-body">
+                        <div className="schedule-info">
+                          <svg className="schedule-info-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
+                          <span>{booking.customerName || 'Unknown'}</span>
                         </div>
-                        <div className="list-booking-service">
-                          🔧 {booking.workName || booking.serviceName}
+                        <div className="schedule-info">
+                          <svg className="schedule-info-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                          </svg>
+                          <span>{booking.workName || booking.serviceName || 'Service'}</span>
                         </div>
                         {booking.workerName && (
-                          <div className="list-booking-worker">
-                            👨‍🔧 {booking.workerName}
+                          <div className="schedule-info">
+                            <svg className="schedule-info-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                            </svg>
+                            <span>Worker: {booking.workerName}</span>
                           </div>
                         )}
                       </div>
+                      <div className="schedule-actions">
+                        <button 
+                          className="schedule-action-btn primary"
+                          onClick={() => {
+                            setSelectedBooking(booking);
+                            setShowBookingDetails(true);
+                          }}
+                        >
+                          View Details
+                        </button>
+                        {booking.status === 'pending' && (
+                          <button 
+                            className="schedule-action-btn secondary"
+                            onClick={() => {
+                              setBookingToAssign(booking);
+                              setShowAssignWorker(true);
+                            }}
+                          >
+                            Assign Worker
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="no-bookings-list">
-                  <div className="no-bookings-icon">📭</div>
-                  <h3>No Bookings Found</h3>
-                  <p>No customer bookings available yet.</p>
-                </div>
+                  ))
               )}
             </div>
-          )}
-        </div>
-      </div>
 
-      {/* Booking Details Modal */}
-      {showBookingDetails && selectedBooking && (
-        <div style={modalStyles.overlay} onClick={closeBookingDetails}>
-          <div style={modalStyles.modal} onClick={(e) => e.stopPropagation()}>
-            <div style={modalStyles.header}>
-              <h2 style={modalStyles.title}>Booking Details</h2>
-              <button style={modalStyles.closeBtn} onClick={closeBookingDetails}>
-                ✕
-              </button>
-            </div>
-            
-            <div style={modalStyles.content}>
-              {/* Booking Information */}
-              <div style={modalStyles.card}>
-                <div style={modalStyles.cardHeader}>
-                  <span style={modalStyles.cardTitle}>📋 Booking Information</span>
-                  <span 
-                    style={{
-                      ...modalStyles.statusBadge,
-                      backgroundColor: getStatusColor(selectedBooking.status)
-                    }}
+            {/* Offline Windows Section */}
+            <div className="offline-windows-section">
+              <div className="offline-windows-header">
+                <h4>Offline Windows</h4>
+                <button className="add-offline-btn" onClick={() => setShowOfflineForm(!showOfflineForm)}>
+                  {showOfflineForm ? '− Cancel' : '+ Add Offline Time'}
+                </button>
+              </div>
+
+              {showOfflineForm && (
+                <div className="offline-form">
+                  <div className="offline-form-row">
+                    <div className="offline-form-group">
+                      <label>Date</label>
+                      <input
+                        type="date"
+                        value={date}
+                        onChange={(e) => setDate(e.target.value)}
+                      />
+                    </div>
+                    <div className="offline-form-group">
+                      <label>Start Time</label>
+                      <input
+                        type="time"
+                        value={start}
+                        onChange={(e) => setStart(e.target.value)}
+                      />
+                    </div>
+                    <div className="offline-form-group">
+                      <label>End Time</label>
+                      <input
+                        type="time"
+                        value={end}
+                        onChange={(e) => setEnd(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="offline-form-actions">
+                    <button className="schedule-action-btn secondary" onClick={() => setShowOfflineForm(false)}>
+                      Cancel
+                    </button>
+                    <button className="schedule-action-btn primary" onClick={addOfflineWindow}>
+                      Add Offline Window
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {offlineWindows.map((window, index) => (
+                <div key={index} className="offline-window-item">
+                  <div className="offline-window-info">
+                    📅 {window.date} • ⏰ {window.start} - {window.end}
+                  </div>
+                  <button 
+                    className="delete-offline-btn"
+                    onClick={() => removeOfflineWindow(index)}
                   >
-                    {selectedBooking.status}
-                  </span>
+                    Delete
+                  </button>
                 </div>
-                <div style={modalStyles.cardBody}>
-                  <div style={modalStyles.infoRow}>
-                    <span style={modalStyles.label}>Date:</span>
-                    <span style={modalStyles.value}>{formatBookingDate(selectedBooking.date)}</span>
-                  </div>
-                  <div style={modalStyles.infoRow}>
-                    <span style={modalStyles.label}>Time:</span>
-                    <span style={modalStyles.value}>{formatTime(selectedBooking.time)}</span>
-                  </div>
-                  <div style={modalStyles.infoRow}>
-                    <span style={modalStyles.label}>Service:</span>
-                    <span style={modalStyles.value}>{selectedBooking.workName || selectedBooking.serviceName}</span>
-                  </div>
-                  {selectedBooking.workerName && (
-                    <div style={modalStyles.infoRow}>
-                      <span style={modalStyles.label}>Worker:</span>
-                      <span style={modalStyles.value}>{selectedBooking.workerName}</span>
-                    </div>
-                  )}
-                  {selectedBooking.price && (
-                    <div style={modalStyles.infoRow}>
-                      <span style={modalStyles.label}>Price:</span>
-                      <span style={modalStyles.value}>₹{selectedBooking.price}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Customer Information */}
-              <div style={modalStyles.card}>
-                <div style={modalStyles.cardHeader}>
-                  <span style={modalStyles.cardTitle}>👤 Customer Information</span>
-                </div>
-                <div style={modalStyles.cardBody}>
-                  <div style={modalStyles.infoRow}>
-                    <span style={modalStyles.label}>Name:</span>
-                    <span style={modalStyles.value}>{selectedBooking.customerName}</span>
-                  </div>
-                  {selectedBooking.customerPhone && (
-                    <div style={modalStyles.infoRow}>
-                      <span style={modalStyles.label}>Phone:</span>
-                      <a 
-                        href={`tel:${selectedBooking.customerPhone}`} 
-                        style={modalStyles.link}
-                      >
-                        {selectedBooking.customerPhone}
-                      </a>
-                    </div>
-                  )}
-                  {selectedBooking.customerEmail && (
-                    <div style={modalStyles.infoRow}>
-                      <span style={modalStyles.label}>Email:</span>
-                      <a 
-                        href={`mailto:${selectedBooking.customerEmail}`} 
-                        style={modalStyles.link}
-                      >
-                        {selectedBooking.customerEmail}
-                      </a>
-                    </div>
-                  )}
-                  {selectedBooking.address && (
-                    <div style={modalStyles.infoRow}>
-                      <span style={modalStyles.label}>Address:</span>
-                      <span style={modalStyles.value}>{selectedBooking.address}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Additional Details */}
-              {(selectedBooking.description || selectedBooking.notes || selectedBooking.createdAt) && (
-                <div style={modalStyles.card}>
-                  <div style={modalStyles.cardHeader}>
-                    <span style={modalStyles.cardTitle}>📝 Additional Details</span>
-                  </div>
-                  <div style={modalStyles.cardBody}>
-                    {selectedBooking.description && (
-                      <div style={modalStyles.infoRow}>
-                        <span style={modalStyles.label}>Description:</span>
-                        <span style={modalStyles.value}>{selectedBooking.description}</span>
-                      </div>
-                    )}
-                    {selectedBooking.notes && (
-                      <div style={modalStyles.infoRow}>
-                        <span style={modalStyles.label}>Notes:</span>
-                        <span style={modalStyles.value}>{selectedBooking.notes}</span>
-                      </div>
-                    )}
-                    {selectedBooking.createdAt && (
-                      <div style={modalStyles.infoRow}>
-                        <span style={modalStyles.label}>Booked On:</span>
-                        <span style={modalStyles.value}>
-                          {selectedBooking.createdAt.toDate ? 
-                            selectedBooking.createdAt.toDate().toLocaleString() : 
-                            new Date(selectedBooking.createdAt).toLocaleString()
-                          }
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div style={modalStyles.footer}>
-              <button style={modalStyles.closeButton} onClick={closeBookingDetails}>
-                Close
-              </button>
+              ))}
             </div>
           </div>
         </div>
       )}
 
-      {/* Assign Worker Modal */}
+      {/* List View */}
+      {viewMode === 'list' && (
+        <div className="slots-content" style={{ gridTemplateColumns: '1fr' }}>
+          <div className="calendar-section">
+            <div className="calendar-header">
+              <h2>All Bookings</h2>
+              <div className="calendar-nav">
+                <button 
+                  className="calendar-nav-btn"
+                  onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
+                >
+                  ‹ Previous Month
+                </button>
+                <button 
+                  className="calendar-nav-btn"
+                  onClick={() => setCurrentMonth(new Date())}
+                >
+                  This Month
+                </button>
+                <button 
+                  className="calendar-nav-btn"
+                  onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
+                >
+                  Next Month ›
+                </button>
+              </div>
+            </div>
+
+            {/* Group bookings by date */}
+            {(() => {
+              // Get bookings for current month
+              const monthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+              const monthEnd = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
+              const monthStartStr = monthStart.toISOString().split('T')[0];
+              const monthEndStr = monthEnd.toISOString().split('T')[0];
+              
+              const monthBookings = bookings.filter(b => 
+                b.date >= monthStartStr && b.date <= monthEndStr
+              );
+
+              // Group by date
+              const groupedBookings = monthBookings.reduce((acc, booking) => {
+                const date = booking.date || 'No Date';
+                if (!acc[date]) {
+                  acc[date] = [];
+                }
+                acc[date].push(booking);
+                return acc;
+              }, {});
+
+              // Sort dates
+              const sortedDates = Object.keys(groupedBookings).sort((a, b) => b.localeCompare(a));
+
+              if (sortedDates.length === 0) {
+                return (
+                  <div className="empty-schedule">
+                    <div className="empty-schedule-icon">📭</div>
+                    <h4>No bookings this month</h4>
+                    <p>No bookings found for {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
+                  </div>
+                );
+              }
+
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                  {sortedDates.map(date => (
+                    <div key={date} style={{ 
+                      background: 'white', 
+                      borderRadius: '12px', 
+                      padding: '20px',
+                      border: '1px solid #e2e8f0'
+                    }}>
+                      <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '12px',
+                        marginBottom: '16px',
+                        paddingBottom: '12px',
+                        borderBottom: '2px solid #f1f5f9'
+                      }}>
+                        <div style={{
+                          background: 'hsl(262.1, 83.3%, 57.8%)',
+                          color: 'white',
+                          padding: '8px 16px',
+                          borderRadius: '8px',
+                          fontWeight: '700',
+                          fontSize: '14px'
+                        }}>
+                          {new Date(date).toLocaleDateString('en-US', { 
+                            weekday: 'short', 
+                            month: 'short', 
+                            day: 'numeric',
+                            year: 'numeric'
+                          })}
+                        </div>
+                        <span style={{ 
+                          color: '#64748b', 
+                          fontSize: '14px',
+                          fontWeight: '600'
+                        }}>
+                          {groupedBookings[date].length} booking{groupedBookings[date].length !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+
+                      <div className="schedule-list">
+                        {groupedBookings[date]
+                          .sort((a, b) => (a.time || '').localeCompare(b.time || ''))
+                          .map(booking => (
+                            <div key={booking.id} className="schedule-item">
+                              <div className="schedule-item-header">
+                                <span className="schedule-time">{booking.time || 'No time'}</span>
+                                <span className={`schedule-status ${booking.status || 'pending'}`}>
+                                  {booking.status || 'pending'}
+                                </span>
+                              </div>
+                              <div className="schedule-item-body">
+                                <div className="schedule-info">
+                                  <svg className="schedule-info-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                  </svg>
+                                  <span>{booking.customerName || 'Unknown'}</span>
+                                </div>
+                                <div className="schedule-info">
+                                  <svg className="schedule-info-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                  </svg>
+                                  <span>{booking.workName || booking.serviceName || 'Service'}</span>
+                                </div>
+                                {booking.customerPhone && (
+                                  <div className="schedule-info">
+                                    <svg className="schedule-info-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                                    </svg>
+                                    <span>{booking.customerPhone}</span>
+                                  </div>
+                                )}
+                                {booking.workerName && (
+                                  <div className="schedule-info">
+                                    <svg className="schedule-info-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                    </svg>
+                                    <span>Worker: {booking.workerName}</span>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="schedule-actions">
+                                <button 
+                                  className="schedule-action-btn primary"
+                                  onClick={() => {
+                                    setSelectedBooking(booking);
+                                    setShowBookingDetails(true);
+                                  }}
+                                >
+                                  View Details
+                                </button>
+                                {booking.status === 'pending' && (
+                                  <button 
+                                    className="schedule-action-btn secondary"
+                                    onClick={() => {
+                                      setBookingToAssign(booking);
+                                      setShowAssignWorker(true);
+                                    }}
+                                  >
+                                    Assign Worker
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
+      {/* Modals */}
       {showAssignWorker && bookingToAssign && (
         <AssignWorkerModal
           booking={bookingToAssign}
           categories={categories}
-          onClose={closeAssignWorker}
-          onAssigned={handleWorkerAssigned}
+          onClose={() => {
+            setShowAssignWorker(false);
+            setBookingToAssign(null);
+          }}
+          onAssigned={() => {
+            setShowAssignWorker(false);
+            setBookingToAssign(null);
+            // Refresh will happen automatically via real-time listener
+          }}
         />
       )}
     </div>
