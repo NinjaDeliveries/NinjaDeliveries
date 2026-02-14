@@ -5,6 +5,7 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "../../context/Firebase";
 const AddServiceModal = ({ onClose, onSaved, editService }) => {
   const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
   // const [categoryId, setCategoryId] = useState("");
   const [categoryMasterId, setCategoryMasterId] = useState(""); // Empty = no category selected
   const [selectedCompanyCategoryId, setSelectedCompanyCategoryId] = useState(""); // Empty = no company category selected
@@ -191,6 +192,7 @@ const fetchAdminServices = async (catId) => {
   if (!editService) return;
 
   setName(editService.name || "");
+  setDescription(editService.description || "");
   setCategoryMasterId(editService.categoryMasterId || "");
 
   // Find the company category that matches the master category
@@ -230,6 +232,23 @@ const fetchAdminServices = async (catId) => {
   } else {
     setIsCustomService(false);
     setFixedPrice(editService.price?.toString() || "");
+    
+    // Load duration for admin services
+    if (editService.duration && editService.durationUnit) {
+      const durationPackage = [{
+        duration: editService.duration,
+        unit: editService.durationUnit,
+        price: "",
+        availability: {
+          days: [],
+          timeSlots: [{ startTime: "09:00", endTime: "17:00" }],
+          isAvailable: true
+        },
+        quantityOffers: []
+      }];
+      setPackages(durationPackage);
+    }
+    
     // Load quantity offers if they exist
     setQuantityOffers(editService.quantityOffers || []);
   }
@@ -583,6 +602,7 @@ const fetchAdminServices = async (catId) => {
       categoryMasterId,
       masterCategoryId: categoryMasterId,
       name: finalServiceName,
+      description: description || "",
       serviceType: isCustomService ? "custom" : "admin",
       adminServiceId: isCustomService ? null : selectedServiceId,
       imageUrl: imageUrl || null,
@@ -609,6 +629,10 @@ if (isAdminService) {
   }
   payload.price = Number(fixedPrice);
   payload.packages = [];
+  
+  // Add duration info for admin services
+  payload.duration = Number(packages[0]?.duration) || 1;
+  payload.durationUnit = packages[0]?.unit || 'hour';
   
   // Add quantity offers if any
   payload.quantityOffers = quantityOffers.filter(offer => 
@@ -844,6 +868,7 @@ if (isCustomService) {
           onClick={() => {
             setIsCustomService(false);
             setName("");
+            setDescription("");
           }}
         >
           ← Back to predefined services
@@ -852,6 +877,28 @@ if (isCustomService) {
     )}
   </div>
 )}
+
+        {/* Description field for both admin and custom services */}
+        {(isAdminService && (selectedServiceId || isEditMode)) || isCustomService ? (
+          <div className="sd-form-group">
+            <label>Description (Optional)</label>
+            <textarea
+              placeholder="Enter service description..."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows="3"
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                border: '1px solid #d1d5db',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontFamily: 'inherit',
+                resize: 'vertical'
+              }}
+            />
+          </div>
+        ) : null}
 
         {isCustomService && (
   <div className="sd-form-group">
@@ -897,6 +944,31 @@ if (isCustomService) {
         value={fixedPrice}
         onChange={(e) => setFixedPrice(e.target.value)}
       />
+    </div>
+
+    {/* NEW: Duration field for admin services */}
+    <div className="sd-form-row">
+      <div className="sd-form-group">
+        <label>Service Duration</label>
+        <input
+          type="number"
+          placeholder="Duration"
+          value={packages[0]?.duration || 1}
+          onChange={(e) => updatePackage(0, 'duration', e.target.value)}
+          min="1"
+        />
+      </div>
+      <div className="sd-form-group">
+        <label>Duration Unit</label>
+        <select
+          value={packages[0]?.unit || 'hour'}
+          onChange={(e) => updatePackage(0, 'unit', e.target.value)}
+        >
+          <option value="minute">Minutes</option>
+          <option value="hour">Hours</option>
+          <option value="day">Days</option>
+        </select>
+      </div>
     </div>
 
     {/* NEW: Quantity-based Offers Section */}
