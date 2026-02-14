@@ -26,51 +26,7 @@ const Bookings = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState(""); // New date filter state
-  const [showAllBookings, setShowAllBookings] = useState(false); // Toggle for showing all bookings vs today only
-  const notifiedBookings = useRef(new Set()) // for whatapps notifications
-
-  const sendNewBookingWhatsApp = async (bookingId, booking) => {
-  try {
-    // Get company phone from companies collection
-    const companyRef = doc(db, "service_company", booking.companyId);
-    const companySnap = await getDocs(
-      query(collection(db, "service_company"), where("__name__", "==", booking.companyId))
-    );
-
-    if (companySnap.empty) return;
-
-    const companyData = companySnap.docs[0].data();
-    const companyPhone = companyData.phone;
-    const companyName = companyData.companyName;
-
-    await fetch(
-      "https://us-central1-ninjadeliveries-91007.cloudfunctions.net/sendNewBookingWhatsApp",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          companyName,
-          companyPhone,
-          bookingId,
-          customerName: booking.customerName,
-          customerPhone: booking.customerPhone,
-          service: booking.workName || booking.serviceName,
-          amount: booking.totalPrice || booking.price || 0,
-          date: booking.date,
-          time: booking.time,
-          address: booking.customerAddress || booking.location,
-        }),
-      }
-    );
-
-    console.log("New booking WhatsApp sent");
-  } catch (error) {
-    console.error("New booking WhatsApp failed:", error);
-  }
-};
-
+  const [showAllBookings, setShowAllBookings] = useState(true); // Toggle for showing all bookings vs today only
   const statusConfig = {
     pending: {
       label: "Pending",
@@ -165,6 +121,16 @@ const Bookings = () => {
     // Set up real-time listener with better error handling
     const unsubscribe = onSnapshot(q, 
       (snapshot) => {
+        if (snapshot.metadata.fromCache) {
+          return;
+        }
+        snapshot.docChanges().forEach((change) => {
+  if (change.type === "added") {
+    const docSnap = change.doc;
+    console.log("New booking detected (UI only):", docSnap.id);
+  }
+});
+
         try {
           console.log("📡 Real-time update received - bookings changed");
           console.log("📊 Snapshot metadata:", {
@@ -184,16 +150,6 @@ const Bookings = () => {
           snapshot.docs.forEach((docSnap) => {
             try {
               const data = docSnap.data();
-              // 📩 Send WhatsApp when new booking arrives
-              // if (!notifiedBookings.has(docSnap.id)) {
-              //   notifiedBookings.add(docSnap.id);
-              if (!notifiedBookings.current.has(docSnap.id)) {
-                  notifiedBookings.current.add(docSnap.id);
-                // Only for new pending bookings
-                  if (data.status === "pending") {
-                    sendNewBookingWhatsApp(docSnap.id, data);
-                }
-              }
 
               // Auto-expire logic - check if booking should be expired
               let shouldExpire = false;
