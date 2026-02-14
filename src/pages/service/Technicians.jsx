@@ -1058,135 +1058,141 @@ const Technicians = () => {
       {showModal && (
         <div className="sd-modal-backdrop">
           <div className="sd-modal technicians-modal">
-            <h2>{editTechnician ? "Edit Worker" : "Add New Worker"}</h2>
-            <p className="technicians-modal-desc">
-              {editTechnician ? "Update worker information and assignments." : "Add a new technician to your team."}
-            </p>
-
-            <div className="technicians-modal-form">
-              <div className="sd-form-group">
-                <label>Full Name *</label>
-                <input
-                  type="text"
-                  placeholder="Enter full name"
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                />
+            <div className="sd-modal-header">
+              <div>
+                <h2>{editTechnician ? "Edit Worker" : "Add New Worker"}</h2>
+                <p className="technicians-modal-desc">
+                  {editTechnician ? "Update worker information and assignments." : "Add a new technician to your team."}
+                </p>
               </div>
+            </div>
 
-              <div className="technicians-form-row">
+            <div className="sd-modal-content">
+              <div className="technicians-modal-form">
                 <div className="sd-form-group">
-                  <label>Phone Number *</label>
-                  <input
-                    type="tel"
-                    placeholder="Enter phone number"
-                    value={phone}
-                    onChange={e => setPhone(e.target.value)}
-                  />
-                </div>
-
-                <div className="sd-form-group">
-                  <label>Aadhar Number</label>
+                  <label>Full Name *</label>
                   <input
                     type="text"
-                    placeholder="Enter Aadhar number"
-                    value={aadharNumber}
-                    onChange={e => {
-                      const value = e.target.value.replace(/\D/g, '').slice(0, 12);
-                      setAadharNumber(value);
-                    }}
-                    maxLength="12"
+                    placeholder="Enter full name"
+                    value={name}
+                    onChange={e => setName(e.target.value)}
                   />
-                  {aadharNumber && aadharNumber.length !== 12 && (
-                    <small className="technicians-error-text">
-                      Aadhar number must be exactly 12 digits
-                    </small>
+                </div>
+
+                <div className="technicians-form-row">
+                  <div className="sd-form-group">
+                    <label>Phone Number *</label>
+                    <input
+                      type="tel"
+                      placeholder="Enter phone number"
+                      value={phone}
+                      onChange={e => setPhone(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="sd-form-group">
+                    <label>Aadhar Number</label>
+                    <input
+                      type="text"
+                      placeholder="Enter Aadhar number"
+                      value={aadharNumber}
+                      onChange={e => {
+                        const value = e.target.value.replace(/\D/g, '').slice(0, 12);
+                        setAadharNumber(value);
+                      }}
+                      maxLength="12"
+                    />
+                    {aadharNumber && aadharNumber.length !== 12 && (
+                      <small className="technicians-error-text">
+                        Aadhar number must be exactly 12 digits
+                      </small>
+                    )}
+                  </div>
+                </div>
+
+                <div className="sd-form-group">
+                  <label>Categories / Specializations</label>
+                  <select 
+                    value="" 
+                    onChange={(e) => {
+                      if (e.target.value && !assignedCategories.includes(e.target.value)) {
+                        handleCategoryToggle(e.target.value);
+                      }
+                    }}
+                    className="sd-form-select"
+                  >
+                    <option value="">Select category to add</option>
+                    {categories.filter(cat => !assignedCategories.includes(cat.id)).map(category => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+                  
+                  {assignedCategories.length > 0 && (
+                    <div className="technicians-selected-categories-list">
+                      <label>Selected Categories:</label>
+                      {assignedCategories.map(catId => (
+                        <div key={catId} className="technicians-selected-category-item">
+                          <span>{getCategoryName(catId)}</span>
+                          <button 
+                            type="button"
+                            onClick={() => handleCategoryToggle(catId)}
+                            className="technicians-remove-category-btn"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
-              </div>
 
-              <div className="sd-form-group">
-                <label>Categories / Specializations</label>
-                <select 
-                  value="" 
-                  onChange={(e) => {
-                    if (e.target.value && !assignedCategories.includes(e.target.value)) {
-                      handleCategoryToggle(e.target.value);
-                    }
-                  }}
-                  className="sd-form-select"
-                >
-                  <option value="">Select category to add</option>
-                  {categories.filter(cat => !assignedCategories.includes(cat.id)).map(category => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
-                
-                {assignedCategories.length > 0 && (
-                  <div className="technicians-selected-categories-list">
-                    <label>Selected Categories:</label>
-                    {assignedCategories.map(catId => (
-                      <div key={catId} className="technicians-selected-category-item">
-                        <span>{getCategoryName(catId)}</span>
-                        <button 
-                          type="button"
-                          onClick={() => handleCategoryToggle(catId)}
-                          className="technicians-remove-category-btn"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+                <div className="technicians-status-toggle">
+                  <label>Active Status</label>
+                  <label className="technicians-switch">
+                    <input
+                      type="checkbox"
+                      checked={isActive}
+                      onChange={(e) => setIsActive(e.target.checked)}
+                    />
+                    <span className="technicians-switch-slider"></span>
+                  </label>
+                </div>
 
-              <div className="technicians-status-toggle">
-                <label>Active Status</label>
-                <label className="technicians-switch">
-                  <input
-                    type="checkbox"
-                    checked={isActive}
-                    onChange={(e) => setIsActive(e.target.checked)}
-                  />
-                  <span className="technicians-switch-slider"></span>
-                </label>
-              </div>
-
-              <div className="sd-form-group">
-                <label>Assign Services</label>
-                <div className="sd-services-list">
-                  {services.length === 0 ? (
-                    <p className="technicians-no-services">No services available. Create services first.</p>
-                  ) : assignedCategories.length === 0 ? (
-                    <div className="technicians-services-info">
-                      <small>Please select categories first to see available services.</small>
-                    </div>
-                  ) : (
-                    <>
+                <div className="sd-form-group">
+                  <label>Assign Services</label>
+                  <div className="sd-services-list">
+                    {services.length === 0 ? (
+                      <p className="technicians-no-services">No services available. Create services first.</p>
+                    ) : assignedCategories.length === 0 ? (
                       <div className="technicians-services-info">
-                        <small>Services for selected categories ({getFilteredServices().length} found):</small>
+                        <small>Please select categories first to see available services.</small>
                       </div>
-                      {getFilteredServices().map(service => (
-                        <label key={service.id} className="sd-service-checkbox">
-                          <input
-                            type="checkbox"
-                            checked={assignedServices.includes(service.id)}
-                            onChange={() => handleServiceToggle(service.id)}
-                          />
-                          <span>{service.name}</span>
-                          <small className="service-category-label">
-                            {getServiceCategoryName(service)}
-                          </small>
-                        </label>
-                      ))}
-                      {getFilteredServices().length === 0 && (
-                        <p className="technicians-no-services">No services found for selected categories.</p>
-                      )}
-                    </>
-                  )}
+                    ) : (
+                      <>
+                        <div className="technicians-services-info">
+                          <small>Services for selected categories ({getFilteredServices().length} found):</small>
+                        </div>
+                        {getFilteredServices().map(service => (
+                          <label key={service.id} className="sd-service-checkbox">
+                            <input
+                              type="checkbox"
+                              checked={assignedServices.includes(service.id)}
+                              onChange={() => handleServiceToggle(service.id)}
+                            />
+                            <span>{service.name}</span>
+                            <small className="service-category-label">
+                              {getServiceCategoryName(service)}
+                            </small>
+                          </label>
+                        ))}
+                        {getFilteredServices().length === 0 && (
+                          <p className="technicians-no-services">No services found for selected categories.</p>
+                        )}
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
