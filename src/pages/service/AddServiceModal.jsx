@@ -133,6 +133,12 @@ const fetchAdminServices = async (catId) => {
         .filter(Boolean) // Remove null/undefined values
     );
     
+    // 🔥 FIX: If editing, allow the current service to show in dropdown
+    if (editService?.adminServiceId) {
+      alreadyAddedServiceIds.delete(editService.adminServiceId);
+      console.log("✏️ Edit mode: Allowing current service", editService.adminServiceId);
+    }
+    
     console.log("🚫 Already added service IDs:", Array.from(alreadyAddedServiceIds));
 
     // Fetch all services from master collection
@@ -155,16 +161,18 @@ const fetchAdminServices = async (catId) => {
         service.categoryId === catId ||
         service.category === catId;
       
-      // Try to match by category name
+      // Try to match by category name (more flexible matching)
       const matchesCategoryName = categoryName && (
         service.categoryName === categoryName ||
         service.category === categoryName ||
-        (service.name && service.name.toLowerCase().includes(categoryName.toLowerCase()))
+        // Extract base category name (e.g., "Electrician" from "Electrician : Home / Shop / Office")
+        categoryName.split(':')[0].trim().toLowerCase() === (service.categoryName || service.category || '').toLowerCase() ||
+        (service.categoryName || service.category || '').toLowerCase().includes(categoryName.split(':')[0].trim().toLowerCase())
       );
       
       const matches = matchesCategoryId || matchesCategoryName;
       
-      console.log(`🔍 "${service.name}": active=${isActive}, alreadyAdded=${isAlreadyAdded}, categoryMatch=${matches}`);
+      console.log(`🔍 "${service.name}": active=${isActive}, alreadyAdded=${isAlreadyAdded}, categoryMatch=${matches}, categoryId=${service.masterCategoryId || service.categoryMasterId}, categoryName=${service.categoryName || service.category}`);
       
       // 🔥 ONLY SHOW SERVICES THAT ARE ACTIVE, MATCH CATEGORY, AND NOT ALREADY ADDED
       return isActive && matches && !isAlreadyAdded;
@@ -200,6 +208,8 @@ const fetchAdminServices = async (catId) => {
     const matchingCompanyCategory = categories.find(cat => cat.masterCategoryId === editService.categoryMasterId);
     if (matchingCompanyCategory) {
       setSelectedCompanyCategoryId(matchingCompanyCategory.id);
+      // 🔥 FIX: Fetch admin services for this category in edit mode
+      fetchAdminServices(editService.categoryMasterId);
     }
   }
 
@@ -219,8 +229,10 @@ const fetchAdminServices = async (catId) => {
       
       return {
         ...pkg,
+        totalDays: pkg.totalDays || (pkg.unit === "month" ? 30 : pkg.unit === "week" ? 7 : 1), // Load totalDays
         availability: {
           days: availability.days || (pkg.unit === "month" ? [] : ['monday', 'tuesday', 'wednesday', 'thursday', 'friday']),
+          offDays: availability.offDays || [], // Load offDays
           timeSlots: availability.timeSlots || [{ startTime: "09:00", endTime: "17:00" }],
           isAvailable: availability.isAvailable ?? true
         },
@@ -239,8 +251,10 @@ const fetchAdminServices = async (catId) => {
         duration: editService.duration,
         unit: editService.durationUnit,
         price: "",
+        totalDays: 1, // Admin services don't use totalDays
         availability: {
           days: [],
+          offDays: [],
           timeSlots: [{ startTime: "09:00", endTime: "17:00" }],
           isAvailable: true
         },
@@ -380,14 +394,13 @@ const fetchAdminServices = async (catId) => {
       duration: 1, 
       unit: "month", 
       price: "",
-      totalDays: 30, // NEW: Total days in package (for monthly packages)
+      totalDays: 30, // Total days in package (for monthly packages)
       availability: {
         days: [], // Empty for monthly packages by default
-        offDays: [], // NEW: Weekly off days (e.g., ['saturday', 'sunday'])
+        offDays: [], // Weekly off days (e.g., ['saturday', 'sunday'])
         timeSlots: [{ startTime: "09:00", endTime: "17:00" }], // Array of time slots
         isAvailable: true
       },
-      // NEW: Quantity offers for this package
       quantityOffers: []
     }]);
   };
@@ -406,6 +419,7 @@ const fetchAdminServices = async (catId) => {
       if (!copy[index].availability) {
         copy[index].availability = {
           days: copy[index].unit === "month" ? [] : ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
+          offDays: [], // Initialize offDays
           timeSlots: [{ startTime: "09:00", endTime: "17:00" }],
           isAvailable: true
         };
@@ -414,17 +428,27 @@ const fetchAdminServices = async (catId) => {
     } else {
       copy[index][field] = value;
       
-      // If unit changes, adjust availability days accordingly
+      // If unit changes, adjust availability days and initialize totalDays accordingly
       if (field === 'unit') {
         if (!copy[index].availability) {
           copy[index].availability = {
             days: value === "month" ? [] : ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
+            offDays: [],
             timeSlots: [{ startTime: "09:00", endTime: "17:00" }],
             isAvailable: true
           };
         } else {
           // Update days based on new unit
           copy[index].availability.days = value === "month" ? [] : ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+        }
+        
+        // Set default totalDays based on unit
+        if (value === "month") {
+          copy[index].totalDays = 30;
+        } else if (value === "week") {
+          copy[index].totalDays = 7;
+        } else if (value === "day") {
+          copy[index].totalDays = 1;
         }
       }
     }
@@ -478,12 +502,13 @@ const fetchAdminServices = async (catId) => {
     copy[index][field] = value;
     
     // Auto-calculate newPricePerUnit when discount changes
-    if (field === "discountValue" || field === "discountType") {
+    if ((field === "discountValue" || field === "discountType") && copy[index].discountType !== "newPrice") {
       const basePrice = Number(fixedPrice) || 0;
       if (copy[index].discountType === "percentage") {
-        copy[index].newPricePerUnit = basePrice - (basePrice * Number(value) / 100);
+        const discountAmount = basePrice * Number(copy[index].discountValue) / 100;
+        copy[index].newPricePerUnit = Math.max(0, basePrice - discountAmount);
       } else if (copy[index].discountType === "fixed") {
-        copy[index].newPricePerUnit = basePrice - Number(value);
+        copy[index].newPricePerUnit = Math.max(0, basePrice - Number(copy[index].discountValue));
       }
     }
     
@@ -517,14 +542,13 @@ const fetchAdminServices = async (catId) => {
     copy[packageIndex].quantityOffers[offerIndex][field] = value;
     
     // Auto-calculate newPricePerUnit when discount changes
-    if (field === "discountValue" || field === "discountType") {
+    if ((field === "discountValue" || field === "discountType") && copy[packageIndex].quantityOffers[offerIndex].discountType !== "newPrice") {
       const basePrice = Number(copy[packageIndex].price) || 0;
       if (copy[packageIndex].quantityOffers[offerIndex].discountType === "percentage") {
-        copy[packageIndex].quantityOffers[offerIndex].newPricePerUnit = 
-          basePrice - (basePrice * Number(value) / 100);
+        const discountAmount = basePrice * Number(copy[packageIndex].quantityOffers[offerIndex].discountValue) / 100;
+        copy[packageIndex].quantityOffers[offerIndex].newPricePerUnit = Math.max(0, basePrice - discountAmount);
       } else if (copy[packageIndex].quantityOffers[offerIndex].discountType === "fixed") {
-        copy[packageIndex].quantityOffers[offerIndex].newPricePerUnit = 
-          basePrice - Number(value);
+        copy[packageIndex].quantityOffers[offerIndex].newPricePerUnit = Math.max(0, basePrice - Number(copy[packageIndex].quantityOffers[offerIndex].discountValue));
       }
     }
     
@@ -682,8 +706,10 @@ if (isCustomService) {
     duration: Number(p.duration),
     unit: p.unit,
     price: Number(p.price),
+    totalDays: p.totalDays || (p.unit === "month" ? 30 : p.unit === "week" ? 7 : 1), // Include totalDays
     availability: p.availability || {
-      days: p.unit === "month" ? [] : ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'], // Empty days for monthly
+      days: p.unit === "month" ? [] : ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
+      offDays: [], // Include offDays
       timeSlots: [{ startTime: "09:00", endTime: "17:00" }],
       isAvailable: true
     },
@@ -967,6 +993,7 @@ if (isCustomService) {
           <option value="minute">Minutes</option>
           <option value="hour">Hours</option>
           <option value="day">Days</option>
+          <option value="month">Months</option>
         </select>
       </div>
     </div>
