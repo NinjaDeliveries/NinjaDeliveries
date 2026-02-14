@@ -364,6 +364,11 @@ const ProductList = () => {
     };
 
     const fetchData = async () => {
+      if (!user?.storeId) {
+        setLoading(false);
+        return;
+      }
+      
       setLoading(true);
       setError(null);
 

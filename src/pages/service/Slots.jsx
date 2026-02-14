@@ -14,6 +14,7 @@ import {
 import "../../style/ServiceDashboard.css";
 import "./Slots.css";
 import AssignWorkerModal from "./AssignWorkerModal";
+import PowerSwitch from "../../components/PowerSwitch";
 export default function Slots() {
   const [loading, setLoading] = useState(true);
   const [bookings, setBookings] = useState([]);
@@ -916,28 +917,19 @@ export default function Slots() {
             </button>
           </div>
           
-          {/* Status Toggle */}
+          {/* Status Toggle with Power Switch */}
           <div className="status-toggle">
             <div className="status-indicator">
               <span className={`status-dot ${isOnline ? 'online' : 'offline'}`}></span>
-              <span>{isOnline ? 'ONLINE' : 'OFFLINE'}</span>
+              <span style={{ fontWeight: '700', fontSize: '16px' }}>
+                {isOnline ? 'ONLINE' : 'OFFLINE'}
+              </span>
             </div>
-            <div className="status-buttons">
-              <button 
-                className="status-btn online"
-                onClick={() => toggleOnlineStatus(true)}
-                disabled={isOnline || updating}
-              >
-                GO ONLINE
-              </button>
-              <button 
-                className="status-btn offline"
-                onClick={() => toggleOnlineStatus(false)}
-                disabled={!isOnline || updating}
-              >
-                GO OFFLINE
-              </button>
-            </div>
+            <PowerSwitch 
+              isOn={isOnline}
+              onChange={(checked) => toggleOnlineStatus(checked)}
+              disabled={updating}
+            />
           </div>
         </div>
       </div>
