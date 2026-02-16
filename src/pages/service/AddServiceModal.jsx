@@ -97,7 +97,7 @@ const [quantityOffers, setQuantityOffers] = useState([]);
 //   setAdminServices(list);
 // };
 
-const fetchAdminServices = async (catId) => {
+const fetchAdminServices = async (catId, currentEditService = null) => {
   if (!catId) {
     setAdminServices([]);
     setServicesLoading(false);
@@ -106,6 +106,7 @@ const fetchAdminServices = async (catId) => {
   }
 
   console.log("🔍 Fetching services for category:", catId);
+  console.log("🔍 Edit service:", currentEditService);
   setServicesLoading(true);
 
   try {
@@ -127,19 +128,38 @@ const fetchAdminServices = async (catId) => {
       where("companyId", "==", user.uid)
     );
     const companyServicesSnap = await getDocs(companyServicesQuery);
-    const alreadyAddedServiceIds = new Set(
-      companyServicesSnap.docs
-        .map(doc => doc.data().adminServiceId)
-        .filter(Boolean) // Remove null/undefined values
-    );
+    
+    // 🔥 FIX: Collect all possible service ID fields
+    const alreadyAddedServiceIds = new Set();
+    const alreadyAddedServiceNames = new Set();
+    
+    companyServicesSnap.docs.forEach(doc => {
+      const data = doc.data();
+      // Add service ID (multiple possible field names)
+      if (data.adminServiceId) alreadyAddedServiceIds.add(data.adminServiceId);
+      if (data.serviceId) alreadyAddedServiceIds.add(data.serviceId);
+      if (data.masterServiceId) alreadyAddedServiceIds.add(data.masterServiceId);
+      
+      // Also track by name for extra safety
+      if (data.name) alreadyAddedServiceNames.add(data.name.toLowerCase().trim());
+      
+      console.log("📝 Existing service:", {
+        id: doc.id,
+        name: data.name,
+        adminServiceId: data.adminServiceId,
+        serviceId: data.serviceId,
+        masterServiceId: data.masterServiceId
+      });
+    });
     
     // 🔥 FIX: If editing, allow the current service to show in dropdown
-    if (editService?.adminServiceId) {
-      alreadyAddedServiceIds.delete(editService.adminServiceId);
-      console.log("✏️ Edit mode: Allowing current service", editService.adminServiceId);
+    if (currentEditService?.adminServiceId) {
+      alreadyAddedServiceIds.delete(currentEditService.adminServiceId);
+      console.log("✏️ Edit mode: Allowing current service", currentEditService.adminServiceId);
     }
     
     console.log("🚫 Already added service IDs:", Array.from(alreadyAddedServiceIds));
+    console.log("🚫 Already added service names:", Array.from(alreadyAddedServiceNames));
 
     // Fetch all services from master collection
     const snap = await getDocs(collection(db, "service_services_master"));
@@ -151,8 +171,10 @@ const fetchAdminServices = async (catId) => {
     const matchingServices = allServices.filter(service => {
       const isActive = service.isActive !== false; // Default to true if not set
       
-      // 🔥 CHECK IF SERVICE IS ALREADY ADDED BY THIS COMPANY
-      const isAlreadyAdded = alreadyAddedServiceIds.has(service.id);
+      // 🔥 CHECK IF SERVICE IS ALREADY ADDED BY THIS COMPANY (by ID or name)
+      const isAlreadyAddedById = alreadyAddedServiceIds.has(service.id);
+      const isAlreadyAddedByName = alreadyAddedServiceNames.has(service.name?.toLowerCase().trim());
+      const isAlreadyAdded = isAlreadyAddedById || isAlreadyAddedByName;
       
       // Try to match by category ID first
       const matchesCategoryId = 
@@ -172,7 +194,7 @@ const fetchAdminServices = async (catId) => {
       
       const matches = matchesCategoryId || matchesCategoryName;
       
-      console.log(`🔍 "${service.name}": active=${isActive}, alreadyAdded=${isAlreadyAdded}, categoryMatch=${matches}, categoryId=${service.masterCategoryId || service.categoryMasterId}, categoryName=${service.categoryName || service.category}`);
+      console.log(`🔍 "${service.name}": active=${isActive}, alreadyAddedById=${isAlreadyAddedById}, alreadyAddedByName=${isAlreadyAddedByName}, categoryMatch=${matches}, serviceId=${service.id}`);
       
       // 🔥 ONLY SHOW SERVICES THAT ARE ACTIVE, MATCH CATEGORY, AND NOT ALREADY ADDED
       return isActive && matches && !isAlreadyAdded;
@@ -208,8 +230,8 @@ const fetchAdminServices = async (catId) => {
     const matchingCompanyCategory = categories.find(cat => cat.masterCategoryId === editService.categoryMasterId);
     if (matchingCompanyCategory) {
       setSelectedCompanyCategoryId(matchingCompanyCategory.id);
-      // 🔥 FIX: Fetch admin services for this category in edit mode
-      fetchAdminServices(editService.categoryMasterId);
+      // 🔥 FIX: Fetch admin services for this category in edit mode, pass editService
+      fetchAdminServices(editService.categoryMasterId, editService);
     }
   }
 
@@ -267,6 +289,23 @@ const fetchAdminServices = async (catId) => {
     setQuantityOffers(editService.quantityOffers || []);
   }
 }, [editService, categories]); // Add categories as dependency
+
+// 🔥 NEW: Separate useEffect to set selectedServiceId AFTER adminServices are loaded
+useEffect(() => {
+  if (editService && editService.serviceType !== "custom" && editService.adminServiceId && adminServices.length > 0) {
+    // Check if the service exists in adminServices
+    const serviceExists = adminServices.find(s => s.id === editService.adminServiceId);
+    if (serviceExists) {
+      console.log("✅ Setting selectedServiceId to:", editService.adminServiceId, "Service name:", serviceExists.name);
+      setSelectedServiceId(editService.adminServiceId);
+    } else {
+      console.log("⚠️ Service not found in adminServices:", editService.adminServiceId);
+      console.log("⚠️ Available services:", adminServices.map(s => ({ id: s.id, name: s.name })));
+      // 🔥 IMPORTANT: Still set the ID even if not in list (for display purposes)
+      setSelectedServiceId(editService.adminServiceId);
+    }
+  }
+}, [editService, adminServices]); // Run when adminServices are loaded
 
   // Handle image upload
   const handleImageChange = (e) => {
@@ -846,7 +885,22 @@ if (isCustomService) {
           <div className="sd-loading-select">
             <span>Loading services...</span>
           </div>
+        ) : editService ? (
+          // 🔥 EDIT MODE: Show service name as readonly input (no dropdown)
+          <input
+            type="text"
+            value={name}
+            readOnly
+            disabled
+            style={{
+              backgroundColor: '#f5f5f5',
+              cursor: 'not-allowed',
+              color: '#666'
+            }}
+            title="Service cannot be changed in edit mode"
+          />
         ) : (
+          // 🔥 ADD MODE: Show dropdown to select service
           <select
             value={selectedServiceId}
             onChange={(e) => {
@@ -875,7 +929,7 @@ if (isCustomService) {
           </select>
         )}
         
-        {!servicesLoading && adminServices.length === 0 && (
+        {!servicesLoading && !editService && adminServices.length === 0 && (
           <div className="sd-no-services-message">
             <p>No predefined services found for this category. You can add a custom service instead.</p>
           </div>
