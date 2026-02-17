@@ -91,8 +91,6 @@ const AddService = ({ onClose, onSave, editMode = false, initialData = null }) =
       return base - (base * value / 100);
     } else if (discountType === 'fixed') {
       return base - value;
-    } else if (discountType === 'newPrice') {
-      return value;
     }
     return base;
   };
@@ -583,8 +581,6 @@ const OfferForm = ({ basePrice, existingOffer, onSave, onCancel }) => {
       return base - (base * value / 100);
     } else if (offer.discountType === 'fixed') {
       return base - value;
-    } else if (offer.discountType === 'newPrice') {
-      return value;
     }
     return base;
   };

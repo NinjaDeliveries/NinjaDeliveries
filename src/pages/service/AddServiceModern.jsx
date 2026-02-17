@@ -55,8 +55,6 @@ const AddServiceModern = ({ onClose, onSave }) => {
             updated.finalPrice = basePrice - (basePrice * updated.discountValue / 100);
           } else if (updated.discountType === 'fixed') {
             updated.finalPrice = basePrice - updated.discountValue;
-          } else if (updated.discountType === 'newPrice') {
-            updated.finalPrice = updated.discountValue;
           }
         }
         
