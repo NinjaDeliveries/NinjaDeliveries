@@ -188,7 +188,8 @@ function ServiceBannerManagement({ onBack }) {
         discount: Math.round(((originalPrice - offerPrice) / originalPrice) * 100),
         description: description.trim(),
         imageUrl: imageUrl,
-        isActive: true,
+        isActive: false,
+        isApproved: false,
         clickable: clickable,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
@@ -210,7 +211,7 @@ function ServiceBannerManagement({ onBack }) {
       setClickable(false);
 
       fetchBanners(userId);
-      alert("Banner created successfully!");
+      alert("Banner submitted for admin approval! It will be visible in the app once approved.");
     } catch (error) {
       console.error("Error creating banner:", error);
       alert("Error creating banner. Please try again.");
@@ -380,6 +381,30 @@ function ServiceBannerManagement({ onBack }) {
 
       {/* Modern Search */}
       <div className="modern-search-section">
+        {banners.some(b => !b.isApproved) && (
+          <div style={{
+            padding: "12px 16px",
+            background: "#fffbeb",
+            border: "1px solid #f59e0b",
+            borderRadius: "8px",
+            marginBottom: "16px",
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            fontSize: "14px",
+            color: "#92400e"
+          }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{ width: "20px", height: "20px", flexShrink: 0 }}>
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <span>
+              <strong>Note:</strong> Banners marked as "Pending Approval" are waiting for admin review. 
+              They will be visible in the app once approved.
+            </span>
+          </div>
+        )}
         <div className="modern-search-box">
           <svg className="modern-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
             <circle cx="11" cy="11" r="8"/>
@@ -451,6 +476,22 @@ function ServiceBannerManagement({ onBack }) {
                   <div className="modern-banner-header">
                     <h3>{banner.serviceName}</h3>
                     <div className="modern-banner-badges">
+                      {!banner.isApproved && (
+                        <span className="modern-status-badge" style={{ 
+                          background: "#f59e0b", 
+                          color: "white",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "4px"
+                        }}>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{ width: "14px", height: "14px" }}>
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="12" y1="8" x2="12" y2="12"/>
+                            <line x1="12" y1="16" x2="12.01" y2="16"/>
+                          </svg>
+                          Pending Approval
+                        </span>
+                      )}
                       <span className={`modern-status-badge ${banner.isActive ? 'active' : 'inactive'}`}>
                         {banner.isActive ? (
                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -510,7 +551,7 @@ function ServiceBannerManagement({ onBack }) {
                     className={`modern-action-btn toggle ${banner.isActive ? 'active' : 'inactive'}`}
                     onClick={() => handleToggleBanner(banner)}
                     title={banner.isActive ? 'Disable banner' : 'Enable banner'}
-                    disabled={actionLoading === `toggle-${banner.id}`}
+                    disabled={actionLoading === `toggle-${banner.id}` || !banner.isApproved}
                   >
                     {actionLoading === `toggle-${banner.id}` ? (
                       <div className="modern-btn-spinner"></div>
@@ -531,8 +572,8 @@ function ServiceBannerManagement({ onBack }) {
                   <button 
                     className="modern-action-btn delete"
                     onClick={() => handleDeleteBanner(banner)}
-                    title="Delete banner"
-                    disabled={actionLoading === `delete-${banner.id}`}
+                    title={!banner.isApproved ? "Cannot delete pending banner" : "Delete banner"}
+                    disabled={actionLoading === `delete-${banner.id}` || !banner.isApproved}
                   >
                     {actionLoading === `delete-${banner.id}` ? (
                       <div className="modern-btn-spinner"></div>

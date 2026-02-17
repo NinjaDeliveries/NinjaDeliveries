@@ -14,8 +14,9 @@ import {
   orderBy,
   limit,
   setDoc,
+  deleteDoc,
+  serverTimestamp,
 } from "firebase/firestore";
-import { deleteDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 
 
@@ -172,6 +173,11 @@ useEffect(() => {
   const [customerRejectedData, setCustomerRejectedData] = useState([]);
   const [expandedCompanies, setExpandedCompanies] = useState({});
   
+  /* 🔹 Pending Banners */
+  const [pendingBanners, setPendingBanners] = useState([]);
+  const [bannersLoading, setBannersLoading] = useState(false);
+  const [previewBanner, setPreviewBanner] = useState(null);
+  
   /* 🔹 WhatsApp Message Modal */
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [messageText, setMessageText] = useState("");
@@ -216,6 +222,92 @@ setActiveUsers(
   fetchAllAdmins();
 }, []);
 /* ================= FETCH PENDING USERS ================= */
+
+/* ================= FETCH PENDING BANNERS ================= */
+useEffect(() => {
+  fetchPendingBanners();
+}, []);
+
+const fetchPendingBanners = async () => {
+  try {
+    setBannersLoading(true);
+    const q = query(
+      collection(db, "service_banners"),
+      where("isApproved", "==", false)
+    );
+    const snap = await getDocs(q);
+    
+    const bannersWithCompanyInfo = await Promise.all(
+      snap.docs.map(async (bannerDoc) => {
+        const bannerData = { id: bannerDoc.id, ...bannerDoc.data() };
+        
+        // Fetch company info
+        try {
+          const companyQuery = query(
+            collection(db, "service_company"),
+            where("__name__", "==", bannerData.companyId)
+          );
+          const companySnap = await getDocs(companyQuery);
+          
+          if (!companySnap.empty) {
+            const companyData = companySnap.docs[0].data();
+            bannerData.companyName = companyData.companyName || companyData.name || "Unknown Company";
+            bannerData.companyPhone = companyData.phoneNumber || companyData.phone || "N/A";
+          } else {
+            bannerData.companyName = "Unknown Company";
+            bannerData.companyPhone = "N/A";
+          }
+        } catch (err) {
+          console.error("Error fetching company info:", err);
+          bannerData.companyName = "Unknown Company";
+          bannerData.companyPhone = "N/A";
+        }
+        
+        return bannerData;
+      })
+    );
+    
+    setPendingBanners(bannersWithCompanyInfo);
+  } catch (err) {
+    console.error("Error fetching pending banners:", err);
+    toast.error("Failed to load pending banners");
+  } finally {
+    setBannersLoading(false);
+  }
+};
+
+/* ================= APPROVE BANNER ================= */
+const approveBanner = async (bannerId) => {
+  try {
+    await updateDoc(doc(db, "service_banners", bannerId), {
+      isApproved: true,
+      isActive: true,
+      approvedAt: new Date().toISOString(),
+      updatedAt: serverTimestamp()
+    });
+    
+    toast.success("Banner approved successfully!");
+    fetchPendingBanners();
+  } catch (err) {
+    console.error("Error approving banner:", err);
+    toast.error("Failed to approve banner");
+  }
+};
+
+/* ================= REJECT BANNER ================= */
+const rejectBanner = async (bannerId) => {
+  if (!window.confirm("Are you sure you want to reject this banner? This action cannot be undone.")) return;
+  
+  try {
+    await deleteDoc(doc(db, "service_banners", bannerId));
+    toast.success("Banner rejected and deleted");
+    fetchPendingBanners();
+  } catch (err) {
+    console.error("Error rejecting banner:", err);
+    toast.error("Failed to reject banner");
+  }
+};
+
   /* ================= FETCH ACTIVITY LOGS ================= */
   const fetchActivityLogs = async () => {
     try {
@@ -737,6 +829,197 @@ const AVAILABLE_FEATURES = [
             Create Role
           </button>
         </div>
+      </div>
+
+      {/* Pending Banner Approvals */}
+      <div style={styles.card}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+          <div>
+            <h3 style={{ margin: 0 }}>Pending Banner Approvals</h3>
+            <p style={{ margin: "5px 0 0 0", fontSize: "14px", color: "#666" }}>
+              Review and approve banners submitted by service companies
+            </p>
+          </div>
+          <button onClick={fetchPendingBanners} style={styles.inviteButton}>
+            {bannersLoading ? "Loading..." : "Refresh"}
+          </button>
+        </div>
+
+        {bannersLoading ? (
+          <p style={{ color: "#666" }}>Loading pending banners...</p>
+        ) : pendingBanners.length === 0 ? (
+          <p style={{ color: "#666" }}>No pending banners for approval</p>
+        ) : (
+          <div style={{ display: "grid", gap: "20px" }}>
+            {pendingBanners.map((banner) => (
+              <div
+                key={banner.id}
+                style={{
+                  border: "2px solid #f59e0b",
+                  borderRadius: "12px",
+                  padding: "20px",
+                  background: "#fffbeb",
+                  display: "grid",
+                  gridTemplateColumns: "auto 1fr auto",
+                  gap: "20px",
+                  alignItems: "start"
+                }}
+              >
+                {/* Banner Image */}
+                <div style={{ width: "150px", height: "100px", borderRadius: "8px", overflow: "hidden", background: "#f3f4f6" }}>
+                  {banner.imageUrl ? (
+                    <img 
+                      src={banner.imageUrl} 
+                      alt={banner.serviceName}
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
+                  ) : (
+                    <div style={{ 
+                      width: "100%", 
+                      height: "100%", 
+                      display: "flex", 
+                      alignItems: "center", 
+                      justifyContent: "center",
+                      color: "#9ca3af"
+                    }}>
+                      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                        <circle cx="8.5" cy="8.5" r="1.5"/>
+                        <polyline points="21,15 16,10 5,21"/>
+                      </svg>
+                    </div>
+                  )}
+                </div>
+
+                {/* Banner Details */}
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
+                    <h4 style={{ margin: 0, fontSize: "18px", color: "#111827" }}>
+                      {banner.serviceName}
+                    </h4>
+                    <span style={{ 
+                      background: "#f59e0b", 
+                      color: "white", 
+                      padding: "4px 10px", 
+                      borderRadius: "12px",
+                      fontSize: "12px",
+                      fontWeight: "600"
+                    }}>
+                      Pending Approval
+                    </span>
+                  </div>
+
+                  <div style={{ marginBottom: "12px" }}>
+                    <p style={{ margin: "4px 0", fontSize: "14px", color: "#374151" }}>
+                      <strong>Company:</strong> {banner.companyName}
+                    </p>
+                    <p style={{ margin: "4px 0", fontSize: "14px", color: "#374151" }}>
+                      <strong>Phone:</strong> {banner.companyPhone}
+                    </p>
+                    <p style={{ margin: "4px 0", fontSize: "14px", color: "#374151" }}>
+                      <strong>Category:</strong> {banner.categoryName}
+                    </p>
+                  </div>
+
+                  {banner.description && (
+                    <p style={{ 
+                      margin: "8px 0", 
+                      fontSize: "14px", 
+                      color: "#6b7280",
+                      fontStyle: "italic",
+                      padding: "8px 12px",
+                      background: "#ffffff",
+                      borderRadius: "6px",
+                      border: "1px solid #e5e7eb"
+                    }}>
+                      "{banner.description}"
+                    </p>
+                  )}
+
+                  <div style={{ display: "flex", gap: "12px", alignItems: "center", marginTop: "12px" }}>
+                    <span style={{ fontSize: "16px", color: "#9ca3af", textDecoration: "line-through" }}>
+                      ₹{banner.originalPrice?.toLocaleString()}
+                    </span>
+                    <span style={{ fontSize: "20px", fontWeight: "700", color: "#10b981" }}>
+                      ₹{banner.offerPrice?.toLocaleString()}
+                    </span>
+                    <span style={{ 
+                      background: "#10b981", 
+                      color: "white", 
+                      padding: "4px 10px", 
+                      borderRadius: "12px",
+                      fontSize: "13px",
+                      fontWeight: "600"
+                    }}>
+                      {banner.discount}% OFF
+                    </span>
+                  </div>
+
+                  <div style={{ marginTop: "8px", fontSize: "12px", color: "#6b7280" }}>
+                    <p style={{ margin: "2px 0" }}>
+                      <strong>Clickable:</strong> {banner.clickable ? "Yes" : "No"}
+                    </p>
+                    <p style={{ margin: "2px 0" }}>
+                      <strong>Created:</strong> {banner.createdAt ? new Date(banner.createdAt.seconds * 1000).toLocaleString() : "N/A"}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                  <button
+                    onClick={() => setPreviewBanner(banner)}
+                    style={{
+                      padding: "10px 16px",
+                      borderRadius: "8px",
+                      border: "1px solid #3b82f6",
+                      background: "#ffffff",
+                      color: "#3b82f6",
+                      fontWeight: "600",
+                      cursor: "pointer",
+                      fontSize: "14px",
+                      whiteSpace: "nowrap"
+                    }}
+                  >
+                    👁️ Preview
+                  </button>
+                  <button
+                    onClick={() => approveBanner(banner.id)}
+                    style={{
+                      padding: "10px 16px",
+                      borderRadius: "8px",
+                      border: "none",
+                      background: "linear-gradient(135deg, #10b981, #059669)",
+                      color: "#fff",
+                      fontWeight: "600",
+                      cursor: "pointer",
+                      fontSize: "14px",
+                      whiteSpace: "nowrap"
+                    }}
+                  >
+                    ✅ Approve
+                  </button>
+                  <button
+                    onClick={() => rejectBanner(banner.id)}
+                    style={{
+                      padding: "10px 16px",
+                      borderRadius: "8px",
+                      border: "none",
+                      background: "linear-gradient(135deg, #ef4444, #dc2626)",
+                      color: "#fff",
+                      fontWeight: "600",
+                      cursor: "pointer",
+                      fontSize: "14px",
+                      whiteSpace: "nowrap"
+                    }}
+                  >
+                    ❌ Reject
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div style={styles.card}>
@@ -1578,6 +1861,135 @@ const AVAILABLE_FEATURES = [
                   <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
                 </svg>
                 Send Message
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Banner Preview Modal */}
+      {previewBanner && (
+        <div style={modalOverlay} onClick={() => setPreviewBanner(null)}>
+          <div style={{ ...modalCard, width: "700px", maxWidth: "90%" }} onClick={(e) => e.stopPropagation()}>
+            <div style={windowHeader}>
+              <h3 style={{ margin: 0 }}>Banner Preview</h3>
+              <button style={windowClose} onClick={() => setPreviewBanner(null)}>
+                ✕
+              </button>
+            </div>
+
+            <div style={{ marginTop: "20px" }}>
+              {/* Banner Image */}
+              <div style={{ 
+                width: "100%", 
+                height: "250px", 
+                borderRadius: "12px", 
+                overflow: "hidden", 
+                background: "#f3f4f6",
+                marginBottom: "20px"
+              }}>
+                {previewBanner.imageUrl ? (
+                  <img 
+                    src={previewBanner.imageUrl} 
+                    alt={previewBanner.serviceName}
+                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  />
+                ) : (
+                  <div style={{ 
+                    width: "100%", 
+                    height: "100%", 
+                    display: "flex", 
+                    flexDirection: "column",
+                    alignItems: "center", 
+                    justifyContent: "center",
+                    color: "#9ca3af"
+                  }}>
+                    <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                      <circle cx="8.5" cy="8.5" r="1.5"/>
+                      <polyline points="21,15 16,10 5,21"/>
+                    </svg>
+                    <p style={{ marginTop: "10px" }}>No Image</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Banner Info */}
+              <div style={{ padding: "0 10px" }}>
+                <h2 style={{ margin: "0 0 10px 0", fontSize: "24px", color: "#111827" }}>
+                  {previewBanner.serviceName}
+                </h2>
+
+                {previewBanner.description && (
+                  <p style={{ 
+                    margin: "0 0 15px 0", 
+                    fontSize: "15px", 
+                    color: "#6b7280",
+                    lineHeight: "1.6"
+                  }}>
+                    {previewBanner.description}
+                  </p>
+                )}
+
+                <div style={{ 
+                  display: "flex", 
+                  gap: "15px", 
+                  alignItems: "center", 
+                  marginBottom: "20px",
+                  padding: "15px",
+                  background: "#f9fafb",
+                  borderRadius: "8px"
+                }}>
+                  <span style={{ fontSize: "20px", color: "#9ca3af", textDecoration: "line-through" }}>
+                    ₹{previewBanner.originalPrice?.toLocaleString()}
+                  </span>
+                  <span style={{ fontSize: "28px", fontWeight: "700", color: "#10b981" }}>
+                    ₹{previewBanner.offerPrice?.toLocaleString()}
+                  </span>
+                  <span style={{ 
+                    background: "#10b981", 
+                    color: "white", 
+                    padding: "6px 14px", 
+                    borderRadius: "20px",
+                    fontSize: "16px",
+                    fontWeight: "600"
+                  }}>
+                    {previewBanner.discount}% OFF
+                  </span>
+                </div>
+
+                <div style={{ 
+                  display: "grid", 
+                  gridTemplateColumns: "1fr 1fr", 
+                  gap: "10px",
+                  fontSize: "14px",
+                  color: "#374151"
+                }}>
+                  <div>
+                    <strong>Company:</strong> {previewBanner.companyName}
+                  </div>
+                  <div>
+                    <strong>Phone:</strong> {previewBanner.companyPhone}
+                  </div>
+                  <div>
+                    <strong>Category:</strong> {previewBanner.categoryName}
+                  </div>
+                  <div>
+                    <strong>Clickable:</strong> {previewBanner.clickable ? "Yes" : "No"}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ marginTop: "25px", textAlign: "right" }}>
+              <button 
+                style={{
+                  ...styles.inviteButton,
+                  marginRight: "10px"
+                }}
+                onClick={() => setPreviewBanner(null)}
+              >
+                Close
               </button>
             </div>
           </div>

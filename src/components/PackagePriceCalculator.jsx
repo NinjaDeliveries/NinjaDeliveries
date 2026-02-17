@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { calculateServicePrice, formatOfferDescription } from '../utils/priceCalculator';
 
 /**
  * Package Price Calculator Component
@@ -7,12 +6,9 @@ import { calculateServicePrice, formatOfferDescription } from '../utils/priceCal
  */
 const PackagePriceCalculator = ({ 
   service, 
-  onPriceChange,
-  initialQuantity = 1 
+  onPriceChange
 }) => {
   const [selectedPackage, setSelectedPackage] = useState(null);
-  const [quantity, setQuantity] = useState(initialQuantity);
-  const [priceInfo, setPriceInfo] = useState(null);
 
   // Select first package by default
   useEffect(() => {
@@ -24,36 +20,25 @@ const PackagePriceCalculator = ({
   useEffect(() => {
     if (!selectedPackage || !selectedPackage.price) return;
 
-    const calculated = calculateServicePrice(
-      selectedPackage.price,
-      quantity,
-      selectedPackage.quantityOffers || []
-    );
+    const price = parseFloat(selectedPackage.price) || 0;
 
-    setPriceInfo(calculated);
+    const priceInfo = {
+      selectedPackage,
+      totalPrice: price
+    };
 
     // Notify parent component
     if (onPriceChange) {
-      onPriceChange({
-        quantity,
-        selectedPackage,
-        ...calculated
-      });
+      onPriceChange(priceInfo);
     }
-  }, [quantity, selectedPackage, onPriceChange]);
+  }, [selectedPackage, onPriceChange]);
 
   if (!service || !service.packages || service.packages.length === 0) {
     return null;
   }
 
-  const handleQuantityChange = (newQuantity) => {
-    const qty = Math.max(1, Number(newQuantity) || 1);
-    setQuantity(qty);
-  };
-
   const handlePackageChange = (pkg) => {
     setSelectedPackage(pkg);
-    setQuantity(1); // Reset quantity when package changes
   };
 
   return (
@@ -122,21 +107,6 @@ const PackagePriceCalculator = ({
                   ₹{pkg.price}
                 </div>
               </div>
-
-              {/* Show if package has offers */}
-              {pkg.quantityOffers && pkg.quantityOffers.length > 0 && (
-                <div style={{
-                  marginTop: '8px',
-                  padding: '6px 10px',
-                  background: '#fef3c7',
-                  borderRadius: '4px',
-                  fontSize: '11px',
-                  fontWeight: '600',
-                  color: '#92400e'
-                }}>
-                  🎁 {pkg.quantityOffers.length} offer{pkg.quantityOffers.length > 1 ? 's' : ''} available
-                </div>
-              )}
             </div>
           ))}
         </div>
@@ -144,217 +114,37 @@ const PackagePriceCalculator = ({
 
       {selectedPackage && (
         <>
-          {/* Quantity Selector */}
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{
-              display: 'block',
-              marginBottom: '8px',
+          {/* Price Display */}
+          <div style={{
+            padding: '20px',
+            background: '#f8fafc',
+            borderRadius: '8px',
+            border: '1px solid #e2e8f0',
+            textAlign: 'center'
+          }}>
+            <div style={{
               fontSize: '14px',
-              fontWeight: '500',
-              color: '#64748b'
+              color: '#64748b',
+              marginBottom: '8px'
             }}>
-              Number of Packages
-            </label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <button
-                onClick={() => handleQuantityChange(quantity - 1)}
-                disabled={quantity <= 1}
-                style={{
-                  width: '40px',
-                  height: '40px',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '8px',
-                  background: quantity <= 1 ? '#f1f5f9' : 'white',
-                  cursor: quantity <= 1 ? 'not-allowed' : 'pointer',
-                  fontSize: '18px',
-                  fontWeight: '600',
-                  color: '#64748b'
-                }}
-              >
-                −
-              </button>
-              
-              <input
-                type="number"
-                min="1"
-                value={quantity}
-                onChange={(e) => handleQuantityChange(e.target.value)}
-                style={{
-                  width: '80px',
-                  height: '40px',
-                  textAlign: 'center',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '8px',
-                  fontSize: '16px',
-                  fontWeight: '600'
-                }}
-              />
-              
-              <button
-                onClick={() => handleQuantityChange(quantity + 1)}
-                style={{
-                  width: '40px',
-                  height: '40px',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '8px',
-                  background: 'white',
-                  cursor: 'pointer',
-                  fontSize: '18px',
-                  fontWeight: '600',
-                  color: '#64748b'
-                }}
-              >
-                +
-              </button>
+              Total Price
+            </div>
+            <div style={{
+              fontSize: '32px',
+              fontWeight: '700',
+              color: '#0ea5e9'
+            }}>
+              ₹{selectedPackage.price}
+            </div>
+            <div style={{
+              fontSize: '13px',
+              color: '#64748b',
+              marginTop: '8px'
+            }}>
+              for {selectedPackage.duration} {selectedPackage.unit}(s)
+              {selectedPackage.totalDays && ` (${selectedPackage.totalDays} days)`}
             </div>
           </div>
-
-          {/* Available Offers */}
-          {selectedPackage.quantityOffers && selectedPackage.quantityOffers.length > 0 && (
-            <div style={{
-              marginBottom: '20px',
-              padding: '12px',
-              background: '#f0fdf4',
-              border: '1px solid #bbf7d0',
-              borderRadius: '8px'
-            }}>
-              <div style={{
-                fontSize: '13px',
-                fontWeight: '600',
-                color: '#166534',
-                marginBottom: '8px'
-              }}>
-                🎉 Available Offers:
-              </div>
-              {selectedPackage.quantityOffers.map((offer, index) => (
-                <div key={index} style={{
-                  fontSize: '13px',
-                  color: '#15803d',
-                  marginBottom: '4px'
-                }}>
-                  • {formatOfferDescription(offer)}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Price Display */}
-          {priceInfo && (
-            <div>
-              {/* Applied Offer Badge */}
-              {priceInfo.appliedOffer && (
-                <div style={{
-                  marginBottom: '15px',
-                  padding: '10px 15px',
-                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                  borderRadius: '8px',
-                  color: 'white',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}>
-                  <span style={{ fontSize: '18px' }}>✓</span>
-                  <span>Offer Applied! You save ₹{priceInfo.savings.toFixed(2)}</span>
-                </div>
-              )}
-
-              {/* Price Breakdown */}
-              <div style={{
-                padding: '15px',
-                background: '#f8fafc',
-                borderRadius: '8px',
-                border: '1px solid #e2e8f0'
-              }}>
-                {priceInfo.appliedOffer && (
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    marginBottom: '8px',
-                    fontSize: '14px',
-                    color: '#64748b'
-                  }}>
-                    <span>Original Price:</span>
-                    <span style={{ textDecoration: 'line-through' }}>
-                      ₹{priceInfo.originalPricePerUnit} × {quantity} = ₹{priceInfo.originalTotal.toFixed(2)}
-                    </span>
-                  </div>
-                )}
-
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  marginBottom: '8px',
-                  fontSize: '14px',
-                  color: '#334155'
-                }}>
-                  <span>Price per package:</span>
-                  <span style={{ fontWeight: '600' }}>₹{priceInfo.pricePerUnit.toFixed(2)}</span>
-                </div>
-
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  marginBottom: '8px',
-                  fontSize: '14px',
-                  color: '#334155'
-                }}>
-                  <span>Number of packages:</span>
-                  <span style={{ fontWeight: '600' }}>× {quantity}</span>
-                </div>
-
-                <div style={{
-                  height: '1px',
-                  background: '#e2e8f0',
-                  margin: '12px 0'
-                }} />
-
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}>
-                  <span style={{
-                    fontSize: '16px',
-                    fontWeight: '600',
-                    color: '#1e293b'
-                  }}>
-                    Total Price:
-                  </span>
-                  <span style={{
-                    fontSize: '24px',
-                    fontWeight: '700',
-                    color: priceInfo.appliedOffer ? '#10b981' : '#1e293b'
-                  }}>
-                    ₹{priceInfo.totalPrice.toFixed(2)}
-                  </span>
-                </div>
-              </div>
-
-              {/* Package Details */}
-              <div style={{
-                marginTop: '15px',
-                padding: '12px',
-                background: '#f8fafc',
-                borderRadius: '8px',
-                fontSize: '13px',
-                color: '#64748b'
-              }}>
-                <div style={{ marginBottom: '4px' }}>
-                  📦 Package: {selectedPackage.duration} {selectedPackage.unit}(s)
-                </div>
-                {selectedPackage.totalDays && (
-                  <div style={{ marginBottom: '4px' }}>
-                    📅 Total Days: {selectedPackage.totalDays} days
-                  </div>
-                )}
-                <div>
-                  🔢 Total Packages: {quantity}
-                </div>
-              </div>
-            </div>
-          )}
         </>
       )}
     </div>

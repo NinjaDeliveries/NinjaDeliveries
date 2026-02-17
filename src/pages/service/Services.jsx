@@ -732,9 +732,9 @@ const formatAvailability = (availability, unit) => {
                                 <span className="services-offer-discount">
                                   {offer.discountType === 'percentage' 
                                     ? `${offer.discountValue}% OFF` 
-                                    : offer.discountType === 'fixed'
-                                    ? `₹${offer.discountValue} OFF`
-                                    : `₹${offer.newPricePerUnit}/unit`}
+                                    : offer.discountType === 'absolute'
+                                    ? `₹${offer.discountValue}/unit`
+                                    : `${offer.discountValue}% OFF`}
                                 </span>
                               </div>
                             ))}

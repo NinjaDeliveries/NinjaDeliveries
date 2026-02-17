@@ -39,24 +39,19 @@ const ServicePriceCalculator = ({
     }
 
     let pricePerUnit = price;
-    let discount = 0;
+    let discountPerUnit = 0;
 
-    if (applicableOffer) {
-      if (applicableOffer.newPricePerUnit && applicableOffer.newPricePerUnit > 0) {
-        pricePerUnit = applicableOffer.newPricePerUnit;
-      } else {
-        switch (applicableOffer.discountType) {
-          case 'percentage':
-            discount = (price * applicableOffer.discountValue) / 100;
-            pricePerUnit = price - discount;
-            break;
-          case 'fixed':
-            discount = applicableOffer.discountValue;
-            pricePerUnit = price - discount;
-            break;
-          default:
-            break;
-        }
+    if (applicableOffer && applicableOffer.discountValue) {
+      if (applicableOffer.discountType === 'percentage') {
+        // Step 1: Calculate discount amount
+        // Formula: (discountValue ÷ 100) × price
+        discountPerUnit = (applicableOffer.discountValue / 100) * price;
+        // Step 2: Subtract from original price
+        pricePerUnit = price - discountPerUnit;
+      } else if (applicableOffer.discountType === 'absolute') {
+        // Set the price to the absolute offer price
+        pricePerUnit = applicableOffer.discountValue;
+        discountPerUnit = price - pricePerUnit;
       }
     }
 
@@ -69,6 +64,7 @@ const ServicePriceCalculator = ({
       quantity: qty,
       basePrice: price,
       pricePerUnit,
+      discountPerUnit,
       totalPrice,
       originalTotal,
       savings: totalSavings,

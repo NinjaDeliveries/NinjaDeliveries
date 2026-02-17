@@ -526,7 +526,7 @@ useEffect(() => {
         minQuantity: 3,
         discountType: "percentage",
         discountValue: 10,
-        newPricePerUnit: "",
+        description: "",
         isActive: true
       }
     ]);
@@ -539,18 +539,6 @@ useEffect(() => {
   const updateQuantityOffer = (index, field, value) => {
     const copy = [...quantityOffers];
     copy[index][field] = value;
-    
-    // Auto-calculate newPricePerUnit when discount changes
-    if (field === "discountValue" || field === "discountType") {
-      const basePrice = Number(fixedPrice) || 0;
-      if (copy[index].discountType === "percentage") {
-        const discountAmount = basePrice * Number(copy[index].discountValue) / 100;
-        copy[index].newPricePerUnit = Math.max(0, basePrice - discountAmount);
-      } else if (copy[index].discountType === "fixed") {
-        copy[index].newPricePerUnit = Math.max(0, basePrice - Number(copy[index].discountValue));
-      }
-    }
-    
     setQuantityOffers(copy);
   };
 
@@ -564,7 +552,7 @@ useEffect(() => {
       minQuantity: 3,
       discountType: "percentage",
       discountValue: 10,
-      newPricePerUnit: "",
+      description: "",
       isActive: true
     });
     setPackages(copy);
@@ -579,18 +567,6 @@ useEffect(() => {
   const updatePackageQuantityOffer = (packageIndex, offerIndex, field, value) => {
     const copy = [...packages];
     copy[packageIndex].quantityOffers[offerIndex][field] = value;
-    
-    // Auto-calculate newPricePerUnit when discount changes
-    if (field === "discountValue" || field === "discountType") {
-      const basePrice = Number(copy[packageIndex].price) || 0;
-      if (copy[packageIndex].quantityOffers[offerIndex].discountType === "percentage") {
-        const discountAmount = basePrice * Number(copy[packageIndex].quantityOffers[offerIndex].discountValue) / 100;
-        copy[packageIndex].quantityOffers[offerIndex].newPricePerUnit = Math.max(0, basePrice - discountAmount);
-      } else if (copy[packageIndex].quantityOffers[offerIndex].discountType === "fixed") {
-        copy[packageIndex].quantityOffers[offerIndex].newPricePerUnit = Math.max(0, basePrice - Number(copy[packageIndex].quantityOffers[offerIndex].discountValue));
-      }
-    }
-    
     setPackages(copy);
   };
 
@@ -699,8 +675,7 @@ if (isAdminService) {
   
   // Add quantity offers if any
   payload.quantityOffers = quantityOffers.filter(offer => 
-    offer.minQuantity > 0 && 
-    (offer.discountValue > 0 || offer.newPricePerUnit > 0)
+    offer.minQuantity > 0 && offer.discountValue > 0
   );
 }
 
@@ -754,8 +729,7 @@ if (isCustomService) {
     },
     // Include quantity offers for this package
     quantityOffers: (p.quantityOffers || []).filter(offer => 
-      offer.minQuantity > 0 && 
-      (offer.discountValue > 0 || offer.newPricePerUnit > 0)
+      offer.minQuantity > 0 && offer.discountValue > 0
     )
   }));
 }
@@ -1179,7 +1153,7 @@ if (isCustomService) {
                 }}
               >
                 <option value="percentage">Percentage Off (%)</option>
-                <option value="fixed">Fixed Amount Off (₹)</option>
+                <option value="absolute">Set Offer Price (₹)</option>
               </select>
             </div>
           </div>
@@ -1187,13 +1161,13 @@ if (isCustomService) {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
             <div>
               <label style={{ fontSize: '13px', color: '#64748b', display: 'block', marginBottom: '4px' }}>
-                {offer.discountType === 'percentage' ? 'Discount (%)' : 'Discount Amount (₹)'}
+                {offer.discountType === 'percentage' ? 'Discount (%)' : 'Offer Price (₹)'}
               </label>
               <input
                 type="number"
                 min="0"
                 step={offer.discountType === 'percentage' ? '1' : '0.01'}
-                placeholder={offer.discountType === 'percentage' ? 'e.g., 10' : 'e.g., 10'}
+                placeholder={offer.discountType === 'percentage' ? 'e.g., 10' : 'e.g., 90'}
                 value={offer.discountValue}
                 onChange={(e) => updateQuantityOffer(index, 'discountValue', Number(e.target.value))}
                 style={{
@@ -1206,32 +1180,30 @@ if (isCustomService) {
               />
             </div>
 
-            <div>
-              <label style={{ fontSize: '13px', color: '#64748b', display: 'block', marginBottom: '4px' }}>
-                Final Price Per Unit (₹)
-              </label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="e.g., 90"
-                value={offer.newPricePerUnit}
-                onChange={(e) => updateQuantityOffer(index, 'newPricePerUnit', Number(e.target.value))}
-                disabled={true}
-                style={{
-                  width: '100%',
-                  padding: '8px',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  background: '#f1f5f9'
-                }}
-              />
-            </div>
+          </div>
+
+          {/* Description Field */}
+          <div style={{ marginTop: '10px' }}>
+            <label style={{ fontSize: '13px', color: '#64748b', display: 'block', marginBottom: '4px' }}>
+              Description (Optional)
+            </label>
+            <input
+              type="text"
+              placeholder="e.g., Best Value!, Most Popular!"
+              value={offer.description || ''}
+              onChange={(e) => updateQuantityOffer(index, 'description', e.target.value)}
+              style={{
+                width: '100%',
+                padding: '8px',
+                border: '1px solid #e2e8f0',
+                borderRadius: '6px',
+                fontSize: '14px'
+              }}
+            />
           </div>
 
           {/* Preview */}
-          {fixedPrice && offer.minQuantity > 0 && (
+          {fixedPrice && offer.minQuantity > 0 && offer.discountValue > 0 && (
             <div style={{
               marginTop: '10px',
               padding: '10px',
@@ -1241,10 +1213,15 @@ if (isCustomService) {
               fontSize: '13px',
               color: '#065f46'
             }}>
-              <strong>Preview:</strong> Buy {offer.minQuantity}+ units, get{' '}
-              {offer.discountType === 'percentage' && `${offer.discountValue}% off`}
-              {offer.discountType === 'fixed' && `₹${offer.discountValue} off per unit`}
-              {offer.newPricePerUnit > 0 && ` (₹${offer.newPricePerUnit}/unit)`}
+              <strong>Preview:</strong> Buy {offer.minQuantity}+ units, 
+              {offer.discountType === 'percentage' 
+                ? ` get ${offer.discountValue}% off` 
+                : ` at ₹${offer.discountValue} per unit`}
+              {offer.description && (
+                <div style={{ marginTop: '4px', fontStyle: 'italic', fontSize: '12px' }}>
+                  "{offer.description}"
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -1722,7 +1699,7 @@ if (isCustomService) {
                     }}
                   >
                     <option value="percentage">Percentage Off (%)</option>
-                    <option value="fixed">Fixed Amount Off (₹)</option>
+                    <option value="absolute">Set Offer Price (₹)</option>
                   </select>
                 </div>
               </div>
@@ -1730,13 +1707,13 @@ if (isCustomService) {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                 <div>
                   <label style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px' }}>
-                    {offer.discountType === 'percentage' ? 'Discount (%)' : 'Discount (₹)'}
+                    {offer.discountType === 'percentage' ? 'Discount (%)' : 'Offer Price (₹)'}
                   </label>
                   <input
                     type="number"
                     min="0"
                     step={offer.discountType === 'percentage' ? '1' : '0.01'}
-                    placeholder={offer.discountType === 'percentage' ? 'e.g., 10' : 'e.g., 50'}
+                    placeholder={offer.discountType === 'percentage' ? 'e.g., 10' : 'e.g., 450'}
                     value={offer.discountValue}
                     onChange={(e) => updatePackageQuantityOffer(i, offerIndex, 'discountValue', Number(e.target.value))}
                     style={{
@@ -1748,33 +1725,30 @@ if (isCustomService) {
                     }}
                   />
                 </div>
+              </div>
 
-                <div>
-                  <label style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px' }}>
-                    Final Price (₹)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="e.g., 450"
-                    value={offer.newPricePerUnit}
-                    onChange={(e) => updatePackageQuantityOffer(i, offerIndex, 'newPricePerUnit', Number(e.target.value))}
-                    disabled={true}
-                    style={{
-                      width: '100%',
-                      padding: '6px',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '4px',
-                      fontSize: '13px',
-                      background: '#f1f5f9'
-                    }}
-                  />
-                </div>
+              {/* Description Field */}
+              <div style={{ marginTop: '8px' }}>
+                <label style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px' }}>
+                  Description (Optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g., Best Value!, Most Popular!"
+                  value={offer.description || ''}
+                  onChange={(e) => updatePackageQuantityOffer(i, offerIndex, 'description', e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '6px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '4px',
+                    fontSize: '13px'
+                  }}
+                />
               </div>
 
               {/* Preview */}
-              {p.price && offer.minQuantity > 0 && (
+              {p.price && offer.minQuantity > 0 && offer.discountValue > 0 && (
                 <div style={{
                   marginTop: '8px',
                   padding: '8px',
@@ -1784,10 +1758,15 @@ if (isCustomService) {
                   fontSize: '12px',
                   color: '#065f46'
                 }}>
-                  <strong>Preview:</strong> Buy {offer.minQuantity}+ packages, get{' '}
-                  {offer.discountType === 'percentage' && `${offer.discountValue}% off`}
-                  {offer.discountType === 'fixed' && `₹${offer.discountValue} off per package`}
-                  {offer.newPricePerUnit > 0 && ` (₹${offer.newPricePerUnit}/package)`}
+                  <strong>Preview:</strong> Buy {offer.minQuantity}+ packages, 
+                  {offer.discountType === 'percentage' 
+                    ? ` get ${offer.discountValue}% off` 
+                    : ` at ₹${offer.discountValue} per package`}
+                  {offer.description && (
+                    <div style={{ marginTop: '4px', fontStyle: 'italic', fontSize: '11px' }}>
+                      "{offer.description}"
+                    </div>
+                  )}
                 </div>
               )}
             </div>
