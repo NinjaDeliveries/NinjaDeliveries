@@ -161,7 +161,23 @@ useEffect(() => {
   const [logsLoading, setLogsLoading] = useState(false);
   const [activeUsers, setActiveUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
-const [selectedUserLogs, setSelectedUserLogs] = useState([]);
+  const [selectedUserLogs, setSelectedUserLogs] = useState([]);
+  
+  /* 🔹 Rejected Bookings */
+  const [rejectedBookings, setRejectedBookings] = useState([]);
+  const [rejectedLoading, setRejectedLoading] = useState(false);
+  
+  /* 🔹 Customer Rejected Services Modal */
+  const [showCustomerRejectedModal, setShowCustomerRejectedModal] = useState(false);
+  const [customerRejectedData, setCustomerRejectedData] = useState([]);
+  const [expandedCompanies, setExpandedCompanies] = useState({});
+  
+  /* 🔹 WhatsApp Message Modal */
+  const [showMessageModal, setShowMessageModal] = useState(false);
+  const [messageText, setMessageText] = useState("");
+  const [selectedCompanies, setSelectedCompanies] = useState([]);
+  const [serviceCompanies, setServiceCompanies] = useState([]);
+  const [loadingCompanies, setLoadingCompanies] = useState(false);
 /* ================= FETCH ALL ADMIN USERS ================= */
 useEffect(() => {
   const fetchAllAdmins = async () => {
@@ -217,6 +233,128 @@ setActiveUsers(
       toast.error("Failed to load activity logs");
     } finally {
       setLogsLoading(false);
+    }
+  };
+
+  /* ================= FETCH REJECTED BOOKINGS ================= */
+  const fetchRejectedBookings = async () => {
+    try {
+      setRejectedLoading(true);
+      const q = query(
+        collection(db, "rejected_bookings"),
+        orderBy("rejectedAt", "desc")
+      );
+      const snap = await getDocs(q);
+      const bookings = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      setRejectedBookings(bookings);
+    } catch (err) {
+      console.error("Error fetching rejected bookings:", err);
+      toast.error("Failed to load rejected bookings");
+    } finally {
+      setRejectedLoading(false);
+    }
+  };
+
+  /* ================= DELETE REJECTED BOOKING ================= */
+  const handleDeleteRejectedBooking = async (bookingId) => {
+    if (!window.confirm("Are you sure you want to delete this rejected booking record?")) return;
+    
+    try {
+      await deleteDoc(doc(db, "rejected_bookings", bookingId));
+      setRejectedBookings(prev => prev.filter(b => b.id !== bookingId));
+      toast.success("Rejected booking deleted successfully");
+    } catch (err) {
+      console.error("Error deleting rejected booking:", err);
+      toast.error("Failed to delete rejected booking");
+    }
+  };
+
+  /* ================= FETCH CUSTOMER REJECTED SERVICES ================= */
+  const fetchCustomerRejectedServices = async () => {
+    try {
+      setRejectedLoading(true);
+      // Reset expanded companies state when opening modal
+      setExpandedCompanies({});
+      
+      const q = query(
+        collection(db, "rejected_bookings"),
+        orderBy("rejectedAt", "desc")
+      );
+      const snap = await getDocs(q);
+      const bookings = snap.docs.map((d) => ({ 
+        id: d.id, 
+        ...d.data(),
+        rejectedAtDate: d.data().rejectedAt ? new Date(d.data().rejectedAt.seconds * 1000) : null
+      }));
+      
+      // Group by company first, then by customer within each company
+      const groupedByCompany = bookings.reduce((acc, booking) => {
+        const companyId = booking.companyId || "Unknown";
+        const companyName = booking.companyName || "Unknown Company";
+        const customerPhone = booking.customerPhone || "Unknown";
+        
+        if (!acc[companyId]) {
+          acc[companyId] = {
+            companyId: companyId,
+            companyName: companyName,
+            customers: {}
+          };
+        }
+        
+        if (!acc[companyId].customers[customerPhone]) {
+          acc[companyId].customers[customerPhone] = {
+            customerName: booking.customerName || "Unknown",
+            customerPhone: customerPhone,
+            rejectedServices: []
+          };
+        }
+        
+        acc[companyId].customers[customerPhone].rejectedServices.push(booking);
+        return acc;
+      }, {});
+      
+      // Convert to array format
+      const formattedData = Object.values(groupedByCompany).map(company => ({
+        ...company,
+        customers: Object.values(company.customers)
+      }));
+      
+      setCustomerRejectedData(formattedData);
+      setShowCustomerRejectedModal(true);
+    } catch (err) {
+      console.error("Error fetching customer rejected services:", err);
+      toast.error("Failed to load customer rejected services");
+    } finally {
+      setRejectedLoading(false);
+    }
+  };
+
+  /* ================= CLOSE CUSTOMER REJECTED MODAL ================= */
+  const closeCustomerRejectedModal = () => {
+    setShowCustomerRejectedModal(false);
+    // Reset expanded companies state when closing modal
+    setExpandedCompanies({});
+  };
+
+  /* ================= FETCH SERVICE COMPANIES ================= */
+  const fetchServiceCompanies = async () => {
+    try {
+      setLoadingCompanies(true);
+      const q = query(collection(db, "service_company"));
+      const snap = await getDocs(q);
+      const companies = snap.docs.map((d) => ({
+        id: d.id,
+        companyName: d.data().companyName || d.data().name || "Unknown Company",
+        phoneNumber: d.data().phoneNumber || d.data().phone || "N/A",
+        ...d.data()
+      }));
+      setServiceCompanies(companies);
+      setShowMessageModal(true);
+    } catch (err) {
+      console.error("Error fetching service companies:", err);
+      toast.error("Failed to load companies");
+    } finally {
+      setLoadingCompanies(false);
     }
   };
 
@@ -430,6 +568,21 @@ const AVAILABLE_FEATURES = [
         <h1 style={styles.title}>Admin Dashboard</h1>
 
         <div style={{ display: "flex", gap: "12px" }}>
+          <button
+            style={{
+              padding: "10px 16px",
+              borderRadius: "10px",
+              border: "none",
+              background: "linear-gradient(135deg, #ef4444, #dc2626)",
+              color: "#fff",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+            onClick={fetchCustomerRejectedServices}
+          >
+            Company Rejected Services
+          </button>
+          
           <button
             style={{
               padding: "10px 16px",
@@ -923,6 +1076,513 @@ const AVAILABLE_FEATURES = [
           </div>
         )}
       </div>
+
+      {/* Customer Rejected Services Modal */}
+      {showCustomerRejectedModal && (
+        <div style={modalOverlay} onClick={closeCustomerRejectedModal}>
+          <div style={{ ...modalCard, width: "90%", maxWidth: "1200px", maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ ...windowHeader, marginBottom: "20px" }}>
+              <h3 style={{ margin: 0 }}>Company Rejected Services</h3>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <button
+                  style={{
+                    backgroundColor: "#25D366",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "8px",
+                    padding: "10px 16px",
+                    fontSize: "14px",
+                    fontWeight: "600",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    transition: "background-color 0.2s ease, transform 0.2s ease",
+                    boxShadow: "0 2px 4px rgba(37, 211, 102, 0.3)"
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    fetchServiceCompanies();
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = "#20BA5A";
+                    e.currentTarget.style.transform = "translateY(-2px)";
+                    e.currentTarget.style.boxShadow = "0 4px 8px rgba(37, 211, 102, 0.4)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = "#25D366";
+                    e.currentTarget.style.transform = "translateY(0)";
+                    e.currentTarget.style.boxShadow = "0 2px 4px rgba(37, 211, 102, 0.3)";
+                  }}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                  </svg>
+                  Message
+                </button>
+                <button style={windowClose} onClick={closeCustomerRejectedModal}>
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {rejectedLoading ? (
+              <p>Loading...</p>
+            ) : customerRejectedData.length === 0 ? (
+              <p style={{ color: "#666", marginTop: "20px" }}>No rejected services found.</p>
+            ) : (
+              <div style={{ marginTop: "20px" }}>
+                {customerRejectedData.map((company, companyIdx) => {
+                  const isExpanded = expandedCompanies[company.companyId];
+                  
+                  return (
+                    <div key={companyIdx} style={{ 
+                      marginBottom: "20px", 
+                      border: "2px solid #3b82f6", 
+                      borderRadius: "12px",
+                      backgroundColor: "#eff6ff",
+                      overflow: "hidden",
+                      transition: "all 0.3s ease"
+                    }}>
+                      {/* Company Header - Clickable */}
+                      <div 
+                        style={{ 
+                          display: "flex", 
+                          justifyContent: "space-between", 
+                          alignItems: "center",
+                          padding: "20px 25px",
+                          cursor: "pointer",
+                          backgroundColor: isExpanded ? "#dbeafe" : "#eff6ff",
+                          transition: "background-color 0.3s ease",
+                          userSelect: "none"
+                        }}
+                        onClick={() => {
+                          setExpandedCompanies(prev => ({
+                            ...prev,
+                            [company.companyId]: !prev[company.companyId]
+                          }));
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isExpanded) {
+                            e.currentTarget.style.backgroundColor = "#dbeafe";
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isExpanded) {
+                            e.currentTarget.style.backgroundColor = "#eff6ff";
+                          }
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                          <span style={{ 
+                            fontSize: "16px", 
+                            transition: "transform 0.3s ease", 
+                            transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
+                            display: "inline-block",
+                            color: "#3b82f6"
+                          }}>
+                            ▶
+                          </span>
+                          <div>
+                            <h3 style={{ margin: "0 0 5px 0", color: "#1e40af", fontSize: "20px" }}>
+                              🏢 {company.companyName}
+                            </h3>
+                            <p style={{ margin: 0, color: "#6b7280", fontSize: "13px" }}>
+                              Company ID: {company.companyId}
+                            </p>
+                          </div>
+                        </div>
+                        <div style={{ 
+                          backgroundColor: "#3b82f6", 
+                          color: "white", 
+                          padding: "8px 16px", 
+                          borderRadius: "20px",
+                          fontSize: "15px",
+                          fontWeight: "600"
+                        }}>
+                          {company.customers.length} Customer{company.customers.length > 1 ? 's' : ''}
+                        </div>
+                      </div>
+
+                      {/* Customers under this company - Collapsible with smooth animation */}
+                      <div style={{
+                        maxHeight: isExpanded ? "10000px" : "0",
+                        overflow: "hidden",
+                        transition: "max-height 0.5s ease-in-out, opacity 0.3s ease-in-out",
+                        opacity: isExpanded ? 1 : 0
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      >
+                        <div style={{ padding: "0 25px 25px 25px" }}>
+                          {company.customers.map((customer, customerIdx) => (
+                            <div key={customerIdx} style={{ 
+                              marginTop: "15px", 
+                              padding: "15px", 
+                              border: "1px solid #e5e7eb", 
+                              borderRadius: "8px",
+                              backgroundColor: "#ffffff",
+                              boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                              transition: "transform 0.2s ease, box-shadow 0.2s ease"
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.transform = "translateY(-2px)";
+                              e.currentTarget.style.boxShadow = "0 4px 6px rgba(0,0,0,0.1)";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.transform = "translateY(0)";
+                              e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.1)";
+                            }}
+                            >
+                              <div style={{ 
+                                display: "flex", 
+                                justifyContent: "space-between", 
+                                alignItems: "center",
+                                marginBottom: "12px",
+                                paddingBottom: "8px",
+                                borderBottom: "1px solid #e5e7eb"
+                              }}>
+                                <div>
+                                  <h4 style={{ margin: "0 0 5px 0", color: "#111827", fontSize: "16px" }}>
+                                    👤 {customer.customerName}
+                                  </h4>
+                                  <p style={{ margin: 0, color: "#6b7280", fontSize: "13px" }}>
+                                    📞 {customer.customerPhone}
+                                  </p>
+                                </div>
+                                <div style={{ 
+                                  backgroundColor: "#ef4444", 
+                                  color: "white", 
+                                  padding: "4px 10px", 
+                                  borderRadius: "15px",
+                                  fontSize: "13px",
+                                  fontWeight: "600"
+                                }}>
+                                  {customer.rejectedServices.length} Rejected
+                                </div>
+                              </div>
+
+                              <div style={{ marginTop: "12px", overflowX: "auto" }}>
+                                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
+                                  <thead>
+                                    <tr style={{ backgroundColor: "#f9fafb" }}>
+                                      <th style={{ ...styles.logTh, textAlign: "left", fontSize: "11px" }}>Rejected At</th>
+                                      <th style={{ ...styles.logTh, textAlign: "left", fontSize: "11px" }}>Service</th>
+                                      <th style={{ ...styles.logTh, textAlign: "left", fontSize: "11px" }}>Work</th>
+                                      <th style={{ ...styles.logTh, textAlign: "left", fontSize: "11px" }}>Booking Date</th>
+                                      <th style={{ ...styles.logTh, textAlign: "left", fontSize: "11px" }}>Time</th>
+                                      <th style={{ ...styles.logTh, textAlign: "left", fontSize: "11px" }}>Amount</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {customer.rejectedServices.map((service) => (
+                                      <tr key={service.id} style={{ 
+                                        borderBottom: "1px solid #f3f4f6",
+                                        transition: "background-color 0.2s ease"
+                                      }}
+                                      onMouseEnter={(e) => {
+                                        e.currentTarget.style.backgroundColor = "#f9fafb";
+                                      }}
+                                      onMouseLeave={(e) => {
+                                        e.currentTarget.style.backgroundColor = "transparent";
+                                      }}
+                                      >
+                                        <td style={{ ...styles.logTd, textAlign: "left" }}>
+                                          {service.rejectedAtDate 
+                                            ? service.rejectedAtDate.toLocaleString()
+                                            : "-"}
+                                        </td>
+                                        <td style={{ ...styles.logTd, textAlign: "left" }}>
+                                          {service.serviceName || "-"}
+                                        </td>
+                                        <td style={{ ...styles.logTd, textAlign: "left" }}>
+                                          {service.workName || "-"}
+                                        </td>
+                                        <td style={{ ...styles.logTd, textAlign: "left" }}>
+                                          {service.bookingDate || "-"}
+                                        </td>
+                                        <td style={{ ...styles.logTd, textAlign: "left" }}>
+                                          {service.bookingTime || "-"}
+                                        </td>
+                                        <td style={{ ...styles.logTd, textAlign: "left", fontWeight: "600", color: "#ef4444" }}>
+                                          ₹{service.amount || 0}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* WhatsApp Message Modal */}
+      {showMessageModal && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: "100vw",
+          height: "100vh",
+          background: "rgba(0,0,0,0.6)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 10000
+        }} onClick={() => setShowMessageModal(false)}>
+          <div style={{
+            width: "600px",
+            maxWidth: "90%",
+            background: "#ffffff",
+            borderRadius: "16px",
+            padding: "30px",
+            boxShadow: "0 20px 50px rgba(0,0,0,0.3)",
+            animation: "scaleIn 0.2s ease"
+          }} onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <div style={{
+                  width: "40px",
+                  height: "40px",
+                  borderRadius: "50%",
+                  backgroundColor: "#25D366",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center"
+                }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                  </svg>
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "20px", color: "#111827" }}>Send WhatsApp Message</h3>
+                  <p style={{ margin: "2px 0 0 0", fontSize: "13px", color: "#6b7280" }}>
+                    Message will be sent to all customers
+                  </p>
+                </div>
+              </div>
+              <button style={{
+                background: "none",
+                border: "none",
+                fontSize: "24px",
+                cursor: "pointer",
+                color: "#6b7280"
+              }} onClick={() => setShowMessageModal(false)}>
+                ✕
+              </button>
+            </div>
+
+            {/* Company Selection */}
+            <div style={{ marginBottom: "20px" }}>
+              <label style={{ fontSize: "14px", fontWeight: "600", color: "#374151", marginBottom: "8px", display: "block" }}>
+                Select Companies
+              </label>
+              {loadingCompanies ? (
+                <div style={{ padding: "20px", textAlign: "center", color: "#6b7280" }}>
+                  Loading companies...
+                </div>
+              ) : serviceCompanies.length === 0 ? (
+                <div style={{ padding: "20px", textAlign: "center", color: "#6b7280" }}>
+                  No companies found
+                </div>
+              ) : (
+                <>
+                  <div style={{ 
+                    maxHeight: "150px", 
+                    overflowY: "auto", 
+                    border: "1px solid #e5e7eb", 
+                    borderRadius: "8px",
+                    padding: "10px"
+                  }}>
+                    {serviceCompanies.map((company, idx) => (
+                      <label key={idx} style={{ 
+                        display: "flex", 
+                        alignItems: "center", 
+                        padding: "8px",
+                        cursor: "pointer",
+                        borderRadius: "6px",
+                        transition: "background-color 0.2s"
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#f3f4f6"}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+                      >
+                        <input 
+                          type="checkbox" 
+                          style={{ marginRight: "10px", width: "16px", height: "16px", cursor: "pointer" }}
+                          checked={selectedCompanies.includes(company.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedCompanies([...selectedCompanies, company.id]);
+                            } else {
+                              setSelectedCompanies(selectedCompanies.filter(id => id !== company.id));
+                            }
+                          }}
+                        />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: "14px", color: "#111827", fontWeight: "500" }}>
+                            {company.companyName}
+                          </div>
+                          <div style={{ fontSize: "12px", color: "#6b7280", marginTop: "2px" }}>
+                            📞 {company.phoneNumber}
+                          </div>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                  <button
+                    style={{
+                      marginTop: "8px",
+                      fontSize: "12px",
+                      color: "#3b82f6",
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      textDecoration: "underline"
+                    }}
+                    onClick={() => {
+                      if (selectedCompanies.length === serviceCompanies.length) {
+                        setSelectedCompanies([]);
+                      } else {
+                        setSelectedCompanies(serviceCompanies.map(c => c.id));
+                      }
+                    }}
+                  >
+                    {selectedCompanies.length === serviceCompanies.length ? "Deselect All" : "Select All"}
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* Message Input */}
+            <div style={{ marginBottom: "20px" }}>
+              <label style={{ fontSize: "14px", fontWeight: "600", color: "#374151", marginBottom: "8px", display: "block" }}>
+                Message
+              </label>
+              <textarea
+                value={messageText}
+                onChange={(e) => setMessageText(e.target.value)}
+                placeholder="Type your message here..."
+                style={{
+                  width: "100%",
+                  minHeight: "120px",
+                  padding: "12px",
+                  fontSize: "14px",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "8px",
+                  resize: "vertical",
+                  fontFamily: "inherit",
+                  outline: "none"
+                }}
+                onFocus={(e) => e.target.style.borderColor = "#3b82f6"}
+                onBlur={(e) => e.target.style.borderColor = "#e5e7eb"}
+              />
+              <p style={{ fontSize: "12px", color: "#6b7280", margin: "5px 0 0 0" }}>
+                {messageText.length} characters
+              </p>
+            </div>
+
+            {/* Preview */}
+            {selectedCompanies.length > 0 && (
+              <div style={{ 
+                marginBottom: "20px", 
+                padding: "12px", 
+                backgroundColor: "#f9fafb", 
+                borderRadius: "8px",
+                border: "1px solid #e5e7eb"
+              }}>
+                <p style={{ fontSize: "13px", color: "#6b7280", margin: 0 }}>
+                  📊 Message will be sent to {selectedCompanies.length} compan{selectedCompanies.length > 1 ? 'ies' : 'y'}
+                </p>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+              <button
+                style={{
+                  padding: "10px 20px",
+                  fontSize: "14px",
+                  fontWeight: "600",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "8px",
+                  backgroundColor: "white",
+                  color: "#374151",
+                  cursor: "pointer",
+                  transition: "background-color 0.2s"
+                }}
+                onClick={() => {
+                  setShowMessageModal(false);
+                  setMessageText("");
+                  setSelectedCompanies([]);
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#f9fafb"}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "white"}
+              >
+                Cancel
+              </button>
+              <button
+                style={{
+                  padding: "10px 20px",
+                  fontSize: "14px",
+                  fontWeight: "600",
+                  border: "none",
+                  borderRadius: "8px",
+                  backgroundColor: selectedCompanies.length === 0 || !messageText.trim() ? "#9ca3af" : "#25D366",
+                  color: "white",
+                  cursor: selectedCompanies.length === 0 || !messageText.trim() ? "not-allowed" : "pointer",
+                  transition: "background-color 0.2s",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px"
+                }}
+                disabled={selectedCompanies.length === 0 || !messageText.trim()}
+                onClick={() => {
+                  // Backend logic will go here
+                  const selectedCompanyNames = serviceCompanies
+                    .filter(c => selectedCompanies.includes(c.id))
+                    .map(c => c.companyName)
+                    .join(", ");
+                  
+                  console.log("Sending message to companies:", selectedCompanies);
+                  console.log("Company names:", selectedCompanyNames);
+                  console.log("Message:", messageText);
+                  
+                  alert(`Message will be sent to:\n\n${selectedCompanyNames}\n\nTotal: ${selectedCompanies.length} compan${selectedCompanies.length > 1 ? 'ies' : 'y'}`);
+                  
+                  setShowMessageModal(false);
+                  setMessageText("");
+                  setSelectedCompanies([]);
+                }}
+                onMouseEnter={(e) => {
+                  if (selectedCompanies.length > 0 && messageText.trim()) {
+                    e.currentTarget.style.backgroundColor = "#20BA5A";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (selectedCompanies.length > 0 && messageText.trim()) {
+                    e.currentTarget.style.backgroundColor = "#25D366";
+                  }
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                </svg>
+                Send Message
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
