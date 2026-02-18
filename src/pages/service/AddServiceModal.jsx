@@ -893,11 +893,35 @@ if (isCustomService) {
           >
             <option value="">Select Service</option>
 
-            {adminServices.map(svc => (
-              <option key={svc.id} value={svc.id}>
-                {svc.name}
-              </option>
-            ))}
+            {/* Group services alphabetically for easier navigation */}
+            {(() => {
+              // Group services by first letter
+              const groupedServices = {};
+              adminServices.forEach(svc => {
+                const firstLetter = (svc.name || 'Other')[0].toUpperCase();
+                if (!groupedServices[firstLetter]) {
+                  groupedServices[firstLetter] = [];
+                }
+                groupedServices[firstLetter].push(svc);
+              });
+
+              // Sort groups alphabetically
+              const sortedGroups = Object.keys(groupedServices).sort();
+
+              // Render optgroups
+              return sortedGroups.map(letter => (
+                <optgroup key={letter} label={`${letter} - ${groupedServices[letter].length} service${groupedServices[letter].length > 1 ? 's' : ''}`}>
+                  {groupedServices[letter]
+                    .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+                    .map(svc => (
+                      <option key={svc.id} value={svc.id}>
+                        {svc.name}
+                      </option>
+                    ))
+                  }
+                </optgroup>
+              ));
+            })()}
 
             <option value="custom">➕ Add Custom Service</option>
           </select>

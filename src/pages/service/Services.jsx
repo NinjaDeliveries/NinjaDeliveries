@@ -28,6 +28,9 @@ const Services = () => {
   // Search and filter states
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
+  
+  // Collapsible category state
+  const [expandedCategories, setExpandedCategories] = useState({});
 
 
   // const fetchServices = async () => {
@@ -458,6 +461,30 @@ const formatAvailability = (availability, unit) => {
   const withPackagesCount = services.filter(s => 
     (s.packages && s.packages.length > 0) || s.globalPackageId
   ).length;
+  
+  // Toggle category expansion
+  const toggleCategory = (categoryId) => {
+    setExpandedCategories(prev => ({
+      ...prev,
+      [categoryId]: !prev[categoryId]
+    }));
+  };
+  
+  // Expand all categories
+  const expandAll = () => {
+    const allExpanded = {};
+    filteredServices.forEach(service => {
+      const categoryId = service.masterCategoryId || service.categoryMasterId || 'uncategorized';
+      allExpanded[categoryId] = true;
+    });
+    setExpandedCategories(allExpanded);
+  };
+  
+  // Collapse all categories
+  const collapseAll = () => {
+    setExpandedCategories({});
+  };
+  
   return (
     <div className="sd-main">
       {/* Page Header */}
@@ -564,6 +591,32 @@ const formatAvailability = (availability, unit) => {
             ))}
           </optgroup>
         </select>
+        
+        {/* Expand/Collapse All Buttons */}
+        <div className="services-expand-controls">
+          <button 
+            className="services-expand-btn"
+            onClick={expandAll}
+            title="Expand all categories"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <polyline points="7 13 12 18 17 13"/>
+              <polyline points="7 6 12 11 17 6"/>
+            </svg>
+            Expand All
+          </button>
+          <button 
+            className="services-collapse-btn"
+            onClick={collapseAll}
+            title="Collapse all categories"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <polyline points="17 11 12 6 7 11"/>
+              <polyline points="17 18 12 13 7 18"/>
+            </svg>
+            Collapse All
+          </button>
+        </div>
       </div>
 
 
@@ -615,13 +668,65 @@ const formatAvailability = (availability, unit) => {
         </div>
       ) : (
         <div className="services-list">
-          {filteredServices.map(service => {
-            const serviceName = getServiceName(service);
-            const serviceImageUrl = getServiceImageUrl(service);
-            const isActive = service.isActive ?? true;
+          {/* Group services by category */}
+          {(() => {
+            // Group services by category
+            const servicesByCategory = {};
             
-            return (
-              <div key={service.id} className={`services-card ${!isActive ? 'inactive' : ''}`}>
+            filteredServices.forEach(service => {
+              const categoryId = service.masterCategoryId || service.categoryMasterId || 'uncategorized';
+              if (!servicesByCategory[categoryId]) {
+                servicesByCategory[categoryId] = [];
+              }
+              servicesByCategory[categoryId].push(service);
+            });
+
+            // Render each category with its services
+            return Object.entries(servicesByCategory).map(([categoryId, categoryServices]) => {
+              const categoryName = categoryId === 'uncategorized' 
+                ? 'Uncategorized' 
+                : getCategoryName(categoryId) || 'Unknown Category';
+
+              return (
+                <div key={categoryId} className="services-category-group">
+                  {/* Category Header - Clickable to toggle */}
+                  <div 
+                    className={`services-category-header ${expandedCategories[categoryId] ? 'expanded' : 'collapsed'}`}
+                    onClick={() => toggleCategory(categoryId)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <div className="services-category-header-left">
+                      <svg 
+                        className={`services-category-toggle-icon ${expandedCategories[categoryId] ? 'expanded' : ''}`}
+                        viewBox="0 0 24 24" 
+                        fill="none" 
+                        stroke="currentColor"
+                      >
+                        <polyline points="9 18 15 12 9 6"/>
+                      </svg>
+                      <h2 className="services-category-title">
+                        <svg className="services-category-title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+                          <line x1="7" y1="7" x2="7.01" y2="7"/>
+                        </svg>
+                        {categoryName}
+                      </h2>
+                    </div>
+                    <span className="services-category-count">
+                      {categoryServices.length} service{categoryServices.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+
+                  {/* Services in this category - Only show if expanded */}
+                  {expandedCategories[categoryId] && (
+                    <div className="services-category-items">
+                    {categoryServices.map(service => {
+                      const serviceName = getServiceName(service);
+                      const serviceImageUrl = getServiceImageUrl(service);
+                      const isActive = service.isActive ?? true;
+            
+                      return (
+                        <div key={service.id} className={`services-card ${!isActive ? 'inactive' : ''}`}>
                 <div className="services-card-content">
                   <div className="services-main-section">
                     <div className="services-icon">
@@ -870,6 +975,12 @@ const formatAvailability = (availability, unit) => {
               </div>
             );
           })}
+                  </div>
+                  )}
+                </div>
+              );
+            });
+          })()}
         </div>
       )}
 
