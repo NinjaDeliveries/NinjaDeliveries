@@ -83,27 +83,35 @@ const fetchServices = async () => {
       console.log(`📊 Found ${snap.docs.length} services with serviceId field`);
     }
 
-    // ✅ Fetch master services to get images (exactly like categories!)
+    // ✅ Fetch master services to get latest images and data
     const masterServicesSnap = await getDocs(collection(db, "service_services_master"));
     const masterServicesMap = {};
     masterServicesSnap.docs.forEach(doc => {
       masterServicesMap[doc.id] = doc.data();
     });
 
-    // ✅ Map company services with master service data (including images)
+    // ✅ Map company services with master service data (ALWAYS use master image for admin services)
     const list = snap.docs.map(doc => {
       const serviceData = doc.data();
       const masterService = masterServicesMap[serviceData.adminServiceId];
       
+      // For admin services, ALWAYS use the master service image (latest)
+      // For custom services, use their own image
+      const imageUrl = serviceData.serviceType === "admin" && masterService?.imageUrl
+        ? masterService.imageUrl
+        : serviceData.imageUrl || null;
+      
       return {
         id: doc.id,
         ...serviceData,
-        // Get image from master service if not already present
-        imageUrl: serviceData.imageUrl || masterService?.imageUrl || null,
+        imageUrl: imageUrl,
+        // Store master image separately for comparison
+        _masterImageUrl: masterService?.imageUrl || null,
       };
     });
 
     console.log("✅ Services loaded:", list.length);
+    console.log("📸 Services with images:", list.filter(s => s.imageUrl).length);
     setServices(list);
   } catch (err) {
     console.error("Fetch services error:", err);

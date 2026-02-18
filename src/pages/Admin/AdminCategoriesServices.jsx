@@ -236,13 +236,17 @@ const AdminCategoriesServices = () => {
           // Update existing category
           await updateDoc(doc(db, "service_categories_master", editingCategory.id), categoryData);
           
-          // 🔥 FIX: If category name changed, update all services that reference this category
+          // 🔥 FIX: If category name or image changed, update all related collections
           const oldCategoryName = editingCategory.name;
           const newCategoryName = name.trim();
+          const oldImageUrl = editingCategory.imageUrl;
+          const newImageUrl = imageUrl;
           
-          if (oldCategoryName !== newCategoryName) {
-            console.log(`🔄 Category name changed from "${oldCategoryName}" to "${newCategoryName}"`);
-            console.log(`📝 Updating all services with old category name...`);
+          const nameChanged = oldCategoryName !== newCategoryName;
+          const imageChanged = categoryImage && oldImageUrl !== newImageUrl;
+          
+          if (nameChanged || imageChanged) {
+            console.log(`🔄 Category update: name=${nameChanged}, image=${imageChanged}`);
             
             // Update services in service_services_master
             const masterServicesSnap = await getDocs(collection(db, "service_services_master"));
@@ -251,10 +255,9 @@ const AdminCategoriesServices = () => {
             );
             
             for (const serviceDoc of masterServicesToUpdate) {
-              await updateDoc(doc(db, "service_services_master", serviceDoc.id), {
-                categoryName: newCategoryName,
-                updatedAt: serverTimestamp(),
-              });
+              const updateData = { updatedAt: serverTimestamp() };
+              if (nameChanged) updateData.categoryName = newCategoryName;
+              await updateDoc(doc(db, "service_services_master", serviceDoc.id), updateData);
             }
             console.log(`✅ Updated ${masterServicesToUpdate.length} services in service_services_master`);
             
@@ -265,10 +268,9 @@ const AdminCategoriesServices = () => {
             );
             
             for (const serviceDoc of companyServicesToUpdate) {
-              await updateDoc(doc(db, "service_services", serviceDoc.id), {
-                categoryName: newCategoryName,
-                updatedAt: serverTimestamp(),
-              });
+              const updateData = { updatedAt: serverTimestamp() };
+              if (nameChanged) updateData.categoryName = newCategoryName;
+              await updateDoc(doc(db, "service_services", serviceDoc.id), updateData);
             }
             console.log(`✅ Updated ${companyServicesToUpdate.length} services in service_services`);
             
@@ -279,10 +281,9 @@ const AdminCategoriesServices = () => {
             );
             
             for (const serviceDoc of appServicesToUpdate) {
-              await updateDoc(doc(db, "app_services", serviceDoc.id), {
-                categoryName: newCategoryName,
-                updatedAt: serverTimestamp(),
-              });
+              const updateData = { updatedAt: serverTimestamp() };
+              if (nameChanged) updateData.categoryName = newCategoryName;
+              await updateDoc(doc(db, "app_services", serviceDoc.id), updateData);
             }
             console.log(`✅ Updated ${appServicesToUpdate.length} services in app_services`);
             
@@ -293,10 +294,10 @@ const AdminCategoriesServices = () => {
             );
             
             for (const catDoc of companyCategoriesToUpdate) {
-              await updateDoc(doc(db, "service_categories", catDoc.id), {
-                name: newCategoryName,
-                updatedAt: serverTimestamp(),
-              });
+              const updateData = { updatedAt: serverTimestamp() };
+              if (nameChanged) updateData.name = newCategoryName;
+              if (imageChanged) updateData.imageUrl = newImageUrl;
+              await updateDoc(doc(db, "service_categories", catDoc.id), updateData);
             }
             console.log(`✅ Updated ${companyCategoriesToUpdate.length} categories in service_categories`);
             
@@ -307,15 +308,19 @@ const AdminCategoriesServices = () => {
             );
             
             for (const catDoc of appCategoriesToUpdate) {
-              await updateDoc(doc(db, "app_categories", catDoc.id), {
-                name: newCategoryName,
-                updatedAt: serverTimestamp(),
-              });
+              const updateData = { updatedAt: serverTimestamp() };
+              if (nameChanged) updateData.name = newCategoryName;
+              if (imageChanged) updateData.imageUrl = newImageUrl;
+              await updateDoc(doc(db, "app_categories", catDoc.id), updateData);
             }
             console.log(`✅ Updated ${appCategoriesToUpdate.length} categories in app_categories`);
             
-            console.log(`🎉 Category name update cascade completed successfully!`);
-            alert(`Category renamed successfully! All ${masterServicesToUpdate.length} services have been updated across all collections.`);
+            console.log(`🎉 Category update cascade completed successfully!`);
+            
+            let message = 'Category updated successfully!';
+            if (nameChanged) message += ` Name changed to "${newCategoryName}".`;
+            if (imageChanged) message += ` Image synced to ${companyCategoriesToUpdate.length} company categories and ${appCategoriesToUpdate.length} app categories.`;
+            alert(message);
           }
         } else {
           // Create new category
@@ -357,11 +362,53 @@ const AdminCategoriesServices = () => {
           imageUrl = await uploadServiceImage();
         }
         
+        const oldServiceName = editingService.name;
+        const newServiceName = name.trim();
+        
         await updateDoc(doc(db, "service_services_master", editingService.id), {
-          name: name.trim(),
+          name: newServiceName,
           imageUrl: imageUrl,
           updatedAt: serverTimestamp(),
         });
+        
+        // 🔥 FIX: Sync image to all company services that use this master service
+        console.log(`🔄 Syncing image for service "${newServiceName}" to company services...`);
+        
+        // Update services in service_services (company services)
+        const companyServicesSnap = await getDocs(collection(db, "service_services"));
+        const companyServicesToUpdate = companyServicesSnap.docs.filter(
+          d => d.data().adminServiceId === editingService.id || 
+               (d.data().name === oldServiceName && d.data().categoryName === editingService.categoryName)
+        );
+        
+        for (const serviceDoc of companyServicesToUpdate) {
+          await updateDoc(doc(db, "service_services", serviceDoc.id), {
+            name: newServiceName,
+            imageUrl: imageUrl,
+            updatedAt: serverTimestamp(),
+          });
+        }
+        console.log(`✅ Updated ${companyServicesToUpdate.length} services in service_services`);
+        
+        // Update services in app_services
+        const appServicesSnap = await getDocs(collection(db, "app_services"));
+        const appServicesToUpdate = appServicesSnap.docs.filter(
+          d => d.data().masterServiceId === editingService.id ||
+               (d.data().name === oldServiceName && d.data().categoryName === editingService.categoryName)
+        );
+        
+        for (const serviceDoc of appServicesToUpdate) {
+          await updateDoc(doc(db, "app_services", serviceDoc.id), {
+            name: newServiceName,
+            imageUrl: imageUrl,
+            updatedAt: serverTimestamp(),
+          });
+        }
+        console.log(`✅ Updated ${appServicesToUpdate.length} services in app_services`);
+        
+        if (serviceImage) {
+          alert(`Service updated successfully! Image synced to ${companyServicesToUpdate.length} company services and ${appServicesToUpdate.length} app services.`);
+        }
       }
 
       setShowModal(false);

@@ -335,14 +335,14 @@ const handleToggleCategoryStatus = async (categoryId, currentStatus) => {
       const snap = await getDocs(q);
       const list = [];
 
-      // Fetch admin categories to get images
+      // Fetch admin categories to get latest images
       const adminCategoriesSnap = await getDocs(collection(db, "service_categories_master"));
       const adminCategoriesMap = {};
       adminCategoriesSnap.docs.forEach(doc => {
         adminCategoriesMap[doc.id] = doc.data();
       });
 
-      // Map service categories with admin category data (including images)
+      // Map service categories with admin category data (ALWAYS use master image)
       for (const doc of snap.docs) {
         const categoryData = doc.data();
         const adminCategory = adminCategoriesMap[categoryData.masterCategoryId];
@@ -350,9 +350,10 @@ const handleToggleCategoryStatus = async (categoryId, currentStatus) => {
         list.push({
           id: doc.id,
           ...categoryData,
-          // Get image from admin category
-          imageUrl: adminCategory?.imageUrl || null,
+          // ALWAYS use image from master category (latest)
+          imageUrl: adminCategory?.imageUrl || categoryData.imageUrl || null,
           description: adminCategory?.description || categoryData.description,
+          _masterImageUrl: adminCategory?.imageUrl || null,
         });
       }
 
@@ -362,7 +363,9 @@ const handleToggleCategoryStatus = async (categoryId, currentStatus) => {
     } finally {
       setLoading(false);
     }
-  };const handleImageChange = (e) => {
+  };
+
+  const handleImageChange = (e) => {
   const file = e.target.files[0];
   if (!file) return;
 
