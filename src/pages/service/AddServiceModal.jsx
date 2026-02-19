@@ -859,22 +859,8 @@ if (isCustomService) {
           <div className="sd-loading-select">
             <span>Loading services...</span>
           </div>
-        ) : editService ? (
-          // 🔥 EDIT MODE: Show service name as readonly input (no dropdown)
-          <input
-            type="text"
-            value={name}
-            readOnly
-            disabled
-            style={{
-              backgroundColor: '#f5f5f5',
-              cursor: 'not-allowed',
-              color: '#666'
-            }}
-            title="Service cannot be changed in edit mode"
-          />
         ) : (
-          // 🔥 ADD MODE: Show dropdown to select service
+          // 🔥 BOTH ADD AND EDIT MODE: Show dropdown to select service
           <select
             value={selectedServiceId}
             onChange={(e) => {
