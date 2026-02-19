@@ -491,7 +491,7 @@ const AdminCategoriesServices = () => {
       }
       console.log(`✅ Updated ${companyServicesToUpdate.length} services in service_services`);
 
-      // 5. Update all app categories in app_categories
+      // 5. Update all app categories in app_categories..
       const appCategories = await getDocs(collection(db, "app_categories"));
       const appCatsToUpdate = appCategories.docs.filter(
         d => d.data().name === category.name
