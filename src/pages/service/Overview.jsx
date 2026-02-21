@@ -573,7 +573,7 @@ const Overview = () => {
     { day: "Sat", bookings: 0, revenue: 0 },
     { day: "Sun", bookings: 0, revenue: 0 },
   ]);
-  const [loading, setLoading] = useState(true);
+  // Loading state removed - parent ServiceDashboard handles initial loading
 
   useEffect(() => {
     const user = auth.currentUser;
@@ -741,7 +741,7 @@ const Overview = () => {
       setRecentBookings(bookings);
     });
 
-    setLoading(false);
+    // No need to set loading false - parent handles it
 
     // Cleanup
     return () => {
@@ -900,16 +900,17 @@ const Overview = () => {
     return `${diffInDays}d ago`;
   };
 
-  if (loading) {
-    return (
-      <div className="sd-main">
-        <div className="modern-loading">
-          <div className="modern-loading-spinner"></div>
-          <p>Loading dashboard...</p>
-        </div>
-      </div>
-    );
-  }
+  // No separate loader needed - parent ServiceDashboard handles initial loading
+  // if (loading) {
+  //   return (
+  //     <div className="sd-main">
+  //       <div className="modern-loading">
+  //         <div className="modern-loading-spinner"></div>
+  //         <p>Loading dashboard...</p>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   return (
     <div className="sd-main modern-dashboard">
@@ -920,7 +921,7 @@ const Overview = () => {
             <div className="modern-welcome-content-compact">
               <div className="modern-welcome-text">
                 <h1 className="modern-welcome-title-compact">
-                  Welcome back, <span className="modern-name-highlight">{serviceData?.name || (loading ? 'Loading...' : 'User')}</span>! ✨
+                  Welcome back, <span className="modern-name-highlight">{serviceData?.name || 'User'}</span>! ✨
                 </h1>
                 <p className="modern-welcome-subtitle-compact">
                   Here's what's happening with your business today.
@@ -950,7 +951,7 @@ const Overview = () => {
                 <div className="modern-company-info-compact">
                   <h1 className="modern-company-name-compact">{serviceData?.companyName || serviceData?.name || 'The Alpha'} ✨</h1>
                   <div className="modern-company-meta">
-                    <span className="modern-owner-text">Owner: {serviceData?.name || (loading ? 'Loading...' : 'User')}</span>
+                    <span className="modern-owner-text">Owner: {serviceData?.name || 'User'}</span>
                     <div className="modern-status-compact">
                       <div className="modern-status-dot-compact"></div>
                       <span>{serviceData?.isActive !== false ? 'Business Active' : 'Business Inactive'}</span>

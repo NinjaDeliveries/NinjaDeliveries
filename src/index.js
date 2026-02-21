@@ -17,14 +17,14 @@ if (rootElement) {
   const root = ReactDOM.createRoot(rootElement);
   root.render(
     <React.StrictMode>
-      <UserProvider>
-        <BrowserRouter>
+      <BrowserRouter>
+        <UserProvider>
           <FirebaseProvider>
             <ToastContainer />
             <App />
           </FirebaseProvider>
-        </BrowserRouter>
-      </UserProvider>
+        </UserProvider>
+      </BrowserRouter>
     </React.StrictMode>
   );
 }
@@ -34,14 +34,14 @@ if (rootElement2) {
   const root2 = ReactDOM.createRoot(rootElement2);
   root2.render(
     <React.StrictMode>
-      <UserProvider>
-        <BrowserRouter>
+      <BrowserRouter>
+        <UserProvider>
           <FirebaseProvider>
             <ToastContainer />
             <App2 />
           </FirebaseProvider>
-        </BrowserRouter>
-      </UserProvider>
+        </UserProvider>
+      </BrowserRouter>
     </React.StrictMode>
   );
 }

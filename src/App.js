@@ -103,20 +103,12 @@ function App() {
     });
   }, [user, location.pathname]);
 
-  if (loadingUser) {
-    return (
-      <div style={{
-        height: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontSize: 18,
-        fontWeight: 500,
-      }}>
-        Loading…
-      </div>
-    );
-  }
+  // Skip global loader for service dashboard routes - they have their own loader
+  const isServiceDashboardRoute = location.pathname.startsWith('/service-dashboard') || 
+                                   location.pathname === '/service-register';
+  
+  // AdminContext already handles loading for non-service routes
+  // No need for additional loader here
 
   return (
     <NotificationProvider>

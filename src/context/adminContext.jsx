@@ -10,6 +10,8 @@ import {
   getDoc,
 } from "firebase/firestore";
 import { logActivity } from "./Firebase";
+import { useLocation } from "react-router-dom";
+import "./style.css"; // Import CSS for loader styling
 
 const UserContext = createContext();
 
@@ -18,6 +20,7 @@ export const UserProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [stores, setStores] = useState([]);
   const [loadingUser, setLoadingUser] = useState(true);
+  const location = useLocation();
 
   const db = getFirestore();
   const lastUserRef = useRef(null);
@@ -224,8 +227,11 @@ const finalUser = {
 }, []);
 
 
-  // 🔒 CRITICAL GUARD (THIS FIXES REDIRECT ON REFRESH)
-if (loadingUser) {
+  // 🔒 CRITICAL GUARD - Skip loader for service routes (they handle their own)
+  const isServiceRoute = location.pathname.startsWith('/service-dashboard') || 
+                        location.pathname === '/service-register';
+                        
+if (loadingUser && !isServiceRoute) {
 
   return (
    <div className="app-loader">

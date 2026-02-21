@@ -24716,3 +24716,147 @@ input:checked + .settings-toggle-slider:before {
     justify-content: center;
   }
 }
+
+/* ========== SERVICE DASHBOARD OVERLAY LOADER (MINIMAL BLUR) ========== */
+.service-loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999999;
+  animation: serviceFadeIn 0.3s ease-out;
+}
+
+.service-loader-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  animation: serviceContainerBounce 0.6s ease-out;
+}
+
+.service-loader-gif {
+  width: 160px;
+  height: 160px;
+  object-fit: contain;
+  display: block;
+  animation: serviceGifFloat 2s ease-in-out infinite;
+  filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.2));
+}
+
+.service-loader-text {
+  font-size: 16px;
+  font-weight: 600;
+  color: #4b3cc4;
+  font-family: 'Montserrat', sans-serif;
+  letter-spacing: 0.6px;
+  text-align: center;
+  animation: serviceTextPulse 1.8s ease-in-out infinite;
+  text-shadow: 0 2px 8px rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.9);
+  padding: 8px 16px;
+  border-radius: 20px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+/* Loading dots animation */
+.service-loader-text::after {
+  content: '';
+  animation: serviceDots 1.5s steps(4, end) infinite;
+}
+
+@keyframes serviceDots {
+  0%, 20% { content: ''; }
+  40% { content: '.'; }
+  60% { content: '..'; }
+  80%, 100% { content: '...'; }
+}
+
+/* Fade in animation */
+@keyframes serviceFadeIn {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
+  }
+  to {
+    opacity: 1;
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+  }
+}
+
+/* Container bounce animation */
+@keyframes serviceContainerBounce {
+  0% {
+    transform: scale(0.9) translateY(20px);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.02) translateY(-5px);
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+/* GIF floating animation */
+@keyframes serviceGifFloat {
+  0%, 100% {
+    transform: translateY(0px) scale(1);
+  }
+  50% {
+    transform: translateY(-6px) scale(1.01);
+  }
+}
+
+/* Text pulse animation */
+@keyframes serviceTextPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(0.99);
+  }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .service-loader-gif {
+    width: 140px;
+    height: 140px;
+  }
+  
+  .service-loader-text {
+    font-size: 15px;
+    padding: 6px 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .service-loader-gif {
+    width: 120px;
+    height: 120px;
+  }
+  
+  .service-loader-text {
+    font-size: 14px;
+    padding: 6px 12px;
+  }
+}
+

@@ -5,6 +5,7 @@ import { doc, getDoc } from "firebase/firestore";
 import "../../style/ServiceDashboard.css";
 import { signOut } from "firebase/auth";
 import { useNotifications } from "../../context/NotificationContext";
+// Removed ninjaServiceLoader import - ServiceRoute handles loading
 
 const ServiceDashboard = () => {
   const navigate = useNavigate();
@@ -12,7 +13,7 @@ const ServiceDashboard = () => {
   const { getBookingNotificationCount } = useNotifications();
 
   const [serviceData, setServiceData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  // Removed loading state - ServiceRoute handles initial loading
 
   const badgeCount = getBookingNotificationCount();
   console.log('📊 ServiceDashboard - badge count:', badgeCount);
@@ -48,21 +49,12 @@ const ServiceDashboard = () => {
         }
       } catch (error) {
         console.error("Service fetch error:", error);
-      } finally {
-        setLoading(false);
       }
+      // No loading state to set - ServiceRoute handles it
     };
 
     fetchServiceData();
   }, []);
-
-  if (loading) {
-    return (
-      <div className="sd-loader">
-        Loading Service Dashboard…
-      </div>
-    );
-  }
 
   const handleLogout = async () => {
     await signOut(auth);
