@@ -840,14 +840,8 @@ const formatAvailability = (availability, unit) => {
                           <div className="services-offers-list">
                             {service.quantityOffers.map((offer, index) => (
                               <div key={index} className="services-offer-item">
-                                <span className="services-offer-qty">Buy {offer.minQuantity}+</span>
-                                <span className="services-offer-arrow">→</span>
-                                <span className="services-offer-discount">
-                                  {offer.discountType === 'percentage' 
-                                    ? `${offer.discountValue}% OFF` 
-                                    : offer.discountType === 'absolute'
-                                    ? `₹${offer.discountValue}/unit`
-                                    : `${offer.discountValue}% OFF`}
+                                <span className="services-offer-text">
+                                  {offer.offerText || `Buy ${offer.minQuantity}+ units`}
                                 </span>
                               </div>
                             ))}

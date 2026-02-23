@@ -62,11 +62,28 @@ const AddService = ({ onClose, onSave, editMode = false, initialData = null }) =
 
   // Add/Edit offer
   const saveOffer = (offer) => {
+    // Auto-generate offer text based on offer data
+    const basePrice = parseFloat(formData.basePrice) || 0;
+    const discountValue = parseFloat(offer.discountValue) || 0;
+    let finalPrice = basePrice;
+    
+    if (offer.discountType === 'percentage') {
+      finalPrice = basePrice - (basePrice * discountValue / 100);
+    } else if (offer.discountType === 'fixed') {
+      finalPrice = basePrice - discountValue;
+    } else if (offer.discountType === 'newPrice') {
+      finalPrice = discountValue;
+    }
+    
+    // Generate offer text automatically
+    const offerText = `Buy ${offer.minQuantity}+ units, at ₹${finalPrice.toFixed(2)} per unit`;
+    const offerWithText = { ...offer, offerText };
+    
     if (editingOfferId !== null) {
-      setOffers(offers.map(o => o.id === editingOfferId ? { ...offer, id: editingOfferId } : o));
+      setOffers(offers.map(o => o.id === editingOfferId ? { ...offerWithText, id: editingOfferId } : o));
       setEditingOfferId(null);
     } else {
-      setOffers([...offers, { ...offer, id: Date.now() }]);
+      setOffers([...offers, { ...offerWithText, id: Date.now() }]);
     }
     setShowOfferForm(false);
   };
@@ -376,15 +393,6 @@ const AddService = ({ onClose, onSave, editMode = false, initialData = null }) =
             {offers.length > 0 && (
               <div className="offers-list">
                 {offers.map((offer, index) => {
-                  const finalPrice = calculateFinalPrice(
-                    formData.basePrice,
-                    offer.discountType,
-                    offer.discountValue
-                  );
-                  const savings = formData.basePrice 
-                    ? ((parseFloat(formData.basePrice) - finalPrice) / parseFloat(formData.basePrice) * 100).toFixed(0)
-                    : 0;
-
                   return (
                     <div key={offer.id} className="offer-card">
                       <div className="offer-header">
@@ -408,13 +416,8 @@ const AddService = ({ onClose, onSave, editMode = false, initialData = null }) =
                       </div>
                       <div className="offer-details">
                         <p className="offer-main">
-                          Buy {offer.minQuantity}+ units → Get ₹{finalPrice.toFixed(2)}/unit
+                          {offer.offerText || `Buy ${offer.minQuantity}+ units`}
                         </p>
-                        {savings > 0 && (
-                          <p className="offer-savings">
-                            Save {savings}% per unit
-                          </p>
-                        )}
                       </div>
                     </div>
                   );
@@ -581,6 +584,8 @@ const OfferForm = ({ basePrice, existingOffer, onSave, onCancel }) => {
       return base - (base * value / 100);
     } else if (offer.discountType === 'fixed') {
       return base - value;
+    } else if (offer.discountType === 'newPrice') {
+      return value;
     }
     return base;
   };
@@ -655,8 +660,10 @@ const OfferForm = ({ basePrice, existingOffer, onSave, onCancel }) => {
 
       {basePrice && offer.discountValue && (
         <div className="offer-preview-box">
-          <p className="preview-label">Final Price Preview:</p>
-          <p className="preview-value">₹{calculatePreview().toFixed(2)} per unit</p>
+          <p className="preview-label">Preview:</p>
+          <p className="preview-value">
+            Buy {offer.minQuantity}+ units, at ₹{calculatePreview().toFixed(2)} per unit
+          </p>
         </div>
       )}
 

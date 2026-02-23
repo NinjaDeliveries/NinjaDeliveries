@@ -16,7 +16,6 @@ const AssignWorkerModal = ({ booking, categories = [], onClose, onAssigned }) =>
   const [workers, setWorkers] = useState([]);
   const [selectedWorker, setSelectedWorker] = useState("");
   const [loading, setLoading] = useState(true);
-  const [autoAssigning, setAutoAssigning] = useState(false);
   const [showWorkerDetails, setShowWorkerDetails] = useState(false);
   const [selectedWorkerDetails, setSelectedWorkerDetails] = useState(null);
   
@@ -219,69 +218,15 @@ const AssignWorkerModal = ({ booking, categories = [], onClose, onAssigned }) =>
     }
   };
 
-  // 🔹 Auto-assign best available worker
-  const handleAutoAssign = async () => {
-    setAutoAssigning(true);
-    try {
-      const availableWorkers = workers.filter(w => w.availability?.available);
-      
-      if (availableWorkers.length === 0) {
-        alert("No workers available for auto-assignment");
-        return;
-      }
-
-      // Auto-assignment logic: Priority order
-      // 1. Worker with specific service assignment
-      // 2. Worker with most completed jobs (experience)
-      // 3. Worker with least current assignments (load balancing)
-      
-      let bestWorker = null;
-      
-      // Priority 1: Find worker with specific service assignment
-      const serviceSpecificWorkers = availableWorkers.filter(w => 
-        w.assignedServices && booking.serviceId && 
-        w.assignedServices.includes(booking.serviceId)
-      );
-      
-      if (serviceSpecificWorkers.length > 0) {
-        // Among service-specific workers, pick the one with most experience
-        bestWorker = serviceSpecificWorkers.reduce((best, current) => 
-          (current.completedJobs || 0) > (best.completedJobs || 0) ? current : best
-        );
-        console.log("🎯 Auto-assigned based on service specialization:", bestWorker.name);
-      } else {
-        // Priority 2: Pick worker with most completed jobs
-        bestWorker = availableWorkers.reduce((best, current) => 
-          (current.completedJobs || 0) > (best.completedJobs || 0) ? current : best
-        );
-        console.log("🎯 Auto-assigned based on experience:", bestWorker.name);
-      }
-
-      if (bestWorker) {
-        setSelectedWorker(bestWorker.id);
-        
-        // Auto-confirm assignment after 2 seconds
-        setTimeout(async () => {
-          await assignWorker(bestWorker);
-        }, 2000);
-      }
-    } catch (error) {
-      console.error("Auto-assignment error:", error);
-      alert("Failed to auto-assign worker");
-    } finally {
-      setAutoAssigning(false);
-    }
-  };
-
   // 🔹 Show worker details modal
   const showWorkerDetailsModal = (worker) => {
     setSelectedWorkerDetails(worker);
     setShowWorkerDetails(true);
   };
 
-  // 🔹 Assign worker (extracted for reuse)
-  const assignWorker = async (worker = null) => {
-    const workerToAssign = worker || workers.find((w) => w.id === selectedWorker);
+  // 🔹 Assign worker
+  const assignWorker = async () => {
+    const workerToAssign = workers.find((w) => w.id === selectedWorker);
     if (!workerToAssign) return;
 
     // Check if worker is available before assigning
@@ -302,7 +247,6 @@ const AssignWorkerModal = ({ booking, categories = [], onClose, onAssigned }) =>
         workerName: workerToAssign.name,
         status: "assigned",
         assignedAt: serverTimestamp(),
-        assignmentMethod: worker ? "auto" : "manual", // Track assignment method
       });
 
       onAssigned(); // refresh bookings
@@ -411,31 +355,6 @@ const AssignWorkerModal = ({ booking, categories = [], onClose, onAssigned }) =>
                   <span className="stat-label">Busy</span>
                 </div>
               </div>
-
-              {/* Auto-assign button */}
-              {workers.filter(w => w.availability?.available).length > 0 && (
-                <div className="auto-assign-section">
-                  <button 
-                    className="auto-assign-btn"
-                    onClick={handleAutoAssign}
-                    disabled={autoAssigning}
-                  >
-                    {autoAssigning ? (
-                      <>
-                        <div className="spinner-small"></div>
-                        Auto-assigning...
-                      </>
-                    ) : (
-                      <>
-                        🤖 Auto-assign Best Worker
-                      </>
-                    )}
-                  </button>
-                  <p className="auto-assign-hint">
-                    Automatically selects the best available worker based on experience and specialization
-                  </p>
-                </div>
-              )}
 
               <div className="sd-form-group">
                 <label>Select Worker</label>
@@ -606,16 +525,6 @@ const AssignWorkerModal = ({ booking, categories = [], onClose, onAssigned }) =>
           <button className="sd-cancel-btn" onClick={onClose}>
             Cancel
           </button>
-          {workers.filter(w => w.availability?.available).length > 0 && (
-            <button 
-              className="sd-save-btn auto-assign-quick" 
-              onClick={handleAutoAssign}
-              disabled={autoAssigning}
-              style={{ marginRight: '8px' }}
-            >
-              {autoAssigning ? 'Auto-assigning...' : '🤖 Auto-assign'}
-            </button>
-          )}
           <button 
             className="sd-save-btn" 
             onClick={handleAssign}
