@@ -36,43 +36,56 @@ class FirebaseRealtimeService {
     // Cleanup existing listener
     this.cleanupListener(listenerKey);
     
-    let q = query(collection(db, 'companies'), orderBy('createdAt', 'desc'));
-    
-    // Apply filters
-    if (filters.status && filters.status !== 'all') {
-      q = query(q, where('status', '==', filters.status));
-    }
-    if (filters.city && filters.city !== 'all') {
-      q = query(q, where('city', '==', filters.city));
-    }
-    if (filters.category && filters.category !== 'all') {
-      q = query(q, where('category', '==', filters.category));
-    }
-    if (filters.limit) {
-      q = query(q, limit(filters.limit));
-    }
-
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const companies = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          createdAt: doc.data().createdAt?.toDate(),
-          lastLogin: doc.data().lastLogin?.toDate(),
-          updatedAt: doc.data().updatedAt?.toDate()
-        }));
-        
-        callback({ success: true, data: companies });
-      },
-      (error) => {
-        console.error('Companies listener error:', error);
-        callback({ success: false, error: error.message });
+    try {
+      let constraints = [];
+      
+      // Apply filters first
+      if (filters.status && filters.status !== 'all') {
+        constraints.push(where('status', '==', filters.status));
       }
-    );
+      if (filters.city && filters.city !== 'all') {
+        constraints.push(where('city', '==', filters.city));
+      }
+      if (filters.category && filters.category !== 'all') {
+        constraints.push(where('category', '==', filters.category));
+      }
+      
+      // Add orderBy
+      constraints.push(orderBy('createdAt', 'desc'));
+      
+      // Add limit
+      if (filters.limit) {
+        constraints.push(limit(filters.limit));
+      }
+      
+      const q = query(collection(db, 'companies'), ...constraints);
 
-    this.listeners.set(listenerKey, unsubscribe);
-    return unsubscribe;
+      const unsubscribe = onSnapshot(
+        q,
+        (snapshot) => {
+          const companies = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt?.toDate(),
+            lastLogin: doc.data().lastLogin?.toDate(),
+            updatedAt: doc.data().updatedAt?.toDate()
+          }));
+          
+          callback({ success: true, data: companies });
+        },
+        (error) => {
+          console.error('Companies listener error:', error);
+          callback({ success: false, error: error.message });
+        }
+      );
+
+      this.listeners.set(listenerKey, unsubscribe);
+      return unsubscribe;
+    } catch (error) {
+      console.error('Error setting up companies listener:', error);
+      callback({ success: false, error: error.message });
+      return null;
+    }
   }
 
   /**
@@ -83,41 +96,55 @@ class FirebaseRealtimeService {
     
     this.cleanupListener(listenerKey);
     
-    let q = query(collection(db, 'services'), orderBy('createdAt', 'desc'));
-    
-    if (filters.companyId) {
-      q = query(q, where('companyId', '==', filters.companyId));
-    }
-    if (filters.category && filters.category !== 'all') {
-      q = query(q, where('category', '==', filters.category));
-    }
-    if (filters.status && filters.status !== 'all') {
-      q = query(q, where('status', '==', filters.status));
-    }
-    if (filters.limit) {
-      q = query(q, limit(filters.limit));
-    }
-
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const services = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          createdAt: doc.data().createdAt?.toDate(),
-          updatedAt: doc.data().updatedAt?.toDate()
-        }));
-        
-        callback({ success: true, data: services });
-      },
-      (error) => {
-        console.error('Services listener error:', error);
-        callback({ success: false, error: error.message });
+    try {
+      let constraints = [];
+      
+      // Apply filters first
+      if (filters.companyId) {
+        constraints.push(where('companyId', '==', filters.companyId));
       }
-    );
+      if (filters.category && filters.category !== 'all') {
+        constraints.push(where('category', '==', filters.category));
+      }
+      if (filters.status && filters.status !== 'all') {
+        constraints.push(where('status', '==', filters.status));
+      }
+      
+      // Add orderBy
+      constraints.push(orderBy('createdAt', 'desc'));
+      
+      // Add limit
+      if (filters.limit) {
+        constraints.push(limit(filters.limit));
+      }
+      
+      const q = query(collection(db, 'services'), ...constraints);
 
-    this.listeners.set(listenerKey, unsubscribe);
-    return unsubscribe;
+      const unsubscribe = onSnapshot(
+        q,
+        (snapshot) => {
+          const services = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt?.toDate(),
+            updatedAt: doc.data().updatedAt?.toDate()
+          }));
+          
+          callback({ success: true, data: services });
+        },
+        (error) => {
+          console.error('Services listener error:', error);
+          callback({ success: false, error: error.message });
+        }
+      );
+
+      this.listeners.set(listenerKey, unsubscribe);
+      return unsubscribe;
+    } catch (error) {
+      console.error('Error setting up services listener:', error);
+      callback({ success: false, error: error.message });
+      return null;
+    }
   }
 
   /**
@@ -128,32 +155,38 @@ class FirebaseRealtimeService {
     
     this.cleanupListener(listenerKey);
     
-    const q = query(
-      collection(db, 'categories'),
-      where('status', '==', 'active'),
-      orderBy('name')
-    );
+    try {
+      const q = query(
+        collection(db, 'categories'),
+        where('status', '==', 'active'),
+        orderBy('name')
+      );
 
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const categories = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          createdAt: doc.data().createdAt?.toDate(),
-          updatedAt: doc.data().updatedAt?.toDate()
-        }));
-        
-        callback({ success: true, data: categories });
-      },
-      (error) => {
-        console.error('Categories listener error:', error);
-        callback({ success: false, error: error.message });
-      }
-    );
+      const unsubscribe = onSnapshot(
+        q,
+        (snapshot) => {
+          const categories = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt?.toDate(),
+            updatedAt: doc.data().updatedAt?.toDate()
+          }));
+          
+          callback({ success: true, data: categories });
+        },
+        (error) => {
+          console.error('Categories listener error:', error);
+          callback({ success: false, error: error.message });
+        }
+      );
 
-    this.listeners.set(listenerKey, unsubscribe);
-    return unsubscribe;
+      this.listeners.set(listenerKey, unsubscribe);
+      return unsubscribe;
+    } catch (error) {
+      console.error('Error setting up categories listener:', error);
+      callback({ success: false, error: error.message });
+      return null;
+    }
   }
 
   /**
@@ -164,45 +197,59 @@ class FirebaseRealtimeService {
     
     this.cleanupListener(listenerKey);
     
-    let q = query(collection(db, 'bookings'), orderBy('bookingDate', 'desc'));
-    
-    if (filters.companyId) {
-      q = query(q, where('companyId', '==', filters.companyId));
-    }
-    if (filters.status && filters.status !== 'all') {
-      q = query(q, where('status', '==', filters.status));
-    }
-    if (filters.dateFrom) {
-      q = query(q, where('bookingDate', '>=', new Date(filters.dateFrom)));
-    }
-    if (filters.dateTo) {
-      q = query(q, where('bookingDate', '<=', new Date(filters.dateTo)));
-    }
-    if (filters.limit) {
-      q = query(q, limit(filters.limit));
-    }
-
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const bookings = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          bookingDate: doc.data().bookingDate?.toDate(),
-          createdAt: doc.data().createdAt?.toDate(),
-          updatedAt: doc.data().updatedAt?.toDate()
-        }));
-        
-        callback({ success: true, data: bookings });
-      },
-      (error) => {
-        console.error('Bookings listener error:', error);
-        callback({ success: false, error: error.message });
+    try {
+      let constraints = [];
+      
+      // Apply filters first
+      if (filters.companyId) {
+        constraints.push(where('companyId', '==', filters.companyId));
       }
-    );
+      if (filters.status && filters.status !== 'all') {
+        constraints.push(where('status', '==', filters.status));
+      }
+      if (filters.dateFrom) {
+        constraints.push(where('bookingDate', '>=', new Date(filters.dateFrom)));
+      }
+      if (filters.dateTo) {
+        constraints.push(where('bookingDate', '<=', new Date(filters.dateTo)));
+      }
+      
+      // Add orderBy
+      constraints.push(orderBy('bookingDate', 'desc'));
+      
+      // Add limit
+      if (filters.limit) {
+        constraints.push(limit(filters.limit));
+      }
+      
+      const q = query(collection(db, 'bookings'), ...constraints);
 
-    this.listeners.set(listenerKey, unsubscribe);
-    return unsubscribe;
+      const unsubscribe = onSnapshot(
+        q,
+        (snapshot) => {
+          const bookings = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            bookingDate: doc.data().bookingDate?.toDate(),
+            createdAt: doc.data().createdAt?.toDate(),
+            updatedAt: doc.data().updatedAt?.toDate()
+          }));
+          
+          callback({ success: true, data: bookings });
+        },
+        (error) => {
+          console.error('Bookings listener error:', error);
+          callback({ success: false, error: error.message });
+        }
+      );
+
+      this.listeners.set(listenerKey, unsubscribe);
+      return unsubscribe;
+    } catch (error) {
+      console.error('Error setting up bookings listener:', error);
+      callback({ success: false, error: error.message });
+      return null;
+    }
   }
 
   /**
@@ -213,44 +260,55 @@ class FirebaseRealtimeService {
     
     this.cleanupListener(listenerKey);
     
-    let q = query(
-      collection(db, 'activityLogs'),
-      orderBy('timestamp', 'desc'),
-      limit(100)
-    );
-    
-    if (filters.companyId) {
-      q = query(q, where('companyId', '==', filters.companyId));
-    }
-    if (filters.type && filters.type !== 'all') {
-      q = query(q, where('type', '==', filters.type));
-    }
-    if (filters.dateFrom) {
-      q = query(q, where('timestamp', '>=', new Date(filters.dateFrom)));
-    }
-    if (filters.dateTo) {
-      q = query(q, where('timestamp', '<=', new Date(filters.dateTo)));
-    }
-
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const logs = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          timestamp: doc.data().timestamp?.toDate()
-        }));
-        
-        callback({ success: true, data: logs });
-      },
-      (error) => {
-        console.error('Activity logs listener error:', error);
-        callback({ success: false, error: error.message });
+    try {
+      let constraints = [];
+      
+      // Apply filters first
+      if (filters.companyId) {
+        constraints.push(where('companyId', '==', filters.companyId));
       }
-    );
+      if (filters.type && filters.type !== 'all') {
+        constraints.push(where('type', '==', filters.type));
+      }
+      if (filters.dateFrom) {
+        constraints.push(where('timestamp', '>=', new Date(filters.dateFrom)));
+      }
+      if (filters.dateTo) {
+        constraints.push(where('timestamp', '<=', new Date(filters.dateTo)));
+      }
+      
+      // Add orderBy
+      constraints.push(orderBy('timestamp', 'desc'));
+      
+      // Add limit (default 100)
+      constraints.push(limit(100));
+      
+      const q = query(collection(db, 'activityLogs'), ...constraints);
 
-    this.listeners.set(listenerKey, unsubscribe);
-    return unsubscribe;
+      const unsubscribe = onSnapshot(
+        q,
+        (snapshot) => {
+          const logs = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            timestamp: doc.data().timestamp?.toDate()
+          }));
+          
+          callback({ success: true, data: logs });
+        },
+        (error) => {
+          console.error('Activity logs listener error:', error);
+          callback({ success: false, error: error.message });
+        }
+      );
+
+      this.listeners.set(listenerKey, unsubscribe);
+      return unsubscribe;
+    } catch (error) {
+      console.error('Error setting up activity logs listener:', error);
+      callback({ success: false, error: error.message });
+      return null;
+    }
   }
 
   /**
