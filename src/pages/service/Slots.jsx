@@ -362,6 +362,55 @@ export default function Slots() {
       });
 
       console.log("Company service availability updated successfully in service_company collection");
+
+      // Update all categories, services, and technicians isActive status
+      console.log(`Updating categories, services, and technicians to: ${status ? 'ACTIVE' : 'INACTIVE'}`);
+      
+      // Update Categories
+      const categoriesQuery = query(
+        collection(db, "service_categories"),
+        where("companyId", "==", user.uid)
+      );
+      const categoriesSnap = await getDocs(categoriesQuery);
+      const categoryUpdates = categoriesSnap.docs.map(docSnap =>
+        updateDoc(doc(db, "service_categories", docSnap.id), {
+          isActive: status,
+          updatedAt: new Date(),
+        })
+      );
+
+      // Update Services
+      const servicesQuery = query(
+        collection(db, "service_services"),
+        where("companyId", "==", user.uid)
+      );
+      const servicesSnap = await getDocs(servicesQuery);
+      const serviceUpdates = servicesSnap.docs.map(docSnap =>
+        updateDoc(doc(db, "service_services", docSnap.id), {
+          isActive: status,
+          updatedAt: new Date(),
+        })
+      );
+
+      // Update Technicians
+      const techniciansQuery = query(
+        collection(db, "service_technicians"),
+        where("companyId", "==", user.uid)
+      );
+      const techniciansSnap = await getDocs(techniciansQuery);
+      const technicianUpdates = techniciansSnap.docs.map(docSnap =>
+        updateDoc(doc(db, "service_technicians", docSnap.id), {
+          isActive: status,
+          updatedAt: new Date(),
+        })
+      );
+
+      // Execute all updates in parallel
+      await Promise.all([...categoryUpdates, ...serviceUpdates, ...technicianUpdates]);
+
+      console.log(`Successfully updated ${categoriesSnap.size} categories, ${servicesSnap.size} services, and ${techniciansSnap.size} technicians`);
+      
+      alert(`Company is now ${status ? 'ONLINE' : 'OFFLINE'}!\n\nUpdated:\n- ${categoriesSnap.size} Categories\n- ${servicesSnap.size} Services\n- ${techniciansSnap.size} Technicians`);
     } catch (error) {
       console.error("Error updating company service availability:", error);
       alert("Failed to update status. Please try again.");
