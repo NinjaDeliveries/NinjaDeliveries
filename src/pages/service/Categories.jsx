@@ -4,8 +4,11 @@ import { collection, query, where, getDocs, addDoc, doc, updateDoc, deleteDoc, o
 import "../../style/ServiceDashboard.css";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "../../context/Firebase";
+import { useToast } from "../../components/ToastContainer";
+import ConfirmDialog from "../../components/ConfirmDialog";
 
 const Categories = () => {
+  const toast = useToast();
   const [categoryImage, setCategoryImage] = useState(null);
   const [imagePreview, setImagePreview] = useState("");
   const [categories, setCategories] = useState([]);
@@ -17,6 +20,15 @@ const Categories = () => {
 
   const [adminCategories, setAdminCategories] = useState([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
+  
+  // Confirm dialog state
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: null,
+    type: 'warning'
+  });
   
   // Search and filter states
   const [searchQuery, setSearchQuery] = useState("");
@@ -370,12 +382,12 @@ const handleToggleCategoryStatus = async (categoryId, currentStatus) => {
   if (!file) return;
 
   if (!file.type.startsWith("image/")) {
-    alert("Please select an image file");
+    toast.warning("Please select an image file");
     return;
   }
 
   if (file.size > 5 * 1024 * 1024) {
-    alert("Image size should be less than 5MB");
+    toast.warning("Image size should be less than 5MB");
     return;
   }
 
@@ -426,7 +438,7 @@ const syncAppCategory = async (adminCat) => {
   const handleSaveCategory = async () => {
   const user = auth.currentUser;
   if (!user || !selectedCategoryId) {
-    alert("Select a category");
+    toast.warning("Select a category");
     return;
   }
 
@@ -441,7 +453,7 @@ const syncAppCategory = async (adminCat) => {
 );
 
   if (exists && !editCategory) {
-    alert("Category already added");
+    toast.warning("Category already added");
     return;
   }
 
@@ -537,43 +549,50 @@ const syncAppCategory = async (adminCat) => {
 };
 
   const handleDeleteCategory = async (categoryId) => {
-  if (!window.confirm("Are you sure you want to delete this category?")) return;
-
-  try {
-    // find category being deleted
     const cat = categories.find(c => c.id === categoryId);
     if (!cat) return;
 
-    // delete from company collection
-    await deleteDoc(doc(db, "service_categories", categoryId));
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Delete Category',
+      message: `Are you sure you want to delete "${cat.name}"? This action cannot be undone.`,
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          // delete from company collection
+          await deleteDoc(doc(db, "service_categories", categoryId));
 
-    // check if any company still uses this category
-    const q = query(
-      collection(db, "service_categories"),
-      where("masterCategoryId", "==", cat.masterCategoryId)
-    );
+          // check if any company still uses this category
+          const q = query(
+            collection(db, "service_categories"),
+            where("masterCategoryId", "==", cat.masterCategoryId)
+          );
 
-    const snap = await getDocs(q);
+          const snap = await getDocs(q);
 
-    // if nobody uses it → remove from app_categories
-    if (snap.empty) {
-      const appQ = query(
-        collection(db, "app_categories"),
-        where("masterCategoryId", "==", cat.masterCategoryId)
-      );
+          // if nobody uses it → remove from app_categories
+          if (snap.empty) {
+            const appQ = query(
+              collection(db, "app_categories"),
+              where("masterCategoryId", "==", cat.masterCategoryId)
+            );
 
-      const appSnap = await getDocs(appQ);
-      for (const d of appSnap.docs) {
-        await deleteDoc(d.ref);
+            const appSnap = await getDocs(appQ);
+            for (const d of appSnap.docs) {
+              await deleteDoc(d.ref);
+            }
+          }
+
+          toast.success("Category deleted successfully!");
+          fetchCategories();
+        } catch (error) {
+          console.error("Error deleting category:", error);
+          toast.error("Error deleting category. Please try again.");
+        }
+        setConfirmDialog({ isOpen: false, title: '', message: '', onConfirm: null, type: 'warning' });
       }
-    }
-
-    fetchCategories();
-  } catch (error) {
-    console.error("Error deleting category:", error);
-    alert("Error deleting category");
-  }
-};
+    });
+  };
 
   const handleCloseModal = () => {
     setShowModal(false);
@@ -930,6 +949,16 @@ const syncAppCategory = async (adminCat) => {
           </div>
         </div>
       )}
+      
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        type={confirmDialog.type}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={() => setConfirmDialog({ isOpen: false, title: '', message: '', onConfirm: null, type: 'warning' })}
+      />
     </div>
   );
 };

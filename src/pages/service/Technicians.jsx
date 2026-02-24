@@ -2,8 +2,11 @@ import React, { useEffect, useState } from "react";
 import { auth, db } from "../../context/Firebase";
 import { collection, query, where, getDocs, addDoc, doc, updateDoc, deleteDoc, onSnapshot } from "firebase/firestore";
 import "../../style/ServiceDashboard.css";
+import { useToast } from "../../components/ToastContainer";
+import ConfirmDialog from "../../components/ConfirmDialog";
 
 const Technicians = () => {
+  const toast = useToast();
   const [technicians, setTechnicians] = useState([]);
   const [categories, setCategories] = useState([]);
   const [categoryMasters, setCategoryMasters] = useState([]);
@@ -11,6 +14,14 @@ const Technicians = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editTechnician, setEditTechnician] = useState(null);
+  
+  // Confirm dialog state
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: null
+  });
   
   // Live worker statistics
   const [workerStats, setWorkerStats] = useState({});
@@ -245,13 +256,13 @@ const Technicians = () => {
     try {
       const user = auth.currentUser;
       if (!user || !name.trim() || !phone.trim()) {
-        alert("Please fill in all required fields");
+        toast.warning("Please fill in all required fields");
         return;
       }
 
       // Validate Aadhar number (12 digits)
       if (aadharNumber && !/^\d{12}$/.test(aadharNumber)) {
-        alert("Aadhar number must be exactly 12 digits");
+        toast.warning("Aadhar number must be exactly 12 digits");
         return;
       }
 
@@ -270,10 +281,12 @@ const Technicians = () => {
       if (editTechnician) {
         // Update existing technician (don't override rating and completedJobs as they come from live data)
         await updateDoc(doc(db, "service_workers", editTechnician.id), payload);
+        toast.success("Technician updated successfully!");
       } else {
         // Create new technician
         payload.createdAt = new Date();
         await addDoc(collection(db, "service_workers"), payload);
+        toast.success("Technician added successfully!");
       }
 
       setShowModal(false);
@@ -281,20 +294,27 @@ const Technicians = () => {
       fetchTechnicians();
     } catch (error) {
       console.error("Error saving technician:", error);
-      alert("Error saving technician. Please try again.");
+      toast.error("Error saving technician. Please try again.");
     }
   };
 
   const handleDeleteTechnician = async (technicianId) => {
-    if (window.confirm("Are you sure you want to delete this technician?")) {
-      try {
-        await deleteDoc(doc(db, "service_workers", technicianId));
-        fetchTechnicians();
-      } catch (error) {
-        console.error("Error deleting technician:", error);
-        alert("Error deleting technician. Please try again.");
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Delete Technician',
+      message: 'Are you sure you want to delete this technician? This action cannot be undone.',
+      onConfirm: async () => {
+        try {
+          await deleteDoc(doc(db, "service_workers", technicianId));
+          toast.success("Technician deleted successfully!");
+          fetchTechnicians();
+        } catch (error) {
+          console.error("Error deleting technician:", error);
+          toast.error("Error deleting technician. Please try again.");
+        }
+        setConfirmDialog({ isOpen: false, title: '', message: '', onConfirm: null });
       }
-    }
+    });
   };
 
   // Sync app category visibility based on active company categories
@@ -483,11 +503,12 @@ const Technicians = () => {
         }
         
         if (messages.length > 0) {
-          alert(
-            `Worker deactivated successfully.\n\n` +
-            `The following were also deactivated because no other active workers are assigned:\n\n` +
-            messages.join('\n\n')
+          toast.warning(
+            `Worker deactivated successfully.`,
+            `The following were also deactivated because no other active workers are assigned:\n\n${messages.join('\n\n')}`
           );
+        } else {
+          toast.success("Worker deactivated successfully!");
         }
       }
       
@@ -602,11 +623,12 @@ const Technicians = () => {
         }
         
         if (messages.length > 0) {
-          alert(
-            `Worker reactivated successfully.\n\n` +
-            `The following were also reactivated:\n\n` +
-            messages.join('\n\n')
+          toast.success(
+            `Worker reactivated successfully!`,
+            `The following were also reactivated:\n\n${messages.join('\n\n')}`
           );
+        } else {
+          toast.success("Worker reactivated successfully!");
         }
       }
 
@@ -614,7 +636,7 @@ const Technicians = () => {
       fetchCategories(); // Refresh categories to show updated status
     } catch (error) {
       console.error("Error updating technician status:", error);
-      alert("Error updating technician status. Please try again.");
+      toast.error("Error updating technician status. Please try again.");
     }
   };
 
@@ -1208,6 +1230,15 @@ const Technicians = () => {
           </div>
         </div>
       )}
+      
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={() => setConfirmDialog({ isOpen: false, title: '', message: '', onConfirm: null })}
+      />
     </div>
   );
 };

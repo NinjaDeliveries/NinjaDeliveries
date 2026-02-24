@@ -13,7 +13,11 @@ import {
 } from "firebase/firestore";
 import AssignWorkerModal from "./AssignWorkerModal";
 import "../../style/ServiceDashboard.css";
+import { useToast } from "../../components/ToastContainer";
+import ConfirmDialog from "../../components/ConfirmDialog";
+
 const Bookings = () => {
+  const toast = useToast();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openAssign, setOpenAssign] = useState(false);
@@ -26,6 +30,16 @@ const Bookings = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState(""); // New date filter state
   const [expandedPackageGroups, setExpandedPackageGroups] = useState({}); // Track expanded package groups
+  
+  // Confirm dialog state
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: null,
+    type: 'warning'
+  });
+  
   const statusConfig = {
     pending: {
       label: "Pending",
@@ -410,10 +424,14 @@ const Bookings = () => {
   }, [setupBookingsListener]);
 
   const handleRejectBooking = async (booking) => {
-    if (!window.confirm("Are you sure you want to reject this booking?")) return;
-
-    try {
-      const user = auth.currentUser;
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Reject Booking',
+      message: `Are you sure you want to reject the booking for ${booking.customerName}?`,
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          const user = auth.currentUser;
       
       // 1️⃣ Update Firestore booking status with user tracking
       await updateDoc(
@@ -500,10 +518,13 @@ const Bookings = () => {
       }
 
       // No need to call fetchBookings() - real-time listener will update automatically
-      alert("Booking rejected successfully");
-    } catch (err) {
-      alert("Failed to reject booking. Please try again.");
-    }
+      toast.success("Booking Rejected", "The booking has been rejected successfully.");
+        } catch (err) {
+          toast.error("Failed to Reject", "Could not reject the booking. Please try again.");
+        }
+        setConfirmDialog({ isOpen: false, title: '', message: '', onConfirm: null, type: 'warning' });
+      }
+    });
   };
 
   const generateOtp = () => {
@@ -534,12 +555,12 @@ const Bookings = () => {
   const handleCompleteWork = async (booking) => {
     try {
       if (!otpInput) {
-        alert("Enter OTP");
+        toast.warning("OTP Required", "Please enter the OTP to complete the booking.");
         return;
       }
 
       if (otpInput !== booking.startOtp) {
-        alert("Invalid OTP");
+        toast.error("Invalid OTP", "The OTP you entered is incorrect. Please try again.");
         return;
       }
 
@@ -559,7 +580,7 @@ const Bookings = () => {
       
       // No need to call fetchBookings() - real-time listener will update automatically
     } catch (err) {
-      alert("Failed to complete booking. Please try again.");
+      toast.error("Failed to Complete", "Could not complete the booking. Please try again.");
     }
   };
 
@@ -750,12 +771,16 @@ const Bookings = () => {
           {process.env.NODE_ENV === 'development' && (
             <button
               onClick={async () => {
-                if (!window.confirm("⚠️ DANGER: This will delete ALL bookings for your company. This action cannot be undone. Are you sure?")) return;
-                
-                setLoading(true);
-                try {
-                  const user = auth.currentUser;
-                  if (!user) return;
+                setConfirmDialog({
+                  isOpen: true,
+                  title: '⚠️ DANGER: Delete All Bookings',
+                  message: 'This will delete ALL bookings for your company. This action cannot be undone. Are you absolutely sure?',
+                  type: 'danger',
+                  onConfirm: async () => {
+                    setLoading(true);
+                    try {
+                      const user = auth.currentUser;
+                      if (!user) return;
                   
                   // Get all bookings for this company
                   const q = query(
@@ -774,14 +799,17 @@ const Bookings = () => {
                   // Wait for all deletions to complete
                   await Promise.all(deletePromises);
                   
-                  alert(`✅ Successfully deleted ${snap.docs.length} bookings`);
+                  toast.success("Bookings Deleted", `Successfully deleted ${snap.docs.length} bookings.`);
                   // Refresh the list
                   await fetchBookings();
-                } catch (err) {
-                  alert("Failed to delete bookings: " + err.message);
-                } finally {
-                  setLoading(false);
-                }
+                    } catch (err) {
+                      toast.error("Delete Failed", `Failed to delete bookings: ${err.message}`);
+                    } finally {
+                      setLoading(false);
+                    }
+                    setConfirmDialog({ isOpen: false, title: '', message: '', onConfirm: null, type: 'warning' });
+                  }
+                });
               }}
               style={{
                 backgroundColor: '#ef4444',
@@ -1999,6 +2027,16 @@ const Bookings = () => {
           </div>
         </div>
       )}
+      
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        type={confirmDialog.type}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={() => setConfirmDialog({ isOpen: false, title: '', message: '', onConfirm: null, type: 'warning' })}
+      />
     </div>
   );
 };
