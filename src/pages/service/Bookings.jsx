@@ -1191,6 +1191,9 @@ const Bookings = () => {
                             {packageGroupBookings.map((booking) => {
                             const status = statusConfig[booking.status] || statusConfig.pending;
                             
+                            // Debug logging for package bookings
+                            console.log(`Package Booking ${booking.id} - Date: ${booking.date}, Status: "${booking.status}", Type: ${typeof booking.status}`);
+                            
                             return (
                               <div key={booking.id} className="bookings-card">
                                 <div className="bookings-card-content">
@@ -1269,8 +1272,7 @@ const Bookings = () => {
                                         View
                                       </button>
                                       
-                                      {/* Always show Assign and Reject buttons for pending bookings - TEST */}
-                                      {(booking.status?.trim().toLowerCase() === "pending") && (
+                                      {booking.status === "pending" && (
                                         <>
                                           <button
                                             className="bookings-action-btn assign"
@@ -1290,13 +1292,13 @@ const Bookings = () => {
                                         </>
                                       )}
                                       
-                                      {(booking.status?.trim().toLowerCase() === "assigned") && (
+                                      {booking.status === "assigned" && (
                                         <>
                                           <button
                                             className="bookings-action-btn start"
                                             onClick={() => handleStartWork(booking)}
                                           >
-                                            Start Work
+                                            Start
                                           </button>
                                           <button
                                             className="bookings-action-btn reject"
@@ -1307,7 +1309,7 @@ const Bookings = () => {
                                         </>
                                       )}
                                       
-                                      {(booking.status?.trim().toLowerCase() === "started") && (
+                                      {booking.status === "started" && (
                                         <button
                                           className="bookings-action-btn complete"
                                           onClick={() => {
@@ -1333,7 +1335,11 @@ const Bookings = () => {
                 {/* Regular Bookings (Grouped by Date) */}
                 {Object.entries(groupedRegularBookings)
                   .sort(([dateA], [dateB]) => new Date(dateA) - new Date(dateB))
-                  .map(([date, dateBookings]) => (
+                  .map(([date, dateBookings]) => {
+                    // Debug logging for date groups
+                    console.log(`Date Group: ${date}, Bookings:`, dateBookings.map(b => ({ id: b.id, status: b.status })));
+                    
+                    return (
                     <div key={date} className="bookings-date-group">
                       <div className="bookings-date-header">
                         <div className="bookings-date-info">
@@ -1350,6 +1356,9 @@ const Bookings = () => {
                       <div className="bookings-date-items">
                         {dateBookings.map((booking) => {
                           const status = statusConfig[booking.status] || statusConfig.pending;
+                          
+                          // Debug logging to check status
+                          console.log(`Booking ${booking.id} - Date: ${booking.date}, Status: "${booking.status}", Type: ${typeof booking.status}`);
                           
                           return (
                             <div key={booking.id} className="bookings-card">
@@ -1421,8 +1430,7 @@ const Bookings = () => {
                                       View
                                     </button>
                                     
-                                    {/* Always show Assign and Reject buttons for pending bookings - TEST */}
-                                    {(booking.status?.trim().toLowerCase() === "pending") && (
+                                    {(!booking.status || booking.status === "pending" || booking.status === "Pending" || booking.status === "PENDING" || booking.status === "confirmed" || booking.status === "Confirmed" || booking.status === "CONFIRMED") && (
                                       <>
                                         <button
                                           className="bookings-action-btn assign"
@@ -1442,24 +1450,16 @@ const Bookings = () => {
                                       </>
                                     )}
                                     
-                                    {(booking.status?.trim().toLowerCase() === "assigned") && (
-                                      <>
-                                        <button
-                                          className="bookings-action-btn start"
-                                          onClick={() => handleStartWork(booking)}
-                                        >
-                                          Start Work
-                                        </button>
-                                        <button
-                                          className="bookings-action-btn reject"
-                                          onClick={() => handleRejectBooking(booking)}
-                                        >
-                                          Reject
-                                        </button>
-                                      </>
+                                    {(booking.status === "assigned" || booking.status === "Assigned" || booking.status === "ASSIGNED") && (
+                                      <button
+                                        className="bookings-action-btn start"
+                                        onClick={() => handleStartWork(booking)}
+                                      >
+                                        Start
+                                      </button>
                                     )}
                                     
-                                    {(booking.status?.trim().toLowerCase() === "started") && (
+                                    {(booking.status === "started" || booking.status === "Started" || booking.status === "STARTED") && (
                                       <button
                                         className="bookings-action-btn complete"
                                         onClick={() => {
@@ -1478,7 +1478,8 @@ const Bookings = () => {
                         })}
                       </div>
                     </div>
-                  ))}
+                  );
+                  })}
               </>
             );
           })()
@@ -1941,7 +1942,7 @@ const Bookings = () => {
 
               {/* Actions */}
               <div className="bookings-modal-actions">
-                {(selectedBooking.status?.trim().toLowerCase() === "pending") && (
+                {selectedBooking.status === "pending" && (
                   <button 
                     className="bookings-modal-btn primary"
                     onClick={() => {
@@ -1958,7 +1959,7 @@ const Bookings = () => {
                     Assign Technician
                   </button>
                 )}
-                {(selectedBooking.status?.trim().toLowerCase() === "assigned") && (
+                {selectedBooking.status === "assigned" && (
                   <button 
                     className="bookings-modal-btn primary"
                     onClick={() => {
@@ -1972,7 +1973,7 @@ const Bookings = () => {
                     Mark as Started
                   </button>
                 )}
-                {(selectedBooking.status?.trim().toLowerCase() === "started") && (
+                {selectedBooking.status === "started" && (
                   <button 
                     className="bookings-modal-btn success"
                     onClick={() => {

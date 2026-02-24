@@ -11368,7 +11368,7 @@ input:checked + .settings-toggle-slider:before {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  align-items: flex-end;
+  align-items: stretch;
 }
 
 .bookings-view-btn,
