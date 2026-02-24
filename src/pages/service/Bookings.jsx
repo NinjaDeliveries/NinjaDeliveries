@@ -25,7 +25,6 @@ const Bookings = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState(""); // New date filter state
-  const [showAllBookings, setShowAllBookings] = useState(true); // Toggle for showing all bookings vs today only
   const [expandedPackageGroups, setExpandedPackageGroups] = useState({}); // Track expanded package groups
   const statusConfig = {
     pending: {
@@ -584,12 +583,6 @@ const Bookings = () => {
     // Date filter
     if (dateFilter && booking.date !== dateFilter) return false;
 
-    // Today-only filter (when showAllBookings is false, only show today's bookings)
-    if (!showAllBookings) {
-      const today = new Date().toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
-      if (booking.date !== today) return false;
-    }
-
     // Status filters
     if (statusFilter === "all") {
       // Exclude completed, rejected, cancelled, and expired bookings from "Active" tab
@@ -952,43 +945,7 @@ const Bookings = () => {
           )}
         </div>
 
-        {/* Today Only Toggle */}
-        <div className="bookings-toggle-filter">
-          <button
-            className={`bookings-toggle-btn ${showAllBookings ? 'all-bookings' : 'today-only'}`}
-            onClick={() => setShowAllBookings(!showAllBookings)}
-            title={showAllBookings ? "Click to show today's bookings only" : "Click to show all bookings"}
-          >
-            <svg className="bookings-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              {showAllBookings ? (
-                // Calendar icon for "All Bookings"
-                <>
-                  <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
-                  <line x1="16" x2="16" y1="2" y2="6"/>
-                  <line x1="8" x2="8" y1="2" y2="6"/>
-                  <line x1="3" x2="21" y1="10" y2="10"/>
-                  <path d="M8 14h.01"/>
-                  <path d="M12 14h.01"/>
-                  <path d="M16 14h.01"/>
-                  <path d="M8 18h.01"/>
-                  <path d="M12 18h.01"/>
-                </>
-              ) : (
-                // Today icon for "Today Only"
-                <>
-                  <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
-                  <line x1="16" x2="16" y1="2" y2="6"/>
-                  <line x1="8" x2="8" y1="2" y2="6"/>
-                  <line x1="3" x2="21" y1="10" y2="10"/>
-                  <circle cx="12" cy="16" r="2"/>
-                </>
-              )}
-            </svg>
-            <span className="bookings-toggle-text">
-              {showAllBookings ? 'All Bookings' : 'Today Only'}
-            </span>
-          </button>
-        </div>
+
       </div>
 
       {/* Status Tabs */}
@@ -1092,9 +1049,7 @@ const Bookings = () => {
             <p>
               {searchQuery || statusFilter !== "all" || dateFilter
                 ? "Try adjusting your filters"
-                : !showAllBookings 
-                  ? "No bookings for today. Toggle to 'All Bookings' to see future bookings."
-                  : "Bookings will appear here when customers make them through the app"}
+                : "Bookings will appear here when customers make them through the app"}
             </p>
           </div>
         ) : (
@@ -1314,7 +1269,8 @@ const Bookings = () => {
                                         View
                                       </button>
                                       
-                                      {booking.status === "pending" && (
+                                      {/* Always show Assign and Reject buttons for pending bookings - TEST */}
+                                      {(booking.status?.trim().toLowerCase() === "pending") && (
                                         <>
                                           <button
                                             className="bookings-action-btn assign"
@@ -1334,7 +1290,7 @@ const Bookings = () => {
                                         </>
                                       )}
                                       
-                                      {booking.status === "assigned" && (
+                                      {(booking.status?.trim().toLowerCase() === "assigned") && (
                                         <>
                                           <button
                                             className="bookings-action-btn start"
@@ -1351,7 +1307,7 @@ const Bookings = () => {
                                         </>
                                       )}
                                       
-                                      {booking.status === "started" && (
+                                      {(booking.status?.trim().toLowerCase() === "started") && (
                                         <button
                                           className="bookings-action-btn complete"
                                           onClick={() => {
@@ -1465,7 +1421,8 @@ const Bookings = () => {
                                       View
                                     </button>
                                     
-                                    {booking.status === "pending" && (
+                                    {/* Always show Assign and Reject buttons for pending bookings - TEST */}
+                                    {(booking.status?.trim().toLowerCase() === "pending") && (
                                       <>
                                         <button
                                           className="bookings-action-btn assign"
@@ -1485,7 +1442,7 @@ const Bookings = () => {
                                       </>
                                     )}
                                     
-                                    {booking.status === "assigned" && (
+                                    {(booking.status?.trim().toLowerCase() === "assigned") && (
                                       <>
                                         <button
                                           className="bookings-action-btn start"
@@ -1502,7 +1459,7 @@ const Bookings = () => {
                                       </>
                                     )}
                                     
-                                    {booking.status === "started" && (
+                                    {(booking.status?.trim().toLowerCase() === "started") && (
                                       <button
                                         className="bookings-action-btn complete"
                                         onClick={() => {
@@ -1984,7 +1941,7 @@ const Bookings = () => {
 
               {/* Actions */}
               <div className="bookings-modal-actions">
-                {selectedBooking.status === "pending" && (
+                {(selectedBooking.status?.trim().toLowerCase() === "pending") && (
                   <button 
                     className="bookings-modal-btn primary"
                     onClick={() => {
@@ -2001,7 +1958,7 @@ const Bookings = () => {
                     Assign Technician
                   </button>
                 )}
-                {selectedBooking.status === "assigned" && (
+                {(selectedBooking.status?.trim().toLowerCase() === "assigned") && (
                   <button 
                     className="bookings-modal-btn primary"
                     onClick={() => {
@@ -2015,7 +1972,7 @@ const Bookings = () => {
                     Mark as Started
                   </button>
                 )}
-                {selectedBooking.status === "started" && (
+                {(selectedBooking.status?.trim().toLowerCase() === "started") && (
                   <button 
                     className="bookings-modal-btn success"
                     onClick={() => {
