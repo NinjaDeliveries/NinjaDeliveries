@@ -24876,3 +24876,101 @@ input:checked + .settings-toggle-slider:before {
   }
 }
 
+/* ========== PACKAGE BOOKING GROUP STYLES ========== */
+.bookings-package-group {
+  margin-bottom: 30px;
+  background: #f0f9ff;
+  border-radius: 12px;
+  padding: 20px;
+  border: 2px solid #bae6fd;
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.1);
+}
+
+.bookings-package-group .bookings-date-header {
+  margin-bottom: 15px;
+}
+
+.bookings-package-group .bookings-date-title {
+  color: #0369a1;
+  font-size: 1.4rem;
+}
+
+.bookings-package-group .bookings-date-count {
+  background: #0ea5e9;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.bookings-package-group .bookings-date-line {
+  background: linear-gradient(to right, #bae6fd, transparent);
+}
+
+.bookings-package-group .bookings-card {
+  background: white;
+  border: 1px solid #e0f2fe;
+  border-left: 4px solid #0ea5e9;
+}
+
+.bookings-package-group .bookings-card:hover {
+  border-color: #7dd3fc;
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.15);
+}
+
+.bookings-package-group .bookings-time-badge {
+  background: #e0f2fe;
+  color: #0369a1;
+  border-color: #bae6fd;
+}
+
+.bookings-package-group .bookings-id-badge {
+  background: #f0f9ff;
+  color: #0c4a6e;
+}
+
+.bookings-package-group .bookings-service-name {
+  color: #0c4a6e;
+}
+
+/* Package group header highlight */
+.bookings-package-group-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 5px;
+}
+
+.bookings-package-group-header .package-icon {
+  font-size: 1.5rem;
+  color: #0ea5e9;
+}
+
+/* Responsive design for package groups */
+@media (max-width: 768px) {
+  .bookings-package-group {
+    padding: 16px;
+    margin-bottom: 25px;
+  }
+  
+  .bookings-package-group .bookings-date-title {
+    font-size: 1.2rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .bookings-package-group {
+    padding: 12px;
+    margin-bottom: 20px;
+  }
+  
+  .bookings-package-group .bookings-date-title {
+    font-size: 1.1rem;
+  }
+  
+  .bookings-package-group .bookings-date-count {
+    font-size: 0.75rem;
+    padding: 3px 8px;
+  }
+}

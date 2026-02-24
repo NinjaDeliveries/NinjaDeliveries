@@ -1,18 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { auth, db } from "../../context/Firebase";
 import {
   collection,
   query,
   where,
   getDocs,
-  getDoc,
   updateDoc,
   doc,
   onSnapshot,
   setDoc,
-  
+  deleteDoc,
 } from "firebase/firestore";
-import { useRef } from "react";
 import AssignWorkerModal from "./AssignWorkerModal";
 import "../../style/ServiceDashboard.css";
 const Bookings = () => {
@@ -28,6 +26,7 @@ const Bookings = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState(""); // New date filter state
   const [showAllBookings, setShowAllBookings] = useState(true); // Toggle for showing all bookings vs today only
+  const [expandedPackageGroups, setExpandedPackageGroups] = useState({}); // Track expanded package groups
   const statusConfig = {
     pending: {
       label: "Pending",
@@ -104,140 +103,6 @@ const Bookings = () => {
       className: "bookings-status-cancelled",
     },
   };
-  //fetch booking with real-time listener
-  const setupBookingsListener = () => {
-    const user = auth.currentUser;
-    if (!user) {
-      console.log("❌ No user for listener setup");
-      return null;
-    }
-
-    console.log("Setting up real-time bookings listener for company:", user.uid);
-
-    const q = query(
-      collection(db, "service_bookings"),
-      where("companyId", "==", user.uid)
-    );
-
-    // Set up real-time listener with better error handling
-    const unsubscribe = onSnapshot(q, 
-      (snapshot) => {
-        if (snapshot.metadata.fromCache) {
-          return;
-        }
-        snapshot.docChanges().forEach((change) => {
-  if (change.type === "added") {
-    const docSnap = change.doc;
-    console.log("New booking detected (UI only):", docSnap.id);
-  }
-});
-
-        try {
-          console.log("📡 Real-time update received - bookings changed");
-          console.log("📊 Snapshot metadata:", {
-            hasPendingWrites: snapshot.metadata.hasPendingWrites,
-            fromCache: snapshot.metadata.fromCache,
-            size: snapshot.size
-          });
-          
-          // Process both cached and server data, but log the source
-          const now = new Date();
-          const today = now.toISOString().split("T")[0];
-          const currentTime = now.getHours() * 60 + now.getMinutes(); // Current time in minutes
-
-          const list = [];
-          const expiredUpdates = [];
-
-          snapshot.docs.forEach((docSnap) => {
-            try {
-              const data = docSnap.data();
-
-              // Auto-expire logic - check if booking should be expired
-              let shouldExpire = false;
-              
-              // 1. Past date bookings that are not completed/rejected/expired
-              if (
-                data.date < today &&
-                !["completed", "rejected", "expired"].includes(data.status)
-              ) {
-                shouldExpire = true;
-              }
-              
-              // 2. Same day bookings that are 1 hour past their time and still pending
-              if (
-                data.date === today &&
-                data.time &&
-                data.status === "pending"
-              ) {
-                const [hours, minutes] = data.time.split(':').map(Number);
-                const bookingTime = hours * 60 + minutes; // Booking time in minutes
-                const timeDiff = currentTime - bookingTime; // Difference in minutes
-                
-                // If more than 60 minutes past the booking time, expire it
-                if (timeDiff > 60) {
-                  shouldExpire = true;
-                }
-              }
-
-              if (shouldExpire) {
-                // Add to expired updates batch
-                expiredUpdates.push({
-                  id: docSnap.id,
-                  ref: doc(db, "service_bookings", docSnap.id)
-                });
-
-                list.push({
-                  id: docSnap.id,
-                  ...data,
-                  status: "expired",
-                });
-              } else {
-                list.push({
-                  id: docSnap.id,
-                  ...data,
-                });
-              }
-            } catch (docError) {
-              console.error("Error processing document:", docSnap.id, docError);
-            }
-          });
-
-          // Update expired bookings in database (only if not from cache)
-          if (expiredUpdates.length > 0 && !snapshot.metadata.fromCache) {
-            console.log(`Auto-expiring ${expiredUpdates.length} bookings`);
-            expiredUpdates.forEach(async (update) => {
-              try {
-                await updateDoc(update.ref, {
-                  status: "expired",
-                  expiredAt: new Date(),
-                });
-              } catch (error) {
-                console.error(`Failed to expire booking ${update.id}:`, error);
-              }
-            });
-          }
-
-          const source = snapshot.metadata.fromCache ? "cache" : "server";
-          console.log(`📊 Real-time update from ${source}: ${list.length} bookings loaded`);
-          setBookings(list);
-          setLoading(false);
-        } catch (snapshotError) {
-          console.error("❌ Error processing snapshot:", snapshotError);
-          // Fallback to manual fetch on snapshot processing error
-          fetchBookings().finally(() => setLoading(false));
-        }
-      }, 
-      (error) => {
-        console.error("❌ Real-time bookings listener error:", error);
-        console.log("🔄 Falling back to manual fetch due to listener error");
-        // Fallback to manual fetch on error
-        fetchBookings().finally(() => setLoading(false));
-      }
-    );
-
-    return unsubscribe;
-  };
-
   // Legacy fetch function for fallback (not used in real-time mode)
   const fetchBookings = async () => {
     try {
@@ -309,7 +174,6 @@ const Bookings = () => {
 
       // Update expired bookings in database
       if (expiredUpdates.length > 0) {
-        console.log(`Auto-expiring ${expiredUpdates.length} bookings`);
         for (const update of expiredUpdates) {
           try {
             await updateDoc(update.ref, {
@@ -317,18 +181,133 @@ const Bookings = () => {
               expiredAt: new Date(),
             });
           } catch (error) {
-            console.error(`Failed to expire booking ${update.id}:`, error);
           }
         }
       }
 
       setBookings(list);
     } catch (err) {
-      console.error("Fetch bookings error:", err);
     } finally {
       setLoading(false);
     }
   };
+
+  //fetch booking with real-time listener
+  const setupBookingsListener = useCallback(() => {
+    const user = auth.currentUser;
+    if (!user) {
+      return null;
+    }
+
+    const q = query(
+      collection(db, "service_bookings"),
+      where("companyId", "==", user.uid)
+    );
+
+    // Set up real-time listener with better error handling
+    const unsubscribe = onSnapshot(q, 
+      (snapshot) => {
+        if (snapshot.metadata.fromCache) {
+          return;
+        }
+        snapshot.docChanges().forEach((change) => {
+  if (change.type === "added") {
+    const docSnap = change.doc;
+  }
+});
+
+        try {
+          
+          // Process both cached and server data, but log the source
+          const now = new Date();
+          const today = now.toISOString().split("T")[0];
+          const currentTime = now.getHours() * 60 + now.getMinutes(); // Current time in minutes
+
+          const list = [];
+          const expiredUpdates = [];
+
+          snapshot.docs.forEach((docSnap) => {
+            try {
+              const data = docSnap.data();
+
+              // Auto-expire logic - check if booking should be expired
+              let shouldExpire = false;
+              
+              // 1. Past date bookings that are not completed/rejected/expired
+              if (
+                data.date < today &&
+                !["completed", "rejected", "expired"].includes(data.status)
+              ) {
+                shouldExpire = true;
+              }
+              
+              // 2. Same day bookings that are 1 hour past their time and still pending
+              if (
+                data.date === today &&
+                data.time &&
+                data.status === "pending"
+              ) {
+                const [hours, minutes] = data.time.split(':').map(Number);
+                const bookingTime = hours * 60 + minutes; // Booking time in minutes
+                const timeDiff = currentTime - bookingTime; // Difference in minutes
+                
+                // If more than 60 minutes past the booking time, expire it
+                if (timeDiff > 60) {
+                  shouldExpire = true;
+                }
+              }
+
+              if (shouldExpire) {
+                // Add to expired updates batch
+                expiredUpdates.push({
+                  id: docSnap.id,
+                  ref: doc(db, "service_bookings", docSnap.id)
+                });
+
+                list.push({
+                  id: docSnap.id,
+                  ...data,
+                  status: "expired",
+                });
+              } else {
+                list.push({
+                  id: docSnap.id,
+                  ...data,
+                });
+              }
+            } catch (docError) {
+            }
+          });
+
+          // Update expired bookings in database (only if not from cache)
+          if (expiredUpdates.length > 0 && !snapshot.metadata.fromCache) {
+            expiredUpdates.forEach(async (update) => {
+              try {
+                await updateDoc(update.ref, {
+                  status: "expired",
+                  expiredAt: new Date(),
+                });
+              } catch (error) {
+              }
+            });
+          }
+
+          setBookings(list);
+          setLoading(false);
+        } catch (snapshotError) {
+          // Fallback to manual fetch on snapshot processing error
+          fetchBookings().finally(() => setLoading(false));
+        }
+      }, 
+      (error) => {
+        // Fallback to manual fetch on error
+        fetchBookings().finally(() => setLoading(false));
+      }
+    );
+
+    return unsubscribe;
+  }, [setBookings, setLoading]);
+
 
   const fetchCategories = async () => {
     try {
@@ -348,7 +327,6 @@ const Bookings = () => {
 
       setCategories(list);
     } catch (err) {
-      console.error("Fetch categories error:", err);
     }
   };
 
@@ -389,19 +367,16 @@ const Bookings = () => {
             await fetchCategories();
           }
         } else if (isComponentMounted) {
-          console.log("❌ No user authenticated for bookings");
           setLoading(false);
           setBookings([]);
         }
       } catch (error) {
-        console.error("❌ Error initializing bookings data:", error);
         if (isComponentMounted) {
           // Ensure we at least try to fetch data
           try {
             await fetchBookings();
             await fetchCategories();
           } catch (fallbackError) {
-            console.error("❌ Fallback fetch also failed:", fallbackError);
           }
           setLoading(false);
         }
@@ -411,10 +386,8 @@ const Bookings = () => {
     // Listen for auth state changes
     authUnsubscribe = auth.onAuthStateChanged((user) => {
       if (user && isComponentMounted) {
-        console.log("🔐 Auth state changed - user logged in:", user.uid);
         initializeData();
       } else if (isComponentMounted) {
-        console.log("🔐 Auth state changed - user logged out");
         // Clean up listener when user logs out
         if (bookingsUnsubscribe) {
           bookingsUnsubscribe();
@@ -427,17 +400,15 @@ const Bookings = () => {
 
     // Cleanup function
     return () => {
-      console.log("🧹 Cleaning up Bookings component listeners");
       isComponentMounted = false;
       if (authUnsubscribe) {
         authUnsubscribe();
       }
       if (bookingsUnsubscribe) {
-        console.log("🔌 Cleaning up real-time bookings listener");
         bookingsUnsubscribe();
       }
     };
-  }, []);
+  }, [setupBookingsListener]);
 
   const handleRejectBooking = async (booking) => {
     if (!window.confirm("Are you sure you want to reject this booking?")) return;
@@ -523,20 +494,15 @@ const Bookings = () => {
   );
 
   const text = await response.text();
-  console.log("Reject WhatsApp API:", text);
 } catch (err) {
-  console.error("Reject WhatsApp error:", err);
 }
-        console.log("WhatsApp notification sent successfully");
       } catch (whatsappError) {
-        console.error("WhatsApp notification failed:", whatsappError);
         // Don't fail the whole operation if WhatsApp fails
       }
 
       // No need to call fetchBookings() - real-time listener will update automatically
       alert("Booking rejected successfully");
     } catch (err) {
-      console.error("Reject booking failed:", err);
       alert("Failed to reject booking. Please try again.");
     }
   };
@@ -545,55 +511,12 @@ const Bookings = () => {
     return Math.floor(100000 + Math.random() * 900000).toString();
   };
 
-  // Function to handle when additional services are added to an existing booking
-  // This function should be called when the mobile app adds services to an existing booking
-  // Example usage: handleServiceAddition(bookingId, { workName: "AC Cleaning", price: 200, notes: "Additional service" })
-  const handleServiceAddition = async (bookingId, newService) => {
-    try {
-      const bookingRef = doc(db, "service_bookings", bookingId);
-      const bookingSnap = await getDocs(query(collection(db, "service_bookings"), where("__name__", "==", bookingId)));
-      
-      if (!bookingSnap.empty) {
-        const currentBooking = bookingSnap.docs[0].data();
-        
-        // Create services array if it doesn't exist
-        const existingServices = currentBooking.services || [
-          {
-            workName: currentBooking.workName,
-            serviceName: currentBooking.serviceName,
-            price: currentBooking.totalPrice || currentBooking.price || currentBooking.amount || 0,
-            notes: currentBooking.notes
-          }
-        ];
-        
-        // Add the new service
-        const updatedServices = [...existingServices, newService];
-        
-        // Calculate total price
-        const totalPrice = updatedServices.reduce((total, service) => 
-          total + (service.price || service.totalPrice || service.amount || 0), 0
-        );
-        
-        // Update the booking
-        await updateDoc(bookingRef, {
-          services: updatedServices,
-          totalPrice: totalPrice,
-          status: "started", // Reset to started since new work is added
-          updatedAt: new Date(),
-          serviceAddedAt: new Date()
-        });
-        
-        console.log("Service added successfully to booking:", bookingId);
-        // No need to call fetchBookings() - real-time listener will update automatically
-      }
-    } catch (error) {
-      console.error("Error adding service to booking:", error);
-    }
-  };
+
 
   const handleStartWork = async (booking) => {
     try {
       const otp = generateOtp();
+      
       await updateDoc(
         doc(db, "service_bookings", booking.id),
         {
@@ -604,10 +527,8 @@ const Bookings = () => {
         }
       );
 
-      console.log("START WORK OTP:", otp);
       // No need to call fetchBookings() - real-time listener will update automatically
     } catch (err) {
-      console.error("Start work failed:", err);
     }
   };
 
@@ -623,6 +544,8 @@ const Bookings = () => {
         return;
       }
 
+      // Double-check: Only update this specific booking
+      
       await updateDoc(
         doc(db, "service_bookings", booking.id),
         {
@@ -634,9 +557,10 @@ const Bookings = () => {
 
       setShowOtpModal(false);
       setOtpInput("");
+      
       // No need to call fetchBookings() - real-time listener will update automatically
     } catch (err) {
-      console.error("Complete work failed:", err);
+      alert("Failed to complete booking. Please try again.");
     }
   };
 
@@ -693,15 +617,25 @@ const Bookings = () => {
     return (a.time || '').localeCompare(b.time || '');
   });
 
-  // Group bookings by date for better organization
-  const groupedBookings = filteredBookings.reduce((groups, booking) => {
-    const date = booking.date;
-    if (!groups[date]) {
-      groups[date] = [];
+  // Function to check if booking is part of a package
+  const isPackageBooking = (booking) => {
+    return !!booking.packageType;
+  };
+
+  // Function to get package group key for grouping
+  const getPackageGroupKey = (booking) => {
+    if (!isPackageBooking(booking)) return null;
+    
+    // For package bookings, group by customer, service, and package type
+    // Use packageId if available, otherwise create a composite key
+    if (booking.packageId) {
+      return booking.packageId;
     }
-    groups[date].push(booking);
-    return groups;
-  }, {});
+    
+    // If no packageId, create a key from customer, service, and package type
+    // For monthly packages, we want all bookings in same group regardless of date
+    return `${booking.customerPhone}_${booking.serviceName}_${booking.packageType}`;
+  };
 
   // Helper function to format date with day name
   const formatDateWithDay = (dateString) => {
@@ -735,7 +669,6 @@ const Bookings = () => {
         });
       }
     } catch (error) {
-      console.error('Date formatting error:', error);
       return dateString;
     }
   };
@@ -794,7 +727,6 @@ const Bookings = () => {
               try {
                 await fetchBookings();
               } catch (error) {
-                console.error("Manual refresh failed:", error);
               } finally {
                 setLoading(false);
               }
@@ -820,6 +752,70 @@ const Bookings = () => {
             </svg>
             Refresh
           </button>
+          
+          {/* Delete All Bookings Button (Dev Mode Only) */}
+          {process.env.NODE_ENV === 'development' && (
+            <button
+              onClick={async () => {
+                if (!window.confirm("⚠️ DANGER: This will delete ALL bookings for your company. This action cannot be undone. Are you sure?")) return;
+                
+                setLoading(true);
+                try {
+                  const user = auth.currentUser;
+                  if (!user) return;
+                  
+                  // Get all bookings for this company
+                  const q = query(
+                    collection(db, "service_bookings"),
+                    where("companyId", "==", user.uid)
+                  );
+                  
+                  const snap = await getDocs(q);
+                  const deletePromises = [];
+                  
+                  // Delete each booking
+                  for (const docSnap of snap.docs) {
+                    deletePromises.push(deleteDoc(doc(db, "service_bookings", docSnap.id)));
+                  }
+                  
+                  // Wait for all deletions to complete
+                  await Promise.all(deletePromises);
+                  
+                  alert(`✅ Successfully deleted ${snap.docs.length} bookings`);
+                  // Refresh the list
+                  await fetchBookings();
+                } catch (err) {
+                  alert("Failed to delete bookings: " + err.message);
+                } finally {
+                  setLoading(false);
+                }
+              }}
+              style={{
+                backgroundColor: '#ef4444',
+                color: 'white',
+                border: 'none',
+                padding: '8px 16px',
+                borderRadius: '6px',
+                fontSize: '14px',
+                fontWeight: '500',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                marginLeft: '8px'
+              }}
+              title="Delete All Bookings (Dev Mode Only)"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M3 6h18"/>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+                <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                <line x1="10" y1="11" x2="10" y2="17"/>
+                <line x1="14" y1="11" x2="14" y2="17"/>
+              </svg>
+              Delete All (Dev)
+            </button>
+          )}
         </div>
       </div>
 
@@ -1081,7 +1077,7 @@ const Bookings = () => {
 
       {/* Bookings List - Grouped by Date */}
       <div className="bookings-list">
-        {Object.keys(groupedBookings).length === 0 ? (
+        {filteredBookings.length === 0 ? (
           /* Empty State */
           <div className="bookings-empty-state">
             <div className="bookings-empty-icon">
@@ -1102,270 +1098,433 @@ const Bookings = () => {
             </p>
           </div>
         ) : (
-          /* Grouped Bookings */
-          Object.entries(groupedBookings)
-            .sort(([dateA], [dateB]) => new Date(dateA) - new Date(dateB)) // Sort dates oldest first
-            .map(([date, dateBookings]) => (
-              <div key={date} className="bookings-date-group">
-                {/* Date Header */}
-                <div className="bookings-date-header">
-                  <div className="bookings-date-info">
-                    <h3 className="bookings-date-title">{formatDateWithDay(date)}</h3>
-                    <span className="bookings-date-count">
-                      {dateBookings.length} booking{dateBookings.length !== 1 ? 's' : ''}
-                    </span>
-                  </div>
-                  <div className="bookings-date-line"></div>
-                </div>
-
-                {/* Bookings for this date */}
-                <div className="bookings-date-items">
-                  {dateBookings.map((booking) => {
-                    const status = statusConfig[booking.status] || statusConfig.pending;
+          // New grouping logic: Separate package bookings and regular bookings
+          (() => {
+            // Separate package and regular bookings
+            const packageBookings = filteredBookings.filter(b => !!b.packageType);
+            const regularBookings = filteredBookings.filter(b => !b.packageType);
+            
+            // Group package bookings by package group
+            const groupedPackageBookings = packageBookings.reduce((groups, booking) => {
+              const groupKey = getPackageGroupKey(booking);
+              if (!groupKey) return groups;
+              
+              if (!groups[groupKey]) {
+                groups[groupKey] = [];
+              }
+              groups[groupKey].push(booking);
+              return groups;
+            }, {});
+            
+            // Group regular bookings by date
+            const groupedRegularBookings = regularBookings.reduce((groups, booking) => {
+              const date = booking.date;
+              if (!groups[date]) groups[date] = [];
+              groups[date].push(booking);
+              return groups;
+            }, {});
+            
+            // Sort package bookings within each group by date
+            Object.keys(groupedPackageBookings).forEach(groupKey => {
+              groupedPackageBookings[groupKey].sort((a, b) => {
+                return new Date(a.date) - new Date(b.date);
+              });
+            });
+            
+            // Sort regular bookings within each date by time
+            Object.keys(groupedRegularBookings).forEach(date => {
+              groupedRegularBookings[date].sort((a, b) => {
+                return (a.time || '').localeCompare(b.time || '');
+              });
+            });
+            
+            // Get first booking from a package group for display info
+            const getPackageGroupInfo = (bookings) => {
+              if (bookings.length === 0) return null;
+              const firstBooking = bookings[0];
+              return {
+                customerName: firstBooking.customerName,
+                customerPhone: firstBooking.customerPhone,
+                serviceName: firstBooking.workName || firstBooking.serviceName,
+                packageType: firstBooking.packageType,
+                packageDuration: firstBooking.packageDuration,
+                totalDays: firstBooking.totalDays,
+                packageStartDate: firstBooking.packageStartDate || bookings[0].date,
+                packageEndDate: firstBooking.packageEndDate || bookings[bookings.length - 1].date,
+                totalBookings: bookings.length,
+                totalPrice: bookings.reduce((sum, b) => sum + (b.totalPrice || b.price || b.amount || 0), 0)
+              };
+            };
+            
+            return (
+              <>
+                {/* Package Bookings Groups */}
+                {Object.entries(groupedPackageBookings)
+                  .sort(([keyA], [keyB]) => keyA.localeCompare(keyB))
+                  .map(([groupKey, packageGroupBookings]) => {
+                    const groupInfo = getPackageGroupInfo(packageGroupBookings);
+                    if (!groupInfo) return null;
                     
                     return (
-                      <div key={booking.id} className="bookings-card">
-                        <div className="bookings-card-content">
-                          <div className="bookings-main-section">
-                            <div className="bookings-info">
-                              <div className="bookings-header">
-                                <div className="bookings-badges">
-                                  <span className="bookings-time-badge">
-                                    🕐 {formatTime(booking.time)}
+                      <div key={groupKey} className="bookings-package-group">
+                        <div className="bookings-date-header">
+                          <div className="bookings-date-info">
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                              <div>
+                                <h3 className="bookings-date-title">
+                                  <span style={{ color: '#1e40af' }}>📦</span> Package: {groupInfo.serviceName}
+                                  <span style={{
+                                    marginLeft: '12px',
+                                    fontSize: '14px',
+                                    color: '#1e40af',
+                                    background: '#dbeafe',
+                                    padding: '2px 8px',
+                                    borderRadius: '12px',
+                                    fontWeight: '500'
+                                  }}>
+                                    {groupInfo.packageType} {groupInfo.packageDuration && `(${groupInfo.packageDuration})`}
                                   </span>
-                                  <span className="bookings-id-badge">
-                                    #{booking.id.slice(-8)}
-                                  </span>
-                                  {/* Package Type Badge */}
-                                  {booking.packageType && (
-                                    <span className="bookings-package-badge" style={{
-                                      background: '#dbeafe',
-                                      color: '#1e40af',
-                                      padding: '4px 10px',
-                                      borderRadius: '12px',
-                                      fontSize: '12px',
-                                      fontWeight: '600',
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      gap: '4px',
-                                      textTransform: 'capitalize'
-                                    }}>
-                                      📦 {booking.packageType}
-                                      {booking.packageDuration && ` (${booking.packageDuration})`}
-                                    </span>
-                                  )}
-                                  <span className={`bookings-status-badge ${status.className}`}>
-                                    {status.icon}
-                                    <span>{status.label}</span>
-                                  </span>
-                                </div>
-                                <h3 className="bookings-service-name">
-                                  {/* Handle multiple services with addOns - show main service only */}
-                                  {booking.workName || booking.serviceName || "Service Request"}
-                                  {/* Show addon indicator */}
-                                  {booking.addOns && booking.addOns.length > 0 && (
-                                    <span className="addon-indicator">
-                                      + {booking.addOns.map(addon => addon.name).join(', ')}
-                                    </span>
-                                  )}
                                 </h3>
-                                {booking.serviceName && booking.workName && booking.serviceName !== booking.workName && !booking.services && (
-                                  <p className="bookings-main-service">Category: {booking.serviceName}</p>
-                                )}
-                              </div>
-
-                              <div className="bookings-details">
-                                <div className="bookings-detail-item">
-                                  <svg className="bookings-detail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                                    <circle cx="12" cy="7" r="4"/>
-                                  </svg>
-                                  <span>{booking.customerName}</span>
-                                </div>
-                                {booking.customerPhone && (
-                                  <div className="bookings-detail-item">
-                                    <svg className="bookings-detail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-                                    </svg>
-                                    <span>{booking.customerPhone}</span>
-                                  </div>
-                                )}
-                                {(booking.customerAddress || booking.address || booking.location) && (
-                                  <div className="bookings-detail-item">
-                                    <svg className="bookings-detail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                                      <circle cx="12" cy="10" r="3"/>
-                                    </svg>
-                                    <span>{booking.customerAddress || booking.address || booking.location}</span>
-                                  </div>
-                                )}
-                              </div>
-
-                              {booking.technicianName && (
-                                <div className="bookings-technician-badge">
-                                  <svg className="bookings-technician-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-                                    <circle cx="10" cy="7" r="4"/>
-                                    <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
-                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                                  </svg>
-                                  Assigned to: {booking.technicianName}
-                                </div>
-                              )}
-
-                              {/* Show indicator for add-on services - REMOVED LARGE ICON */}
-                              {booking.addOns && booking.addOns.length > 0 && (
-                                <div className="bookings-merged-indicator">
-                                  Add-on services added
-                                  {booking.serviceAddedAt && (
-                                    <span className="merge-time">
-                                      • Added {new Date(booking.serviceAddedAt.seconds * 1000).toLocaleTimeString()}
-                                    </span>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="bookings-actions-section">
-                            <div className="bookings-amount">
-                              <div className="bookings-price">
-                                <span className="price-display">
-                                  <span className="rupee-symbol">₹</span>
-                                  <span className="price-amount">
-                                    {/* Use totalPrice directly if it already includes addOns, otherwise calculate */}
-                                    {(() => {
-                                      // If totalPrice exists and addOns exist, assume totalPrice already includes addOns
-                                      if (booking.totalPrice && booking.addOns && booking.addOns.length > 0) {
-                                        console.log('Using existing totalPrice (includes addOns):', {
-                                          bookingId: booking.id,
-                                          totalPrice: booking.totalPrice,
-                                          addOns: booking.addOns
-                                        });
-                                        return booking.totalPrice.toLocaleString();
-                                      }
-                                      
-                                      // Otherwise calculate manually
-                                      const basePrice = booking.totalPrice || booking.price || booking.amount || 0;
-                                      const addOnsPrice = booking.addOns ? booking.addOns.reduce((total, addon) => total + (addon.price || 0), 0) : 0;
-                                      const totalPrice = basePrice + addOnsPrice;
-                                      
-                                      console.log('Calculating price manually:', {
-                                        bookingId: booking.id,
-                                        basePrice,
-                                        addOnsPrice,
-                                        totalPrice
-                                      });
-                                      
-                                      return totalPrice.toLocaleString();
-                                    })()}
-                                  </span>
+                                <span className="bookings-date-count">
+                                  {groupInfo.totalBookings} booking{groupInfo.totalBookings !== 1 ? 's' : ''} • {groupInfo.customerName} • ₹{groupInfo.totalPrice.toLocaleString()}
                                 </span>
                               </div>
-                              <p className="bookings-category">
-                                {booking.addOns && booking.addOns.length > 0 
-                                  ? `${booking.addOns.length + 1} Services` 
-                                  : (booking.categoryName || "Service")
-                                }
-                              </p>
-                            </div>
-
-                            <div className="bookings-actions">
                               <button
-                                className="bookings-view-btn"
+                                className="bookings-expand-btn"
                                 onClick={() => {
-                                  setSelectedBooking(booking);
-                                  setShowDetailsModal(true);
+                                  setExpandedPackageGroups(prev => ({
+                                    ...prev,
+                                    [groupKey]: !prev[groupKey]
+                                  }));
+                                }}
+                                style={{
+                                  background: 'transparent',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  padding: '8px',
+                                  borderRadius: '6px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                  color: '#3b82f6',
+                                  fontSize: '14px',
+                                  fontWeight: '500'
                                 }}
                               >
-                                <svg className="bookings-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                                  <circle cx="12" cy="12" r="3"/>
-                                </svg>
-                                View
-                              </button>
-
-                              {/* Action buttons based on status */}
-                              {booking.status === "pending" && (
-                                <>
-                                  <button
-                                    className="bookings-action-btn assign"
-                                    onClick={() => {
-                                      setSelectedBooking(booking);
-                                      setOpenAssign(true);
-                                    }}
-                                  >
-                                    <svg className="bookings-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-                                      <circle cx="10" cy="7" r="4"/>
-                                      <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
-                                      <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                                    </svg>
-                                    Assign
-                                  </button>
-                                  <button
-                                    className="bookings-action-btn reject"
-                                    onClick={() => handleRejectBooking(booking)}
-                                  >
-                                    <svg className="bookings-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                      <circle cx="12" cy="12" r="10"/>
-                                      <line x1="15" y1="9" x2="9" y2="15"/>
-                                      <line x1="9" y1="9" x2="15" y2="15"/>
-                                    </svg>
-                                    Reject
-                                  </button>
-                                </>
-                              )}
-
-                              {booking.status === "assigned" && (
-                                <>
-                                  <button
-                                    className="bookings-action-btn start"
-                                    onClick={() => handleStartWork(booking)}
-                                  >
-                                    <svg className="bookings-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                      <polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/>
-                                    </svg>
-                                    Start Work
-                                  </button>
-                                  <button
-                                    className="bookings-action-btn reject"
-                                    onClick={() => handleRejectBooking(booking)}
-                                  >
-                                    <svg className="bookings-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                      <circle cx="12" cy="12" r="10"/>
-                                      <line x1="15" y1="9" x2="9" y2="15"/>
-                                      <line x1="9" y1="9" x2="15" y2="15"/>
-                                    </svg>
-                                    Reject
-                                  </button>
-                                </>
-                              )}
-
-                              {booking.status === "started" && (
-                                <button
-                                  className="bookings-action-btn complete"
-                                  onClick={() => {
-                                    setSelectedBooking(booking);
-                                    setShowOtpModal(true);
+                                <svg 
+                                  width="16" 
+                                  height="16" 
+                                  viewBox="0 0 24 24" 
+                                  fill="none" 
+                                  stroke="currentColor"
+                                  style={{
+                                    transform: expandedPackageGroups[groupKey] ? 'rotate(180deg)' : 'rotate(0deg)',
+                                    transition: 'transform 0.2s ease'
                                   }}
                                 >
-                                  <svg className="bookings-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                                    <polyline points="22,4 12,14.01 9,11.01"/>
-                                  </svg>
-                                  Complete
-                                </button>
-                              )}
+                                  <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg>
+                                {expandedPackageGroups[groupKey] ? 'Collapse' : 'Expand'}
+                              </button>
                             </div>
                           </div>
+                          <div className="bookings-date-line"></div>
                         </div>
+                        
+                        {expandedPackageGroups[groupKey] && (
+                          <div className="bookings-date-items">
+                            {packageGroupBookings.map((booking) => {
+                            const status = statusConfig[booking.status] || statusConfig.pending;
+                            
+                            return (
+                              <div key={booking.id} className="bookings-card">
+                                <div className="bookings-card-content">
+                                  <div className="bookings-main-section">
+                                    <div className="bookings-info">
+                                      <div className="bookings-header">
+                                        <div className="bookings-badges">
+                                          <span className="bookings-time-badge">
+                                            🕐 {formatTime(booking.time)} • {formatDateWithDay(booking.date)}
+                                          </span>
+                                          <span className="bookings-id-badge">
+                                            #{booking.id.slice(-8)}
+                                          </span>
+                                          <span className={`bookings-status-badge ${status.className}`}>
+                                            {status.icon}
+                                            <span>{status.label}</span>
+                                          </span>
+                                        </div>
+                                        <h3 className="bookings-service-name">
+                                          {booking.workName || booking.serviceName || "Service Request"}
+                                          <span style={{
+                                            fontSize: '12px',
+                                            color: '#6b7280',
+                                            marginLeft: '8px',
+                                            fontWeight: 'normal'
+                                          }}>
+                                            (Day {packageGroupBookings.findIndex(b => b.id === booking.id) + 1} of {groupInfo.totalBookings})
+                                          </span>
+                                        </h3>
+                                      </div>
+                                      
+                                      <div className="bookings-details">
+                                        <div className="bookings-detail-item">
+                                          <svg className="bookings-detail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                            <circle cx="12" cy="7" r="4"/>
+                                          </svg>
+                                          <span>{booking.customerName}</span>
+                                        </div>
+                                        {booking.customerPhone && (
+                                          <div className="bookings-detail-item">
+                                            <svg className="bookings-detail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                                            </svg>
+                                            <span>{booking.customerPhone}</span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="bookings-actions-section">
+                                    <div className="bookings-amount">
+                                      <div className="bookings-price">
+                                        <span className="price-display">
+                                          <span className="rupee-symbol">₹</span>
+                                          <span className="price-amount">
+                                            {(booking.totalPrice || booking.price || booking.amount || 0).toLocaleString()}
+                                          </span>
+                                        </span>
+                                      </div>
+                                    </div>
+                                    
+                                    <div className="bookings-actions">
+                                      <button
+                                        className="bookings-view-btn"
+                                        onClick={() => {
+                                          setSelectedBooking(booking);
+                                          setShowDetailsModal(true);
+                                        }}
+                                      >
+                                        <svg className="bookings-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                          <circle cx="12" cy="12" r="3"/>
+                                        </svg>
+                                        View
+                                      </button>
+                                      
+                                      {booking.status === "pending" && (
+                                        <>
+                                          <button
+                                            className="bookings-action-btn assign"
+                                            onClick={() => {
+                                              setSelectedBooking(booking);
+                                              setOpenAssign(true);
+                                            }}
+                                          >
+                                            Assign
+                                          </button>
+                                          <button
+                                            className="bookings-action-btn reject"
+                                            onClick={() => handleRejectBooking(booking)}
+                                          >
+                                            Reject
+                                          </button>
+                                        </>
+                                      )}
+                                      
+                                      {booking.status === "assigned" && (
+                                        <>
+                                          <button
+                                            className="bookings-action-btn start"
+                                            onClick={() => handleStartWork(booking)}
+                                          >
+                                            Start Work
+                                          </button>
+                                          <button
+                                            className="bookings-action-btn reject"
+                                            onClick={() => handleRejectBooking(booking)}
+                                          >
+                                            Reject
+                                          </button>
+                                        </>
+                                      )}
+                                      
+                                      {booking.status === "started" && (
+                                        <button
+                                          className="bookings-action-btn complete"
+                                          onClick={() => {
+                                            setSelectedBooking(booking);
+                                            setShowOtpModal(true);
+                                          }}
+                                        >
+                                          Complete
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
-                </div>
-              </div>
-            ))
+                
+                {/* Regular Bookings (Grouped by Date) */}
+                {Object.entries(groupedRegularBookings)
+                  .sort(([dateA], [dateB]) => new Date(dateA) - new Date(dateB))
+                  .map(([date, dateBookings]) => (
+                    <div key={date} className="bookings-date-group">
+                      <div className="bookings-date-header">
+                        <div className="bookings-date-info">
+                          <h3 className="bookings-date-title">
+                            {formatDateWithDay(date)}
+                          </h3>
+                          <span className="bookings-date-count">
+                            {dateBookings.length} booking{dateBookings.length !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                        <div className="bookings-date-line"></div>
+                      </div>
+
+                      <div className="bookings-date-items">
+                        {dateBookings.map((booking) => {
+                          const status = statusConfig[booking.status] || statusConfig.pending;
+                          
+                          return (
+                            <div key={booking.id} className="bookings-card">
+                              <div className="bookings-card-content">
+                                <div className="bookings-main-section">
+                                  <div className="bookings-info">
+                                    <div className="bookings-header">
+                                      <div className="bookings-badges">
+                                        <span className="bookings-time-badge">
+                                          🕐 {formatTime(booking.time)}
+                                        </span>
+                                        <span className="bookings-id-badge">
+                                          #{booking.id.slice(-8)}
+                                        </span>
+                                        <span className={`bookings-status-badge ${status.className}`}>
+                                          {status.icon}
+                                          <span>{status.label}</span>
+                                        </span>
+                                      </div>
+                                      <h3 className="bookings-service-name">
+                                        {booking.workName || booking.serviceName || "Service Request"}
+                                      </h3>
+                                    </div>
+                                    
+                                    <div className="bookings-details">
+                                      <div className="bookings-detail-item">
+                                        <svg className="bookings-detail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                          <circle cx="12" cy="7" r="4"/>
+                                        </svg>
+                                        <span>{booking.customerName}</span>
+                                      </div>
+                                      {booking.customerPhone && (
+                                        <div className="bookings-detail-item">
+                                          <svg className="bookings-detail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                                          </svg>
+                                          <span>{booking.customerPhone}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                                
+                                <div className="bookings-actions-section">
+                                  <div className="bookings-amount">
+                                    <div className="bookings-price">
+                                      <span className="price-display">
+                                        <span className="rupee-symbol">₹</span>
+                                        <span className="price-amount">
+                                          {(booking.totalPrice || booking.price || booking.amount || 0).toLocaleString()}
+                                        </span>
+                                      </span>
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="bookings-actions">
+                                    <button
+                                      className="bookings-view-btn"
+                                      onClick={() => {
+                                        setSelectedBooking(booking);
+                                        setShowDetailsModal(true);
+                                      }}
+                                    >
+                                      <svg className="bookings-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                        <circle cx="12" cy="12" r="3"/>
+                                      </svg>
+                                      View
+                                    </button>
+                                    
+                                    {booking.status === "pending" && (
+                                      <>
+                                        <button
+                                          className="bookings-action-btn assign"
+                                          onClick={() => {
+                                            setSelectedBooking(booking);
+                                            setOpenAssign(true);
+                                          }}
+                                        >
+                                          Assign
+                                        </button>
+                                        <button
+                                          className="bookings-action-btn reject"
+                                          onClick={() => handleRejectBooking(booking)}
+                                        >
+                                          Reject
+                                        </button>
+                                      </>
+                                    )}
+                                    
+                                    {booking.status === "assigned" && (
+                                      <>
+                                        <button
+                                          className="bookings-action-btn start"
+                                          onClick={() => handleStartWork(booking)}
+                                        >
+                                          Start Work
+                                        </button>
+                                        <button
+                                          className="bookings-action-btn reject"
+                                          onClick={() => handleRejectBooking(booking)}
+                                        >
+                                          Reject
+                                        </button>
+                                      </>
+                                    )}
+                                    
+                                    {booking.status === "started" && (
+                                      <button
+                                        className="bookings-action-btn complete"
+                                        onClick={() => {
+                                          setSelectedBooking(booking);
+                                          setShowOtpModal(true);
+                                        }}
+                                      >
+                                        Complete
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+              </>
+            );
+          })()
         )}
       </div>
 
