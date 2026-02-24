@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './AddServiceModernUI.css';
+import { generateOfferMessage } from '../../utils/offerMessageGenerator';
 
 /**
  * Modern UI for Add/Edit Service
@@ -85,6 +86,9 @@ const AddServiceModernUI = ({ onClose, onSave, editMode = false, initialData = n
       maxQuantity: null,
       description: ''
     };
+    // Auto-generate message for new offer
+    newOffer.message = generateOfferMessage(newOffer);
+    
     setFormData(prev => ({
       ...prev,
       quantityOffers: [...prev.quantityOffers, newOffer]
@@ -103,9 +107,15 @@ const AddServiceModernUI = ({ onClose, onSave, editMode = false, initialData = n
   const updateOffer = (id, field, value) => {
     setFormData(prev => ({
       ...prev,
-      quantityOffers: prev.quantityOffers.map(offer =>
-        offer.id === id ? { ...offer, [field]: value } : offer
-      )
+      quantityOffers: prev.quantityOffers.map(offer => {
+        if (offer.id === id) {
+          const updatedOffer = { ...offer, [field]: value };
+          // Auto-generate message when offer details change
+          updatedOffer.message = generateOfferMessage(updatedOffer);
+          return updatedOffer;
+        }
+        return offer;
+      })
     }));
   };
 

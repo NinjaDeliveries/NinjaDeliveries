@@ -3,6 +3,8 @@ import { auth, db } from "../../context/Firebase";
 import { collection, addDoc, doc, updateDoc, query, where, getDocs } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "../../context/Firebase";
+import { generateOfferMessage } from '../../utils/offerMessageGenerator';
+
 const AddServiceModal = ({ onClose, onSaved, editService }) => {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -520,15 +522,19 @@ useEffect(() => {
 
   // NEW: Quantity offer management functions (for admin services)
   const addQuantityOffer = () => {
+    const newOffer = {
+      minQuantity: 3,
+      discountType: "percentage",
+      discountValue: 10,
+      description: "",
+      isActive: true
+    };
+    // Auto-generate message
+    newOffer.message = generateOfferMessage(newOffer);
+    
     setQuantityOffers([
       ...quantityOffers,
-      {
-        minQuantity: 3,
-        discountType: "percentage",
-        discountValue: 10,
-        description: "",
-        isActive: true
-      }
+      newOffer
     ]);
   };
 
@@ -539,6 +545,8 @@ useEffect(() => {
   const updateQuantityOffer = (index, field, value) => {
     const copy = [...quantityOffers];
     copy[index][field] = value;
+    // Auto-generate message when offer details change
+    copy[index].message = generateOfferMessage(copy[index]);
     setQuantityOffers(copy);
   };
 
@@ -548,13 +556,17 @@ useEffect(() => {
     if (!copy[packageIndex].quantityOffers) {
       copy[packageIndex].quantityOffers = [];
     }
-    copy[packageIndex].quantityOffers.push({
+    const newOffer = {
       minQuantity: 3,
       discountType: "percentage",
       discountValue: 10,
       description: "",
       isActive: true
-    });
+    };
+    // Auto-generate message
+    newOffer.message = generateOfferMessage(newOffer);
+    
+    copy[packageIndex].quantityOffers.push(newOffer);
     setPackages(copy);
   };
 
@@ -567,6 +579,8 @@ useEffect(() => {
   const updatePackageQuantityOffer = (packageIndex, offerIndex, field, value) => {
     const copy = [...packages];
     copy[packageIndex].quantityOffers[offerIndex][field] = value;
+    // Auto-generate message when offer details change
+    copy[packageIndex].quantityOffers[offerIndex].message = generateOfferMessage(copy[packageIndex].quantityOffers[offerIndex]);
     setPackages(copy);
   };
 
