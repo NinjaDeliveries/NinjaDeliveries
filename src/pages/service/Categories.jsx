@@ -60,14 +60,17 @@ const Categories = () => {
     setAdminCategories(list.filter(c => c.isActive));
   };
 
-  // Function to sync from master category status
-  const syncFromMasterCategory = async (masterCategoryId, isActive) => {
+  // Function to sync from master category status AND images
+  const syncFromMasterCategory = async (masterCategoryId, masterData) => {
     try {
       const user = auth.currentUser;
       if (!user) return;
       
       let totalCategoriesUpdated = 0;
       let totalServicesUpdated = 0;
+      const masterIsActive = masterData?.isActive ?? true;
+      const masterImageUrl = masterData?.imageUrl || null;
+      const masterDescription = masterData?.description || null;
 
       // Update all company categories that use this master category
       const companyCatQ = query(
@@ -79,10 +82,14 @@ const Categories = () => {
       const companyCatSnap = await getDocs(companyCatQ);
 
       for (const catDoc of companyCatSnap.docs) {
+        // Update category with latest master data (image, description, status)
         await updateDoc(catDoc.ref, {
-          isActive: isActive,
+          isActive: masterIsActive,
           updatedAt: new Date(),
-          syncedFromMaster: true
+          syncedFromMaster: true,
+          // Update image if master has one
+          ...(masterImageUrl && { imageUrl: masterImageUrl }),
+          ...(masterDescription && { description: masterDescription })
         });
         
         totalCategoriesUpdated++;
@@ -97,19 +104,16 @@ const Categories = () => {
         const serviceSnap = await getDocs(serviceQ);
 
         for (const svcDoc of serviceSnap.docs) {
+          const svcData = svcDoc.data();
+          
+          // Update service status
           await updateDoc(svcDoc.ref, {
-            isActive: isActive,
+            isActive: masterIsActive,
             updatedAt: new Date(),
             syncedFromMaster: true
           });
 
           totalServicesUpdated++;
-
-          const svcData = svcDoc.data();
-          // Sync app_services if it's an admin service
-          if (svcData.serviceType === "admin" && svcData.adminServiceId) {
-            await syncAppServiceVisibility(svcData.adminServiceId);
-          }
         }
       }
 
@@ -153,7 +157,7 @@ const Categories = () => {
             
             if (!companyCatSnap.empty) {
               try {
-                await syncFromMasterCategory(masterId, masterIsActive);
+                await syncFromMasterCategory(masterId, masterData);
                 // Refresh the display silently
                 fetchCategories();
               } catch (error) {
@@ -363,7 +367,8 @@ const handleToggleCategoryStatus = async (categoryId, currentStatus) => {
           id: doc.id,
           ...categoryData,
           // ALWAYS use image from master category (latest)
-          imageUrl: adminCategory?.imageUrl || categoryData.imageUrl || null,
+          // Handle both image and imageUrl field names
+          imageUrl: adminCategory?.imageUrl || categoryData.imageUrl || categoryData.image || null,
           description: adminCategory?.description || categoryData.description,
           _masterImageUrl: adminCategory?.imageUrl || null,
         });
@@ -754,14 +759,22 @@ const syncAppCategory = async (adminCat) => {
                           src={category.imageUrl} 
                           alt={category.name}
                           className="categories-image"
+                          onError={(e) => {
+                            console.error(`Failed to load category image: ${category.imageUrl}`);
+                            e.target.style.display = 'none';
+                            // Show placeholder instead
+                            const placeholder = e.target.parentElement.querySelector('.categories-placeholder');
+                            if (placeholder) {
+                              placeholder.style.display = 'block';
+                            }
+                          }}
                         />
-                      ) : (
-                        <div className="categories-placeholder">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v11z"/>
-                          </svg>
-                        </div>
-                      )}
+                      ) : null}
+                      <div className="categories-placeholder" style={{ display: category.imageUrl ? 'none' : 'block' }}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v11z"/>
+                        </svg>
+                      </div>
                     </div>
                     
                     <div className="categories-info">
@@ -910,13 +923,17 @@ const syncAppCategory = async (adminCat) => {
                     const selectedCat = adminCategories.find(c => c.id === selectedCategoryId);
                     return selectedCat ? (
                       <div className="categories-preview-card">
-                        {selectedCat.imageUrl && (
+                        {selectedCat.imageUrl ? (
                           <img 
                             src={selectedCat.imageUrl} 
                             alt={selectedCat.name}
                             className="categories-preview-image"
+                            onError={(e) => {
+                              console.error(`Failed to load preview category image: ${selectedCat.imageUrl}`);
+                              e.target.style.display = 'none';
+                            }}
                           />
-                        )}
+                        ) : null}
                         <div className="categories-preview-info">
                           <h4>{selectedCat.name}</h4>
                           <p>This category will be added to your service offerings</p>

@@ -72,7 +72,15 @@ const ServiceDashboard = () => {
               onClick={() => navigate("/service-dashboard")}
               style={{ cursor: 'pointer' }}
             >
-              <img src={serviceData.logoUrl} alt="Company Logo" />
+              <img 
+                src={serviceData.logoUrl} 
+                alt="Company Logo"
+                onError={(e) => {
+                  console.error(`Failed to load company logo: ${serviceData.logoUrl}`);
+                  e.target.style.display = 'none';
+                  // Optionally show a placeholder here
+                }}
+              />
             </div>
           )}
           <h2>{serviceData?.companyName || "Service Dashboard"}</h2>

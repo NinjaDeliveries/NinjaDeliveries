@@ -429,17 +429,29 @@ export default function Settings() {
                     <div className="logo-upload-container">
                       <div className="logo-preview">
                         {logoPreview ? (
-                          <img src={logoPreview} alt="Company Logo" className="logo-preview-img" />
-                        ) : (
-                          <div className="logo-placeholder">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                              <circle cx="8.5" cy="8.5" r="1.5"/>
-                              <polyline points="21 15 16 10 5 21"/>
-                            </svg>
-                            <span>No logo uploaded</span>
-                          </div>
-                        )}
+                          <img 
+                            src={logoPreview} 
+                            alt="Company Logo" 
+                            className="logo-preview-img"
+                            onError={(e) => {
+                              console.error(`Failed to load company logo: ${logoPreview}`);
+                              e.target.style.display = 'none';
+                              // Show placeholder instead
+                              const placeholder = e.target.parentElement.querySelector('.logo-placeholder');
+                              if (placeholder) {
+                                placeholder.style.display = 'block';
+                              }
+                            }}
+                          />
+                        ) : null}
+                        <div className="logo-placeholder" style={{ display: logoPreview ? 'none' : 'block' }}>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                            <circle cx="8.5" cy="8.5" r="1.5"/>
+                            <polyline points="21 15 16 10 5 21"/>
+                          </svg>
+                          <span>No logo uploaded</span>
+                        </div>
                       </div>
                       <div className="logo-upload-actions">
                         <input

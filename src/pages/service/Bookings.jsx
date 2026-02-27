@@ -13,8 +13,10 @@ import {
 } from "firebase/firestore";
 import AssignWorkerModal from "./AssignWorkerModal";
 import "../../style/ServiceDashboard.css";
+import "../../style/date-filter-tabs.css";
 import { useToast } from "../../components/ToastContainer";
 import ConfirmDialog from "../../components/ConfirmDialog";
+import { getBookingPrice } from "../../utils/packagePricingFix";
 
 const Bookings = () => {
   const toast = useToast();
@@ -30,6 +32,15 @@ const Bookings = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState(""); // New date filter state
   const [expandedPackageGroups, setExpandedPackageGroups] = useState({}); // Track expanded package groups
+  
+  // Simple date view mode: 'today' or 'all'
+  const [dateViewMode, setDateViewMode] = useState("today");
+  
+  // Helper function to get today's date in YYYY-MM-DD format
+  const getTodayDateString = () => {
+    const today = new Date();
+    return today.toISOString().split("T")[0];
+  };
   
   // Confirm dialog state
   const [confirmDialog, setConfirmDialog] = useState({
@@ -212,10 +223,24 @@ const Bookings = () => {
       return null;
     }
 
-    const q = query(
-      collection(db, "service_bookings"),
-      where("companyId", "==", user.uid)
-    );
+    // Build query based on dateViewMode
+    let q;
+    if (dateViewMode === "today") {
+      // Today's bookings only
+      q = query(
+        collection(db, "service_bookings"),
+        where("companyId", "==", user.uid),
+        where("date", "==", getTodayDateString())
+      );
+    } else {
+      // All bookings (no date filter)
+      q = query(
+        collection(db, "service_bookings"),
+        where("companyId", "==", user.uid)
+      );
+    }
+
+    console.log("📡 Setting up bookings listener with mode:", dateViewMode);
 
     // Set up real-time listener with better error handling
     const unsubscribe = onSnapshot(q, 
@@ -319,7 +344,7 @@ const Bookings = () => {
     );
 
     return unsubscribe;
-  }, [setBookings, setLoading]);
+  }, [dateViewMode, setBookings, setLoading]);
 
 
   const fetchCategories = async () => {
@@ -454,7 +479,7 @@ const Bookings = () => {
         customerPhone: booking.customerPhone,
         bookingDate: booking.date,
         bookingTime: booking.time,
-        amount: booking.totalPrice || booking.price || booking.amount || 0,
+        amount: getBookingPrice(booking),
         rejectedAt: new Date(),
         rejectedBy: user?.uid,
         status: "pending_review", // Admin can review this
@@ -502,7 +527,7 @@ const Bookings = () => {
         customerName: booking.customerName,
         customerPhone: booking.customerPhone,
         service: booking.workName || booking.serviceName,
-        amount: booking.totalPrice || booking.price || 0,
+        amount: getBookingPrice(booking),
         date: booking.date,
         time: booking.time,
         address: booking.customerAddress || booking.location,
@@ -931,6 +956,55 @@ const Bookings = () => {
         </div>
       </div>
 
+      {/* Date Filter Tabs */}
+      <div className="bookings-date-filter-tabs">
+        <button
+          className={`bookings-filter-tab ${dateViewMode === 'today' ? 'active' : ''}`}
+          onClick={() => {
+            setDateViewMode('today');
+            console.log("📅 Switched to Today's Bookings");
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          Today's Bookings
+          {dateViewMode === 'today' && <span className="bookings-tab-badge">{bookings.length}</span>}
+        </button>
+
+        <button
+          className={`bookings-filter-tab ${dateViewMode === 'all' ? 'active' : ''}`}
+          onClick={() => {
+            setDateViewMode('all');
+            console.log("📅 Switched to All Bookings");
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+          All Bookings
+          {dateViewMode === 'all' && <span className="bookings-tab-badge">{bookings.length}</span>}
+        </button>
+      </div>
+
+      {/* Info Banner for testing mode */}
+      {dateViewMode === 'all' && (
+        <div className="bookings-info-banner">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="16" x2="12" y2="12"/>
+            <line x1="12" y1="8" x2="12.01" y2="8"/>
+          </svg>
+          <span>
+            🧪 Testing Mode: Viewing all bookings from all dates. You can assign, start, and complete any booking regardless of date.
+          </span>
+        </div>
+      )}
+
       {/* Filters */}
       <div className="bookings-filters">
         <div className="bookings-search">
@@ -1135,7 +1209,7 @@ const Bookings = () => {
                 packageStartDate: firstBooking.packageStartDate || bookings[0].date,
                 packageEndDate: firstBooking.packageEndDate || bookings[bookings.length - 1].date,
                 totalBookings: bookings.length,
-                totalPrice: bookings.reduce((sum, b) => sum + (b.totalPrice || b.price || b.amount || 0), 0)
+                totalPrice: firstBooking.packagePrice || firstBooking.totalPrice || firstBooking.price || firstBooking.amount || 0
               };
             };
             
@@ -1279,7 +1353,7 @@ const Bookings = () => {
                                         <span className="price-display">
                                           <span className="rupee-symbol">₹</span>
                                           <span className="price-amount">
-                                            {(booking.totalPrice || booking.price || booking.amount || 0).toLocaleString()}
+                                            {getBookingPrice(booking).toLocaleString()}
                                           </span>
                                         </span>
                                       </div>
@@ -1437,7 +1511,7 @@ const Bookings = () => {
                                       <span className="price-display">
                                         <span className="rupee-symbol">₹</span>
                                         <span className="price-amount">
-                                          {(booking.totalPrice || booking.price || booking.amount || 0).toLocaleString()}
+                                          {getBookingPrice(booking).toLocaleString()}
                                         </span>
                                       </span>
                                     </div>
@@ -1722,7 +1796,7 @@ const Bookings = () => {
                           return originalPrice.toLocaleString();
                         }
                         // Otherwise use the existing price
-                        return (selectedBooking.totalPrice || selectedBooking.price || selectedBooking.amount || 0).toLocaleString();
+                        return (getBookingPrice(selectedBooking) || 0).toLocaleString();
                       })()}
                     </p>
                   </div>
@@ -1882,7 +1956,7 @@ const Bookings = () => {
                   <div className="total-services-summary">
                     <strong>
                       Total: {selectedBooking.addOns.length + 1} services - ₹
-                      {(selectedBooking.totalPrice || selectedBooking.price || selectedBooking.amount || 0).toLocaleString()}
+                      {(getBookingPrice(selectedBooking) || 0).toLocaleString()}
                     </strong>
                   </div>
                 )}
@@ -1942,7 +2016,7 @@ const Bookings = () => {
                             return selectedBooking.totalPrice.toLocaleString();
                           }
                           
-                          const basePrice = selectedBooking.totalPrice || selectedBooking.price || selectedBooking.amount || 0;
+                          const basePrice = getBookingPrice(selectedBooking) || 0;
                           const addOnsPrice = selectedBooking.addOns ? selectedBooking.addOns.reduce((total, addon) => total + (addon.price || 0), 0) : 0;
                           return (basePrice + addOnsPrice).toLocaleString();
                         })()}

@@ -8,7 +8,8 @@ import {
   addDoc, 
   deleteDoc, 
   doc, 
-  updateDoc 
+  updateDoc,
+  onSnapshot 
 } from "firebase/firestore";
 import AddServiceModal from "./AddServiceModal";
 import "../../style/ServiceDashboard.css";
@@ -107,9 +108,10 @@ const fetchServices = async () => {
       
       // For admin services, ALWAYS use the master service image (latest)
       // For custom services, use their own image
+      // Handle both image and imageUrl field names
       const imageUrl = serviceData.serviceType === "admin" && masterService?.imageUrl
         ? masterService.imageUrl
-        : serviceData.imageUrl || null;
+        : serviceData.imageUrl || serviceData.image || null;
       
       return {
         id: doc.id,
@@ -169,7 +171,8 @@ const fetchServices = async () => {
   // Only add if it doesn't exist
   if (snap.empty) {
     // Get image URL from master service
-    let imageUrl = service.imageUrl;
+    // Handle both image and imageUrl field names
+    let imageUrl = service.imageUrl || service.image;
     if (!imageUrl && service.adminServiceId) {
       const master = serviceMasters.find(s => s.id === service.adminServiceId);
       imageUrl = master?.imageUrl || null;
@@ -394,7 +397,9 @@ const getServiceImageUrl = (service) => {
   if (!service) return null;
   
   // Image should already be merged from fetchServices
+  // Handle both image and imageUrl field names
   if (service.imageUrl) return service.imageUrl;
+  if (service.image) return service.image; // Fallback to image field
   
   // Fallback: try to get from master (shouldn't be needed now)
   if (service.serviceType === "admin" && service.adminServiceId) {

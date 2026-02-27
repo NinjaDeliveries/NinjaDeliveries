@@ -6,6 +6,7 @@ import { toast } from 'react-toastify';
 import './ServiceAdmin.css';
 import { detectDevice } from '../../../utils/deviceDetection';
 import CompanyActivityDetails from './CompanyActivityDetails';
+import { getBookingPrice } from '../../../utils/packagePricingFix';
 
 const ServiceAdmin = () => {
   const [companies, setCompanies] = useState([]);
