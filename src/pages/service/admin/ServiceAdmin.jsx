@@ -26,6 +26,13 @@ const ServiceAdmin = () => {
   const [connectionStatus, setConnectionStatus] = useState('connected');
   const [selectedCompany, setSelectedCompany] = useState(null);
   const [showActivityModal, setShowActivityModal] = useState(false);
+  const [bookings, setBookings] = useState([]);
+  const [bookingsLoading, setBookingsLoading] = useState(true);
+  const [selectedBooking, setSelectedBooking] = useState(null);
+  const [showBookingModal, setShowBookingModal] = useState(false);
+  const [bookingSearchTerm, setBookingSearchTerm] = useState('');
+  const [bookingStatusFilter, setBookingStatusFilter] = useState('all');
+  const [bookingDateFilter, setBookingDateFilter] = useState('all');
 
   // Refs for cleanup
   const unsubscribeRefs = useRef({});
@@ -343,6 +350,204 @@ const ServiceAdmin = () => {
     }
   }, [cleanupListeners]);
 
+  // Setup real-time bookings listener with enhanced data processing
+  const setupBookingsListener = useCallback(() => {
+    try {
+      setBookingsLoading(true);
+      
+      // Cleanup existing bookings listener
+      if (unsubscribeRefs.current.bookings) {
+        unsubscribeRefs.current.bookings();
+      }
+
+      // Bookings listener with error handling
+      const bookingsQuery = query(
+        collection(db, 'service_bookings'),
+        orderBy('createdAt', 'desc'),
+        limit(200) // Increased limit to handle package filtering
+      );
+
+      const unsubscribeBookings = onSnapshot(
+        bookingsQuery,
+        (snapshot) => {
+          try {
+            // Create a map of companies for quick lookup
+            const companiesMap = {};
+            companies.forEach(company => {
+              companiesMap[company.id] = company;
+            });
+
+            // Process all bookings
+            const allBookings = snapshot.docs.map(doc => {
+              const data = doc.data();
+              const company = companiesMap[data.companyId];
+              
+              // Format dates properly - handle Firestore Timestamp
+              let createdAt = null;
+              let bookingDate = null;
+              
+              try {
+                if (data.createdAt) {
+                  if (data.createdAt.toDate && typeof data.createdAt.toDate === 'function') {
+                    createdAt = data.createdAt.toDate();
+                  } else if (data.createdAt.seconds) {
+                    createdAt = new Date(data.createdAt.seconds * 1000);
+                  } else if (typeof data.createdAt === 'string' || typeof data.createdAt === 'number') {
+                    createdAt = new Date(data.createdAt);
+                  }
+                }
+                
+                if (data.bookingDate) {
+                  if (data.bookingDate.toDate && typeof data.bookingDate.toDate === 'function') {
+                    bookingDate = data.bookingDate.toDate();
+                  } else if (data.bookingDate.seconds) {
+                    bookingDate = new Date(data.bookingDate.seconds * 1000);
+                  } else if (typeof data.bookingDate === 'string' || typeof data.bookingDate === 'number') {
+                    bookingDate = new Date(data.bookingDate);
+                  }
+                }
+                
+                // If bookingDate is invalid, use createdAt
+                if (!bookingDate || isNaN(bookingDate.getTime())) {
+                  bookingDate = createdAt;
+                }
+              } catch (e) {
+                console.error('Error parsing dates:', e);
+              }
+              
+              // Get company details
+              const companyName = company?.companyName || company?.name || company?.businessName || data.companyName || 'Unknown Company';
+              const companyOwner = company?.ownerName || company?.owner || company?.contactPerson || company?.ownerDetails?.name || 'Not specified';
+              const companyLogo = company?.logoUrl || company?.logo || company?.imageUrl || null;
+              const companyPhone = company?.phoneNumber || company?.phone || company?.contactNumber || company?.mobile || 'Not provided';
+              
+              // Get service/booking type (not category)
+              const serviceName = data.bookingType || data.serviceName || data.service?.name || data.serviceTitle || data.type || 'Unknown Service';
+              
+              // Format date and time for display
+              const formatDateTime = (date) => {
+                if (!date) return 'Not set';
+                try {
+                  const d = date instanceof Date ? date : new Date(date);
+                  if (isNaN(d.getTime())) return 'Not set';
+                  
+                  // Format as DD-MM-YYYY HH:MM AM/PM
+                  const day = d.getDate().toString().padStart(2, '0');
+                  const month = (d.getMonth() + 1).toString().padStart(2, '0');
+                  const year = d.getFullYear();
+                  
+                  let hours = d.getHours();
+                  const minutes = d.getMinutes().toString().padStart(2, '0');
+                  const ampm = hours >= 12 ? 'PM' : 'AM';
+                  hours = hours % 12;
+                  hours = hours ? hours : 12; // the hour '0' should be '12'
+                  
+                  return `${day}-${month}-${year} ${hours}:${minutes} ${ampm}`;
+                } catch (e) {
+                  return 'Not set';
+                }
+              };
+              const displayDateTime = formatDateTime(bookingDate || createdAt);
+              
+              // Get status from Firebase - if null/undefined/empty, set to PENDING
+              const rawStatus = data.status;
+              let finalStatus = 'PENDING'; // Default to PENDING for new bookings
+              
+              if (rawStatus && rawStatus.trim() !== '') {
+                // If status exists and is not empty, convert to uppercase
+                finalStatus = rawStatus.toUpperCase();
+              }
+              
+              // Debug: Log status processing
+              console.log('📊 Booking status:', {
+                id: doc.id,
+                companyName,
+                rawStatus: rawStatus,
+                finalStatus: finalStatus,
+                hasStatus: !!rawStatus
+              });
+              
+              return {
+                id: doc.id,
+                ...data,
+                // Company details
+                companyName,
+                companyOwner,
+                companyLogo,
+                companyPhone,
+                // Date details
+                createdAt,
+                bookingDate,
+                displayDateTime,
+                // Price
+                totalPrice: data.totalPrice || data.price || data.amount || 0,
+                // Status - PENDING if not set by company
+                status: finalStatus,
+                // Customer details
+                customerName: data.customerName || data.customer?.name || 'Unknown Customer',
+                customerPhone: data.customerPhone || data.customer?.phone || 'Not provided',
+                customerEmail: data.customerEmail || data.customer?.email || 'Not provided',
+                // Service details (actual service/booking type, not category)
+                serviceName,
+                // Package info
+                isPackage: data.isPackage || data.packageBooking || false,
+                parentBookingId: data.parentBookingId || null,
+                packageId: data.packageId || null
+              };
+            });
+
+            // Filter out package sub-entries (daily entries)
+            // Keep only: 1) Non-package bookings, 2) Main package bookings (isPackage: true), 3) Bookings without parentBookingId
+            const filteredBookings = allBookings.filter(booking => {
+              // If it's not a package and doesn't have a parent, keep it
+              if (!booking.isPackage && !booking.parentBookingId) return true;
+              
+              // If it's a main package booking, keep it
+              if (booking.isPackage && !booking.parentBookingId) return true;
+              
+              // If it has a parentBookingId (sub-entry), filter it out
+              if (booking.parentBookingId) return false;
+              
+              return true;
+            });
+
+            // Sort by date (most recent first)
+            const sortedBookings = filteredBookings.sort((a, b) => {
+              const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
+              const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
+              return dateB - dateA;
+            });
+
+            // Limit to 100 for performance
+            const finalBookings = sortedBookings.slice(0, 100);
+            
+            setBookings(finalBookings);
+            console.log('Loaded real-time bookings:', finalBookings.length, 'filtered from', allBookings.length);
+          } catch (error) {
+            console.error('Error processing bookings data:', error);
+            toast.error('Failed to process bookings data');
+            setBookings([]);
+          } finally {
+            setBookingsLoading(false);
+          }
+        },
+        (error) => {
+          console.error('Bookings listener error:', error);
+          toast.error('Failed to load bookings data');
+          setBookings([]);
+          setBookingsLoading(false);
+        }
+      );
+      
+      unsubscribeRefs.current.bookings = unsubscribeBookings;
+      
+    } catch (error) {
+      console.error('Error setting up bookings listener:', error);
+      toast.error('Failed to setup bookings listener');
+      setBookingsLoading(false);
+    }
+  }, [companies]); // Re-run when companies change to update company details
+
   const filteredServices = services.filter(service => {
     const matchesSearch = !searchTerm ||
       (service.serviceName || service.name || service.title || '').toLowerCase().includes(searchTerm.toLowerCase());
@@ -371,6 +576,39 @@ const ServiceAdmin = () => {
     return !searchTerm ||
       log.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       log.action.toLowerCase().includes(searchTerm.toLowerCase());
+  });
+
+  const filteredBookings = bookings.filter(booking => {
+    const matchesSearch = !bookingSearchTerm ||
+      (booking.companyName || '').toLowerCase().includes(bookingSearchTerm.toLowerCase()) ||
+      (booking.customerName || '').toLowerCase().includes(bookingSearchTerm.toLowerCase()) ||
+      (booking.serviceName || '').toLowerCase().includes(bookingSearchTerm.toLowerCase()) ||
+      (booking.bookingId || '').toLowerCase().includes(bookingSearchTerm.toLowerCase());
+
+    const matchesStatus = bookingStatusFilter === 'all' || 
+      (booking.status || '').toLowerCase() === bookingStatusFilter.toLowerCase();
+
+    // Date filtering logic
+    let matchesDate = bookingDateFilter === 'all';
+    if (!matchesDate && bookingDateFilter === 'today' && booking.bookingDate) {
+      const today = new Date();
+      const bookingDate = new Date(booking.bookingDate);
+      matchesDate = bookingDate.toDateString() === today.toDateString();
+    }
+    if (!matchesDate && bookingDateFilter === 'week' && booking.bookingDate) {
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      const bookingDate = new Date(booking.bookingDate);
+      matchesDate = bookingDate >= weekAgo;
+    }
+    if (!matchesDate && bookingDateFilter === 'month' && booking.bookingDate) {
+      const monthAgo = new Date();
+      monthAgo.setMonth(monthAgo.getMonth() - 1);
+      const bookingDate = new Date(booking.bookingDate);
+      matchesDate = bookingDate >= monthAgo;
+    }
+
+    return matchesSearch && matchesStatus && matchesDate;
   });
 
   const filteredCompanies = companies.filter(company => {
@@ -402,11 +640,25 @@ const ServiceAdmin = () => {
   useEffect(() => {
     setupRealtimeListeners();
     
+    // Setup bookings listener after a short delay to ensure companies are loaded
+    const timer = setTimeout(() => {
+      if (companies.length > 0) {
+        setupBookingsListener();
+      }
+    }, 1000);
+    
     // Cleanup on unmount
     return () => {
       cleanupListeners();
+      clearTimeout(timer);
     };
   }, [setupRealtimeListeners, cleanupListeners]);
+
+  // Setup bookings listener when companies are loaded or change
+  useEffect(() => {
+    if (companies.length === 0) return;
+    setupBookingsListener();
+  }, [companies, setupBookingsListener]);
 
   // Setup activity logs listener after companies are loaded
   useEffect(() => {
@@ -481,6 +733,14 @@ const ServiceAdmin = () => {
     totalServices: services.length,
     activeServices: services.filter(s => s.isActive).length,
     totalCategories: categories.length,
+    totalBookings: bookings.length,
+    recentBookings: bookings.filter(booking => {
+      if (!booking.createdAt) return false;
+      const bookingDate = booking.createdAt instanceof Date ? 
+        booking.createdAt : new Date(booking.createdAt);
+      const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      return bookingDate > dayAgo;
+    }).length,
     recentActivity: activityLogs.filter(log => {
       if (!log.timestamp) return false;
       const logDate = typeof log.timestamp === 'object' ? 
@@ -565,6 +825,7 @@ const ServiceAdmin = () => {
             { key: 'overview', label: 'Overview', icon: '📊' },
             { key: 'companies', label: 'Companies', icon: '🏢' },
             { key: 'services', label: 'Services', icon: '⚙️' },
+            { key: 'bookings', label: 'Bookings', icon: '📅' },
             { key: 'activity', label: 'Activity', icon: '📈' }
           ].map(tab => (
             <button
@@ -634,6 +895,22 @@ const ServiceAdmin = () => {
                 icon="📂"
                 darkMode={darkMode}
                 trend="Stable"
+              />
+              <StatsCard
+                title="Total Bookings"
+                value={analytics.totalBookings}
+                subtitle="All bookings"
+                icon="📅"
+                darkMode={darkMode}
+                trend="Live"
+              />
+              <StatsCard
+                title="Recent Bookings"
+                value={analytics.recentBookings}
+                subtitle="Last 24 hours"
+                icon="🆕"
+                darkMode={darkMode}
+                trend="Real-time"
               />
               <StatsCard
                 title="Recent Activity"
@@ -886,6 +1163,128 @@ const ServiceAdmin = () => {
           </div>
         )}
 
+        {/* Bookings Tab */}
+        {activeTab === 'bookings' && (
+          <div>
+            {/* Search and Filters */}
+            <div style={{
+              ...styles.filtersContainer,
+              backgroundColor: darkMode ? '#1e293b' : '#ffffff'
+            }}>
+              <div style={styles.filtersGrid}>
+                <div>
+                  <label style={{
+                    ...styles.label,
+                    color: darkMode ? '#e2e8f0' : '#374151'
+                  }}>
+                    Search Bookings
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Search by company, customer, service, or booking ID..."
+                    value={bookingSearchTerm}
+                    onChange={(e) => setBookingSearchTerm(e.target.value)}
+                    style={{
+                      ...styles.input,
+                      backgroundColor: darkMode ? '#334155' : '#ffffff',
+                      borderColor: darkMode ? '#475569' : '#d1d5db',
+                      color: darkMode ? '#ffffff' : '#111827'
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{
+                    ...styles.label,
+                    color: darkMode ? '#e2e8f0' : '#374151'
+                  }}>
+                    Status Filter
+                  </label>
+                  <select
+                    value={bookingStatusFilter}
+                    onChange={(e) => setBookingStatusFilter(e.target.value)}
+                    style={{
+                      ...styles.input,
+                      backgroundColor: darkMode ? '#334155' : '#ffffff',
+                      borderColor: darkMode ? '#475569' : '#d1d5db',
+                      color: darkMode ? '#ffffff' : '#111827'
+                    }}
+                  >
+                    <option value="all">All Status</option>
+                    <option value="pending">Pending</option>
+                    <option value="confirmed">Confirmed</option>
+                    <option value="completed">Completed</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{
+                    ...styles.label,
+                    color: darkMode ? '#e2e8f0' : '#374151'
+                  }}>
+                    Date Filter
+                  </label>
+                  <select
+                    value={bookingDateFilter}
+                    onChange={(e) => setBookingDateFilter(e.target.value)}
+                    style={{
+                      ...styles.input,
+                      backgroundColor: darkMode ? '#334155' : '#ffffff',
+                      borderColor: darkMode ? '#475569' : '#d1d5db',
+                      color: darkMode ? '#ffffff' : '#111827'
+                    }}
+                  >
+                    <option value="all">All Dates</option>
+                    <option value="today">Today</option>
+                    <option value="week">Last 7 Days</option>
+                    <option value="month">Last 30 Days</option>
+                  </select>
+                </div>
+              </div>
+              <div style={styles.resultsInfo}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: darkMode ? '#94a3b8' : '#64748b' }}>
+                    Showing {getPaginatedData(filteredBookings, currentPage).length} of {filteredBookings.length} bookings
+                    {bookingsLoading && ' (Loading...)'}
+                  </span>
+                  <button
+                    onClick={() => exportToCSV(filteredBookings, 'service_bookings')}
+                    style={{
+                      ...styles.button,
+                      backgroundColor: '#10b981',
+                      color: '#ffffff',
+                      fontSize: '14px',
+                      padding: '8px 16px'
+                    }}
+                  >
+                    📊 Export CSV
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Bookings Table */}
+            <BookingsTable 
+              bookings={getPaginatedData(filteredBookings, currentPage)}
+              darkMode={darkMode}
+              loading={bookingsLoading}
+              onViewDetails={(booking) => {
+                setSelectedBooking(booking);
+                setShowBookingModal(true);
+              }}
+              logActivity={logActivity}
+              toast={toast}
+            />
+
+            {/* Pagination */}
+            <Pagination
+              currentPage={currentPage}
+              totalPages={getTotalPages(filteredBookings.length)}
+              onPageChange={setCurrentPage}
+              darkMode={darkMode}
+            />
+          </div>
+        )}
+
         {/* Activity Tab */}
         {activeTab === 'activity' && (
           <div>
@@ -965,6 +1364,207 @@ const ServiceAdmin = () => {
           }}
           darkMode={darkMode}
         />
+      )}
+
+      {/* Booking Details Modal */}
+      {showBookingModal && selectedBooking && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: darkMode ? '#1e293b' : 'white',
+            borderRadius: '12px',
+            padding: '24px',
+            maxWidth: '600px',
+            width: '90%',
+            maxHeight: '80vh',
+            overflowY: 'auto',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '20px',
+              borderBottom: `1px solid ${darkMode ? '#334155' : '#e2e8f0'}`,
+              paddingBottom: '16px'
+            }}>
+              <h3 style={{ margin: 0, color: darkMode ? 'white' : '#1e293b' }}>Booking Details</h3>
+              <button
+                onClick={() => {
+                  setShowBookingModal(false);
+                  setSelectedBooking(null);
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  color: darkMode ? '#94a3b8' : '#64748b',
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '24px',
+                  cursor: 'pointer'
+                }}
+              >
+                ×
+              </button>
+            </div>
+            
+            <div style={{ marginBottom: '20px' }}>
+              <h4 style={{ marginBottom: '12px', color: darkMode ? '#e2e8f0' : '#1e293b' }}>Booking Information</h4>
+              <div style={{ 
+                backgroundColor: darkMode ? '#1e293b' : '#f8fafc', 
+                padding: '16px', 
+                borderRadius: '8px',
+                border: `1px solid ${darkMode ? '#334155' : '#e2e8f0'}`
+              }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <p style={{ margin: '4px 0', fontSize: '14px', color: darkMode ? '#94a3b8' : '#64748b' }}>Booking ID</p>
+                    <p style={{ margin: '4px 0', fontWeight: '500', color: darkMode ? 'white' : '#1e293b' }}>
+                      {selectedBooking.bookingId || selectedBooking.id}
+                    </p>
+                  </div>
+                  <div>
+                    <p style={{ margin: '4px 0', fontSize: '14px', color: darkMode ? '#94a3b8' : '#64748b' }}>Status</p>
+                    <span style={{
+                      padding: '4px 12px',
+                      borderRadius: '12px',
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      backgroundColor: selectedBooking.status === 'confirmed' ? '#dcfce7' : 
+                                    selectedBooking.status === 'cancelled' ? '#fee2e2' : 
+                                    selectedBooking.status === 'completed' ? '#dbeafe' : '#fef3c7',
+                      color: selectedBooking.status === 'confirmed' ? '#166534' : 
+                            selectedBooking.status === 'cancelled' ? '#991b1b' : 
+                            selectedBooking.status === 'completed' ? '#1e40af' : '#92400e'
+                    }}>
+                      {selectedBooking.status?.toUpperCase() || 'PENDING'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <h4 style={{ marginBottom: '12px', color: darkMode ? '#e2e8f0' : '#1e293b' }}>Customer Details</h4>
+              <div style={{ 
+                backgroundColor: darkMode ? '#1e293b' : '#f8fafc', 
+                padding: '16px', 
+                borderRadius: '8px',
+                border: `1px solid ${darkMode ? '#334155' : '#e2e8f0'}`
+              }}>
+                <p style={{ margin: '4px 0', color: darkMode ? '#e2e8f0' : '#1e293b' }}>
+                  <strong>Name:</strong> {selectedBooking.customerName || 'N/A'}
+                </p>
+                <p style={{ margin: '4px 0', color: darkMode ? '#cbd5e1' : '#475569' }}>
+                  <strong>Phone:</strong> {selectedBooking.customerPhone || 'Not provided'}
+                </p>
+                <p style={{ margin: '4px 0', color: darkMode ? '#cbd5e1' : '#475569' }}>
+                  <strong>Email:</strong> {selectedBooking.customerEmail || 'Not provided'}
+                </p>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <h4 style={{ marginBottom: '12px', color: darkMode ? '#e2e8f0' : '#1e293b' }}>Service Details</h4>
+              <div style={{ 
+                backgroundColor: darkMode ? '#1e293b' : '#f8fafc', 
+                padding: '16px', 
+                borderRadius: '8px',
+                border: `1px solid ${darkMode ? '#334155' : '#e2e8f0'}`
+              }}>
+                <p style={{ margin: '4px 0', color: darkMode ? '#e2e8f0' : '#1e293b' }}>
+                  <strong>Service:</strong> {selectedBooking.serviceName || 'N/A'}
+                </p>
+                <p style={{ margin: '4px 0', color: darkMode ? '#cbd5e1' : '#475569' }}>
+                  <strong>Category:</strong> {selectedBooking.serviceCategory || selectedBooking.serviceCategory || 'General'}
+                </p>
+                <p style={{ margin: '4px 0', color: darkMode ? '#cbd5e1' : '#475569' }}>
+                  <strong>Company:</strong> {selectedBooking.companyName || 'N/A'}
+                </p>
+                <p style={{ margin: '4px 0', color: darkMode ? '#cbd5e1' : '#475569' }}>
+                  <strong>Date & Time:</strong> {selectedBooking.bookingDate ? new Date(selectedBooking.bookingDate).toLocaleString() : 'Not specified'}
+                </p>
+                <p style={{ margin: '4px 0', color: darkMode ? '#cbd5e1' : '#475569' }}>
+                  <strong>Time:</strong> {selectedBooking.bookingTime || 'Not specified'}
+                </p>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <h4 style={{ marginBottom: '12px', color: darkMode ? '#e2e8f0' : '#1e293b' }}>Payment Details</h4>
+              <div style={{ 
+                backgroundColor: darkMode ? '#1e293b' : '#f8fafc', 
+                padding: '16px', 
+                borderRadius: '8px',
+                border: `1px solid ${darkMode ? '#334155' : '#e2e8f0'}`
+              }}>
+                <p style={{ margin: '4px 0', color: darkMode ? '#e2e8f0' : '#1e293b' }}>
+                  <strong>Total Price:</strong> ₹{selectedBooking.totalPrice || selectedBooking.price || 0}
+                </p>
+                <p style={{ margin: '4px 0', color: darkMode ? '#cbd5e1' : '#475569' }}>
+                  <strong>Payment Status:</strong> {selectedBooking.paymentStatus || 'Pending'}
+                </p>
+                <p style={{ margin: '4px 0', color: darkMode ? '#cbd5e1' : '#475569' }}>
+                  <strong>Payment Method:</strong> {selectedBooking.paymentMethod || 'Not specified'}
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <button
+                onClick={() => {
+                  setShowBookingModal(false);
+                  setSelectedBooking(null);
+                }}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: darkMode ? '#334155' : '#e2e8f0',
+                  color: darkMode ? '#e2e8f0' : '#1e293b',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                Close
+              </button>
+              <button
+                onClick={() => {
+                  // Add call to company functionality
+                  toast.info(`Calling company about booking: ${selectedBooking.bookingId || selectedBooking.id}`);
+                  logActivity('call_company_booking', 'admin', {
+                    bookingId: selectedBooking.id,
+                    action: 'Called company about booking'
+                  });
+                }}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#10b981',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500'
+                }}
+              >
+                📞 Call Company
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -1574,6 +2174,267 @@ const ActivityTable = ({ logs, darkMode }) => {
   );
 };
 
+// Bookings Table Component - Enhanced Professional Version (v2.0 - 8 Columns)
+// Updated: Removed Booking ID column, optimized layout
+const BookingsTable = ({ bookings, darkMode, loading, onViewDetails, logActivity, toast }) => {
+  // State for date filter
+  const [selectedDate, setSelectedDate] = React.useState('all');
+  const [availableDates, setAvailableDates] = React.useState([]);
+
+  // Get unique dates from bookings and sort them
+  React.useEffect(() => {
+    if (bookings.length > 0) {
+      const dates = new Set();
+      bookings.forEach(booking => {
+        if (booking.bookingDate) {
+          const date = new Date(booking.bookingDate);
+          if (!isNaN(date.getTime())) {
+            dates.add(date.toISOString().split('T')[0]); // YYYY-MM-DD format
+          }
+        }
+      });
+      const sortedDates = Array.from(dates).sort((a, b) => new Date(b) - new Date(a));
+      setAvailableDates(sortedDates);
+    }
+  }, [bookings]);
+
+  // Filter bookings by selected date
+  const dateFilteredBookings = selectedDate === 'all' 
+    ? bookings 
+    : bookings.filter(booking => {
+        if (!booking.bookingDate) return false;
+        const bookingDateStr = new Date(booking.bookingDate).toISOString().split('T')[0];
+        return bookingDateStr === selectedDate;
+      });
+
+  // Get today's date for comparison
+  const getTodayDate = () => {
+    return new Date().toISOString().split('T')[0];
+  };
+
+  // Format date for display
+  const formatDateForDisplay = (dateStr) => {
+    const date = new Date(dateStr);
+    const today = getTodayDate();
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+    if (dateStr === today) return '📅 Today';
+    if (dateStr === yesterdayStr) return '📅 Yesterday';
+    
+    const options = { day: '2-digit', month: 'short', year: 'numeric' };
+    return date.toLocaleDateString('en-GB', options);
+  };
+
+  if (loading) {
+    return (
+      <div className={`service-admin-table-container ${darkMode ? 'dark-mode' : ''}`}>
+        <div className="service-admin-empty-state">
+          <div className="service-admin-spinner"></div>
+          <h3 className="service-admin-empty-title">
+            Loading Bookings...
+          </h3>
+          <p className="service-admin-empty-text">
+            Fetching real-time booking data from Firebase
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (bookings.length === 0) {
+    return (
+      <div className={`service-admin-table-container ${darkMode ? 'dark-mode' : ''}`}>
+        <div className="service-admin-empty-state">
+          <div className="service-admin-empty-icon">📅</div>
+          <h3 className="service-admin-empty-title">
+            No Bookings Found
+          </h3>
+          <p className="service-admin-empty-text">
+            No bookings match your current search criteria. Bookings will appear here in real-time when customers make bookings.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Function to get status badge class - matches Firebase service_bookings status field
+  const getStatusBadgeClass = (status) => {
+    if (!status) return 'pending';
+    const statusUpper = status.toUpperCase();
+    
+    // Match exact Firebase status values
+    if (statusUpper === 'CONFIRMED' || statusUpper === 'APPROVED') return 'confirmed';
+    if (statusUpper === 'COMPLETED' || statusUpper === 'DELIVERED') return 'completed';
+    if (statusUpper === 'CANCELLED' || statusUpper === 'REJECTED' || statusUpper === 'DECLINED') return 'cancelled';
+    if (statusUpper === 'ASSIGNED' || statusUpper === 'ACCEPTED') return 'assigned';
+    if (statusUpper === 'PENDING' || statusUpper === 'WAITING') return 'pending';
+    
+    // Fallback for partial matches
+    const statusLower = status.toLowerCase();
+    if (statusLower.includes('confirm')) return 'confirmed';
+    if (statusLower.includes('complet')) return 'completed';
+    if (statusLower.includes('cancel') || statusLower.includes('reject')) return 'cancelled';
+    if (statusLower.includes('assign') || statusLower.includes('accept')) return 'assigned';
+    if (statusLower.includes('pend')) return 'pending';
+    
+    return 'pending';
+  };
+
+  // Function to check if booking is pending (for highlighting)
+  const isPendingBooking = (status) => {
+    const statusLower = (status || '').toLowerCase();
+    return statusLower.includes('pending') || statusLower.includes('waiting');
+  };
+
+  // Function to check if booking is completed (for highlighting)
+  const isCompletedBooking = (status) => {
+    const statusLower = (status || '').toLowerCase();
+    return statusLower.includes('completed') || statusLower.includes('delivered');
+  };
+
+  return (
+    <div className="bookings-monitor-container">
+      <div className="bookings-monitor-header">
+        <h3 className="monitor-title">
+          Live Bookings Monitor ({dateFilteredBookings.length})
+        </h3>
+        <div className="monitor-controls">
+          <select 
+            className="date-filter-dropdown"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+          >
+            <option value="all">📅 All Dates ({bookings.length})</option>
+            {availableDates.map(date => (
+              <option key={date} value={date}>
+                {formatDateForDisplay(date)} ({bookings.filter(b => {
+                  if (!b.bookingDate) return false;
+                  return new Date(b.bookingDate).toISOString().split('T')[0] === date;
+                }).length})
+              </option>
+            ))}
+          </select>
+          <div className="monitor-live-badge">
+            <div className="live-pulse-dot"></div>
+            <span>Real-time Updates</span>
+          </div>
+        </div>
+      </div>
+      
+      <div className="bookings-table-wrapper">
+        <table className="bookings-table">
+          <thead className="table-header-dark">
+            <tr>
+              <th className="col-company">COMPANY</th>
+              <th className="col-customer">CUSTOMER</th>
+              <th className="col-service">SERVICE</th>
+              <th className="col-datetime">DATE & TIME</th>
+              <th className="col-price">PRICE</th>
+              <th className="col-status">STATUS</th>
+              <th className="col-actions">ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody>
+            {dateFilteredBookings.map((booking, index) => {
+              const statusClass = getStatusBadgeClass(booking.status);
+              const isPending = isPendingBooking(booking.status);
+              const isCompleted = isCompletedBooking(booking.status);
+              const isEvenRow = index % 2 === 0;
+              
+              let rowClass = 'table-row';
+              if (isEvenRow) rowClass += ' row-even';
+              else rowClass += ' row-odd';
+              
+              const bookingDate = booking.bookingDate ? new Date(booking.bookingDate).toLocaleDateString() : 
+                                 booking.date ? new Date(booking.date + 'T00:00:00').toLocaleDateString() : 'Not set';
+              const bookingTime = booking.bookingTime || booking.time || 'Not specified';
+              
+              return (
+                <tr 
+                  key={booking.id} 
+                  className={rowClass}
+                  onClick={() => onViewDetails && onViewDetails(booking)}
+                >
+                  <td className="col-company">
+                    <div className="cell-content">
+                      <div className="cell-primary">{booking.companyName || 'Unknown Company'}</div>
+                      <div className="cell-secondary">ID: {(booking.companyId || booking.id).substring(0, 8)}...</div>
+                    </div>
+                  </td>
+                  <td className="col-customer">
+                    <div className="cell-content">
+                      <div className="cell-primary">{booking.customerName || 'Unknown'}</div>
+                      <div className="cell-secondary">{booking.customerPhone || booking.phone || 'No phone'}</div>
+                    </div>
+                  </td>
+                  <td className="col-service">
+                    <div className="cell-content">
+                      <div className="cell-primary">{booking.serviceName || booking.workName || 'Unknown Service'}</div>
+                      <div className="cell-secondary">{booking.serviceCategory || booking.category || ''}</div>
+                    </div>
+                  </td>
+                  <td className="col-datetime">
+                    <div className="cell-content">
+                      <div className="cell-primary">{bookingDate}</div>
+                      <div className="cell-secondary">{bookingTime}</div>
+                    </div>
+                  </td>
+                  <td className="col-price">
+                    <div className="price-value">₹{(booking.totalPrice || booking.price || 0).toLocaleString()}</div>
+                  </td>
+                  <td className="col-status">
+                    <span className={`status-badge status-${statusClass}`}>
+                      {(booking.status || 'PENDING').toUpperCase()}
+                    </span>
+                  </td>
+                  <td className="col-actions">
+                    <div className="action-buttons">
+                      <button
+                        className="btn-view"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onViewDetails && onViewDetails(booking);
+                        }}
+                      >
+                        👁️ View
+                      </button>
+                      {(booking.customerPhone || booking.phone) && (
+                        <a 
+                          className="btn-call"
+                          href={`tel:${booking.customerPhone || booking.phone}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toast && toast.info(`Calling ${booking.customerName}...`);
+                            logActivity && logActivity('call_customer', 'admin', {
+                              bookingId: booking.id,
+                              customerName: booking.customerName,
+                              customerPhone: booking.customerPhone || booking.phone
+                            });
+                          }}
+                        >
+                          📞 Call
+                        </a>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      
+      <div className="bookings-table-footer">
+        <div className="footer-info">
+          Showing {dateFilteredBookings.length} bookings {selectedDate !== 'all' ? `for ${formatDateForDisplay(selectedDate)}` : 'from all dates'} • Updated just now
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Pagination Component
 const Pagination = ({ currentPage, totalPages, onPageChange, darkMode }) => {
   if (totalPages <= 1) return null;
@@ -1677,6 +2538,7 @@ export default ServiceAdmin;
 const styles = {
   container: {
     minHeight: '100vh',
+    width: '100%',
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
   },
 
@@ -1720,14 +2582,13 @@ const styles = {
   },
 
   headerContent: {
-    maxWidth: '1400px',
-    margin: '0 auto',
-    padding: '0 24px',
+    width: '100%',
+    maxWidth: '100%',
+    margin: '0',
+    padding: '24px 16px',
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: '24px',
-    paddingBottom: '24px',
   },
 
   title: {
@@ -1772,9 +2633,10 @@ const styles = {
   },
 
   content: {
-    maxWidth: '1400px',
-    margin: '0 auto',
-    padding: '32px 24px',
+    width: '100%',
+    maxWidth: '100%',
+    margin: '0',
+    padding: '24px 16px',
   },
 
   // Tab Navigation
