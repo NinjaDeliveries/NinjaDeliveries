@@ -99,6 +99,9 @@ const generateBill = async (order, phoneNumber) => {
   const company = companySnap.exists() ? companySnap.data() : {};
   const orderSubtotal = order.subtotal || order.productSubtotal;
 
+  // Fetch rider details if available
+  const riderDetails = order.acceptedBy ? await fetchRiderDetails(order.acceptedBy) : null;
+
   const docPDF = new jsPDF();
 
   // Company Details
@@ -159,12 +162,33 @@ const generateBill = async (order, phoneNumber) => {
   docPDF.setTextColor(100);
   docPDF.text(`${phoneNumber}`, 40, 90);
 
+  // Rider Details (if available)
+  let productSectionY;
+  if (riderDetails) {
+    docPDF.setTextColor(0);
+    docPDF.text("Rider Name:", 10, 100);
+    docPDF.setTextColor(100);
+    docPDF.text(`${riderDetails.name}`, 40, 100);
+    
+    docPDF.setTextColor(0);
+    docPDF.text("Rider Phone:", 10, 110);
+    docPDF.setTextColor(100);
+    docPDF.text(`${riderDetails.phoneNumber}`, 40, 110);
+    
+    docPDF.setTextColor(0);
+    // Adjust the starting Y position for product section
+    productSectionY = 120;
+  } else {
+    // No rider details, product section starts at 100
+    productSectionY = 100;
+  }
+
   docPDF.setTextColor(0);
 
   // Product Section
   docPDF.setFontSize(14);
   docPDF.setFont("helvetica", "bold");
-  docPDF.text("Product", 10, 100);
+  docPDF.text("Product", 10, productSectionY);
   docPDF.setFont("helvetica", "normal");
 
   // ✅ We keep your products merge, but now store comes from product.storeName (new field),
@@ -204,7 +228,7 @@ const generateBill = async (order, phoneNumber) => {
   );
 
   autoTable(docPDF, {
-    startY: 110,
+    startY: productSectionY + 10,
     head: [["Item", "Qty", "Store", "Unit Price", "Discount", "Total"]],
     body: bodyData,
   });
@@ -245,6 +269,27 @@ const fetchPhoneNumber = async (orderedBy) => {
     return userSnap.exists() ? userSnap.data().phoneNumber : null;
   } catch (error) {
     console.error("Error fetching phone number:", error);
+    return null;
+  }
+};
+
+// ========== fetchRiderDetails FUNCTION (NEW) ========== //
+const fetchRiderDetails = async (riderId) => {
+  if (!riderId) return null;
+  
+  const riderRef = doc(db, "riderDetails", riderId);
+  try {
+    const riderSnap = await getDoc(riderRef);
+    if (riderSnap.exists()) {
+      const riderData = riderSnap.data();
+      return {
+        name: riderData.name || riderData.fullName || "Unknown Rider",
+        phoneNumber: riderData.contactNumber || "N/A"  // Only use contactNumber field
+      };
+    }
+    return null;
+  } catch (error) {
+    console.error("Error fetching rider details:", error);
     return null;
   }
 };
@@ -305,8 +350,9 @@ const OrderList = () => {
       const orderRef = doc(db, "orders", orderId);
       const orderSnap = await getDoc(orderRef);
       if (orderSnap.exists()) {
-        const phoneNumber = await fetchPhoneNumber(orderSnap.data().orderedBy);
-        generateBill(orderSnap.data(), phoneNumber);
+        const orderData = orderSnap.data();
+        const phoneNumber = await fetchPhoneNumber(orderData.orderedBy);
+        generateBill(orderData, phoneNumber);
       }
     } catch (error) {
       console.error("Error downloading bill:", error);
