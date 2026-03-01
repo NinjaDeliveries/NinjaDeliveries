@@ -16,18 +16,22 @@ import "./Slots.css";
 import AssignWorkerModal from "./AssignWorkerModal";
 import PowerSwitch from "../../components/PowerSwitch";
 import { useToast } from "../../components/ToastContainer";
+import { 
+  getTodayIST, 
+  toISTDateString, 
+  isToday as checkIsToday,
+  isPast,
+  formatDateForDisplay,
+  getRelativeDateLabel
+} from "../../utils/dateHelpers";
 
 export default function Slots() {
   const toast = useToast();
   const [loading, setLoading] = useState(true);
   const [bookings, setBookings] = useState([]);
   const [selectedDate, setSelectedDate] = useState(() => {
-    // Ensure we get today's date in local timezone
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    // Use IST date helper to get today's date
+    return getTodayIST();
   });
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [viewMode, setViewMode] = useState('calendar'); // 'calendar' or 'list'
@@ -304,7 +308,7 @@ export default function Slots() {
 
     const checkStatus = async () => {
       const now = new Date();
-      const today = now.toISOString().split("T")[0];
+      const today = getTodayIST();
       const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
       const isInOfflineWindow = offlineWindows.some((w) => {
@@ -502,11 +506,8 @@ export default function Slots() {
 
   // Get bookings for a specific date (fix timezone issue) - sorted by time
   const getBookingsForDate = (date) => {
-    // Create date string in local timezone to avoid timezone issues
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const dateStr = `${year}-${month}-${day}`;
+    // Convert date to IST date string
+    const dateStr = toISTDateString(date);
     
     const dayBookings = bookings.filter(booking => {
       // Ensure booking.date is in the same format
@@ -554,17 +555,14 @@ export default function Slots() {
     startDate.setDate(startDate.getDate() - firstDay.getDay());
     
     const days = [];
-    const currentDate = new Date(startDate);
-    const todayStr = getTodayDateString();
+    const todayStr = getTodayIST();
+    const currentDate = new Date(startDate); // Initialize currentDate from startDate
     
     for (let i = 0; i < 35; i++) { // Reduced from 42 to 35 for more compact view
       const dayBookings = getBookingsForDate(currentDate);
       
-      // Create date string in local timezone
-      const year = currentDate.getFullYear();
-      const month = String(currentDate.getMonth() + 1).padStart(2, '0');
-      const day = String(currentDate.getDate()).padStart(2, '0');
-      const dateStr = `${year}-${month}-${day}`;
+      // Convert date to IST date string
+      const dateStr = toISTDateString(currentDate);
       
       days.push({
         date: new Date(currentDate),
@@ -670,26 +668,18 @@ export default function Slots() {
   // Check if booking date is in the past (not today or future)
   const isBookingInPast = (booking) => {
     if (!booking.date) return false;
-    
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Reset to start of day
-    
-    const [year, month, day] = booking.date.split('-').map(Number);
-    const bookingDate = new Date(year, month - 1, day);
-    bookingDate.setHours(0, 0, 0, 0); // Reset to start of day
-    
-    return bookingDate < today;
+    return isPast(booking.date);
   };
 
   // Check if booking can be assigned (only for today and future dates)
   const canAssignWorker = (booking) => {
-    // Don't allow assignment if already assigned, completed, or cancelled
-    if (booking.status === 'assigned' || booking.status === 'completed' || booking.status === 'cancelled') {
+    // Don't allow assignment if completed, cancelled, or rejected
+    if (booking.status === 'completed' || booking.status === 'cancelled' || booking.status === 'rejected') {
       return false;
     }
     
-    // Don't allow assignment if worker already assigned
-    if (booking.workerId || booking.workerName) {
+    // Don't allow assignment if work has started
+    if (booking.status === 'started') {
       return false;
     }
     
@@ -698,21 +688,18 @@ export default function Slots() {
       return false;
     }
     
+    // Allow assignment for: pending, confirmed, assigned (for re-assignment)
     return true;
   };
 
-  // Get today's date in local timezone
+  // Get today's date in IST timezone
   const getTodayDateString = () => {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    return getTodayIST();
   };
 
   // Get today's bookings
   const getTodaysBookings = () => {
-    const todayStr = getTodayDateString();
+    const todayStr = getTodayIST();
     const todaysBookings = bookings.filter(booking => booking.date === todayStr);
     
     // Sort by time (earliest first)
@@ -725,9 +712,9 @@ export default function Slots() {
     return todaysBookings;
   };
 
-  // Check if a date is today
+  // Check if a date is today (IST)
   const isToday = (dateStr) => {
-    return dateStr === getTodayDateString();
+    return checkIsToday(dateStr);
   };
 
   if (loading) {
@@ -891,7 +878,7 @@ export default function Slots() {
   // Assign worker button styles
   // Helper function to get bookings count for a date
   const getBookingsCountForDate = (date) => {
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = toISTDateString(date);
     return bookings.filter(b => b.date === dateStr).length;
   };
 
@@ -905,8 +892,7 @@ export default function Slots() {
     const startingDayOfWeek = firstDay.getDay();
     
     const days = [];
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const todayStr = getTodayIST();
     
     // Add empty cells for days before month starts
     for (let i = 0; i < startingDayOfWeek; i++) {
@@ -921,9 +907,9 @@ export default function Slots() {
     // Add days of current month
     for (let day = 1; day <= daysInMonth; day++) {
       const date = new Date(year, month, day);
-      const dateStr = date.toISOString().split('T')[0];
+      const dateStr = toISTDateString(date);
       const isSelected = dateStr === selectedDate;
-      const isToday = date.toDateString() === today.toDateString();
+      const isToday = dateStr === todayStr;
       const bookingsCount = getBookingsCountForDate(date);
       
       days.push(
@@ -1131,12 +1117,7 @@ export default function Slots() {
                 </span>
               </div>
               <p className="schedule-date">
-                {new Date(selectedDate).toLocaleDateString('en-US', { 
-                  weekday: 'long', 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric' 
-                })}
+                {formatDateForDisplay(selectedDate)}
               </p>
             </div>
 
@@ -1202,7 +1183,7 @@ export default function Slots() {
                           </svg>
                           View Details
                         </button>
-                        {booking.status === 'pending' && (
+                        {canAssignWorker(booking) && (
                           <button 
                             className="schedule-action-btn secondary"
                             onClick={() => {
@@ -1318,8 +1299,8 @@ export default function Slots() {
               // Get bookings for current month
               const monthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
               const monthEnd = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
-              const monthStartStr = monthStart.toISOString().split('T')[0];
-              const monthEndStr = monthEnd.toISOString().split('T')[0];
+              const monthStartStr = toISTDateString(monthStart);
+              const monthEndStr = toISTDateString(monthEnd);
               
               const monthBookings = bookings.filter(b => 
                 b.date >= monthStartStr && b.date <= monthEndStr
@@ -1451,7 +1432,7 @@ export default function Slots() {
                                   </svg>
                                   View Details
                                 </button>
-                                {booking.status === 'pending' && (
+                                {canAssignWorker(booking) && (
                                   <button 
                                     className="schedule-action-btn secondary"
                                     onClick={() => {
@@ -1712,12 +1693,7 @@ export default function Slots() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ color: '#64748b', fontSize: '14px', fontWeight: '500' }}>Date</span>
                     <span style={{ color: '#1e293b', fontSize: '14px', fontWeight: '600' }}>
-                      {selectedBooking.date ? new Date(selectedBooking.date).toLocaleDateString('en-US', {
-                        weekday: 'long',
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      }) : 'N/A'}
+                      {selectedBooking.date ? formatDateForDisplay(selectedBooking.date) : 'N/A'}
                     </span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1736,6 +1712,31 @@ export default function Slots() {
                       ₹{(selectedBooking.totalPrice || selectedBooking.price || selectedBooking.amount || 0).toLocaleString()}
                     </span>
                   </div>
+                  {selectedBooking.createdAt && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ color: '#64748b', fontSize: '14px', fontWeight: '500' }}>Booked On</span>
+                      <span style={{ color: '#64748b', fontSize: '13px', fontWeight: '500' }}>
+                        {selectedBooking.createdAt?.toDate ? 
+                          selectedBooking.createdAt.toDate().toLocaleString('en-IN', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: true
+                          }) : 
+                          new Date(selectedBooking.createdAt).toLocaleString('en-IN', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: true
+                          })
+                        }
+                      </span>
+                    </div>
+                  )}
                   {selectedBooking.notes && (
                     <div style={{ 
                       marginTop: '8px',
@@ -1798,7 +1799,7 @@ export default function Slots() {
               gap: '12px',
               justifyContent: 'flex-end'
             }}>
-              {selectedBooking.status === 'pending' && (
+              {canAssignWorker(selectedBooking) && (
                 <button
                   onClick={() => {
                     setShowBookingDetails(false);

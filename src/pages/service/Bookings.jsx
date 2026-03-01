@@ -17,6 +17,7 @@ import "../../style/date-filter-tabs.css";
 import { useToast } from "../../components/ToastContainer";
 import ConfirmDialog from "../../components/ConfirmDialog";
 import { getBookingPrice } from "../../utils/packagePricingFix";
+import { getTodayIST, toISTDateString, isToday, isInPast, formatDateForDisplay, formatTime12Hour } from "../../utils/dateHelpers";
 
 const Bookings = () => {
   const toast = useToast();
@@ -38,8 +39,7 @@ const Bookings = () => {
   
   // Helper function to get today's date in YYYY-MM-DD format
   const getTodayDateString = () => {
-    const today = new Date();
-    return today.toISOString().split("T")[0];
+    return getTodayIST();
   };
   
   // Confirm dialog state
@@ -140,7 +140,7 @@ const Bookings = () => {
 
       const snap = await getDocs(q);
       const now = new Date();
-      const today = now.toISOString().split("T")[0];
+      const today = getTodayIST(); // Use IST date helper
       const currentTime = now.getHours() * 60 + now.getMinutes(); // Current time in minutes
 
       const list = [];
@@ -258,7 +258,7 @@ const Bookings = () => {
           
           // Process both cached and server data, but log the source
           const now = new Date();
-          const today = now.toISOString().split("T")[0];
+          const today = getTodayIST(); // Use IST date helper
           const currentTime = now.getHours() * 60 + now.getMinutes(); // Current time in minutes
 
           const list = [];
