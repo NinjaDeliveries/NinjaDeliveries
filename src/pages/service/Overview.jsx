@@ -689,13 +689,46 @@ const Overview = () => {
       const completedBookings = validBookings.filter(d => d.data().status === 'completed').length;
       
       // Calculate total revenue (only from completed bookings, excluding rejected/cancelled)
+      // For package bookings: count the full package price only once (when first booking is completed)
       const totalRevenue = validBookings.reduce((sum, doc) => {
         const booking = doc.data();
         if (booking.status === 'completed') {
+          // Check if this is a package booking
+          if (booking.packageType || booking.isPackageBooking) {
+            // For package bookings, use packagePrice (full package amount)
+            // This will be counted for each completed booking, but we'll deduplicate below
+            return sum + (booking.packagePrice || 0);
+          } else {
+            // Regular booking - use normal price
+            return sum + (booking.totalPrice || booking.price || booking.amount || 0);
+          }
+        }
+        return sum;
+      }, 0);
+      
+      // Deduplicate package revenue - only count each package once
+      const packageGroups = new Map();
+      validBookings.forEach(doc => {
+        const booking = doc.data();
+        if (booking.status === 'completed' && (booking.packageType || booking.isPackageBooking)) {
+          const packageKey = booking.packageId || `${booking.customerPhone}_${booking.serviceName}_${booking.packageType}`;
+          if (!packageGroups.has(packageKey)) {
+            packageGroups.set(packageKey, booking.packagePrice || 0);
+          }
+        }
+      });
+      
+      // Calculate correct total revenue
+      const packageRevenue = Array.from(packageGroups.values()).reduce((sum, price) => sum + price, 0);
+      const regularRevenue = validBookings.reduce((sum, doc) => {
+        const booking = doc.data();
+        if (booking.status === 'completed' && !booking.packageType && !booking.isPackageBooking) {
           return sum + (booking.totalPrice || booking.price || booking.amount || 0);
         }
         return sum;
       }, 0);
+      
+      const correctTotalRevenue = packageRevenue + regularRevenue;
 
       // Calculate completion rate (excluding rejected/cancelled)
       const completionRate = totalBookings > 0 ? (completedBookings / totalBookings) * 100 : 0;
@@ -703,7 +736,9 @@ const Overview = () => {
       console.log('📈 Calculated stats:', {
         totalBookings,
         completedBookings,
-        totalRevenue,
+        totalRevenue: correctTotalRevenue,
+        packageRevenue,
+        regularRevenue,
         completionRate,
         excludedBookings: snap.size - validBookings.length
       });
@@ -712,7 +747,7 @@ const Overview = () => {
         ...prev, 
         totalBookings: totalBookings,
         completedBookings: completedBookings,
-        totalRevenue: totalRevenue,
+        totalRevenue: correctTotalRevenue,
         completionRate: completionRate
       }));
 
@@ -776,6 +811,9 @@ const Overview = () => {
 
     console.log('📅 Showing data from:', sevenDaysAgo.toLocaleDateString(), 'to', today.toLocaleDateString());
 
+    // Track unique packages to avoid counting them multiple times
+    const packageGroups = new Map();
+
     bookingDocs.forEach(doc => {
       const booking = doc.data();
       const bookingDate = booking.createdAt?.toDate ? booking.createdAt.toDate() : 
@@ -810,10 +848,29 @@ const Overview = () => {
         
         // ✅ FIX: Only add revenue for COMPLETED bookings
         if (booking.status === 'completed') {
-          const amount = booking.totalPrice || booking.price || booking.amount || 0;
-          if (amount > 0) {
-            weekData[dayIndex].revenue += amount;
-            console.log(`💰 Added ₹${amount} to ${weekData[dayIndex].day} (${bookingDate.toLocaleDateString()}) - Status: ${booking.status}`);
+          // Check if this is a package booking
+          if (booking.packageType || booking.isPackageBooking) {
+            // Create unique package key
+            const packageKey = booking.packageId || `${booking.customerPhone}_${booking.serviceName}_${booking.packageType}`;
+            
+            // Only count package revenue once per unique package
+            if (!packageGroups.has(packageKey)) {
+              const packagePrice = booking.packagePrice || 0;
+              if (packagePrice > 0) {
+                packageGroups.set(packageKey, true);
+                weekData[dayIndex].revenue += packagePrice;
+                console.log(`💰 Added package ₹${packagePrice} to ${weekData[dayIndex].day} (${bookingDate.toLocaleDateString()}) - Status: ${booking.status}`);
+              }
+            } else {
+              console.log(`⏭️ Skipped duplicate package booking from ${weekData[dayIndex].day} - Already counted`);
+            }
+          } else {
+            // Regular booking
+            const amount = booking.totalPrice || booking.price || booking.amount || 0;
+            if (amount > 0) {
+              weekData[dayIndex].revenue += amount;
+              console.log(`💰 Added ₹${amount} to ${weekData[dayIndex].day} (${bookingDate.toLocaleDateString()}) - Status: ${booking.status}`);
+            }
           }
         } else {
           console.log(`⏭️ Skipped ₹${booking.totalPrice || booking.price || booking.amount || 0} from ${weekData[dayIndex].day} - Status: ${booking.status}`);
@@ -827,6 +884,7 @@ const Overview = () => {
 
   const processTopServices = (bookingDocs) => {
     const serviceStats = {};
+    const packageGroups = new Map(); // Track unique packages per service
 
     bookingDocs.forEach(doc => {
       const booking = doc.data();
@@ -839,12 +897,30 @@ const Overview = () => {
       const serviceName = booking.serviceName || 'Unknown Service';
       
       if (!serviceStats[serviceName]) {
-        serviceStats[serviceName] = { bookings: 0, revenue: 0 };
+        serviceStats[serviceName] = { bookings: 0, revenue: 0, packageRevenue: 0, regularRevenue: 0 };
       }
       
       serviceStats[serviceName].bookings += 1;
+      
       if (booking.status === 'completed') {
-        serviceStats[serviceName].revenue += (booking.totalPrice || booking.price || booking.amount || 0);
+        // Check if this is a package booking
+        if (booking.packageType || booking.isPackageBooking) {
+          // Create unique package key
+          const packageKey = `${serviceName}_${booking.packageId || `${booking.customerPhone}_${booking.packageType}`}`;
+          
+          // Only count package revenue once per unique package
+          if (!packageGroups.has(packageKey)) {
+            const packagePrice = booking.packagePrice || 0;
+            packageGroups.set(packageKey, { serviceName, price: packagePrice });
+            serviceStats[serviceName].packageRevenue += packagePrice;
+            serviceStats[serviceName].revenue += packagePrice;
+          }
+        } else {
+          // Regular booking - add its price
+          const price = booking.totalPrice || booking.price || booking.amount || 0;
+          serviceStats[serviceName].regularRevenue += price;
+          serviceStats[serviceName].revenue += price;
+        }
       }
     });
 

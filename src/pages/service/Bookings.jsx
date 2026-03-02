@@ -152,19 +152,21 @@ const Bookings = () => {
         // Auto-expire logic - check if booking should be expired
         let shouldExpire = false;
         
-        // 1. Past date bookings that are not completed/rejected/expired
+        // 1. Past date bookings that are not completed/rejected/expired/cancelled
+        // This will expire pending, assigned, and started bookings from past dates
         if (
           data.date < today &&
-          !["completed", "rejected", "expired"].includes(data.status)
+          !["completed", "rejected", "expired", "cancelled"].includes(data.status)
         ) {
           shouldExpire = true;
+          console.log(`⏰ Expiring past booking: ${docSnap.id} - Date: ${data.date}, Status: ${data.status}`);
         }
         
-        // 2. Same day bookings that are 1 hour past their time and still pending
+        // 2. Same day bookings that are 1 hour past their time and still pending/assigned
         if (
           data.date === today &&
           data.time &&
-          data.status === "pending"
+          ["pending", "assigned"].includes(data.status)
         ) {
           const [hours, minutes] = data.time.split(':').map(Number);
           const bookingTime = hours * 60 + minutes; // Booking time in minutes
@@ -173,6 +175,7 @@ const Bookings = () => {
           // If more than 60 minutes past the booking time, expire it
           if (timeDiff > 60) {
             shouldExpire = true;
+            console.log(`⏰ Expiring late booking: ${docSnap.id} - Time: ${data.time}, Status: ${data.status}`);
           }
         }
 
@@ -271,19 +274,21 @@ const Bookings = () => {
               // Auto-expire logic - check if booking should be expired
               let shouldExpire = false;
               
-              // 1. Past date bookings that are not completed/rejected/expired
+              // 1. Past date bookings that are not completed/rejected/expired/cancelled
+              // This will expire pending, assigned, and started bookings from past dates
               if (
                 data.date < today &&
-                !["completed", "rejected", "expired"].includes(data.status)
+                !["completed", "rejected", "expired", "cancelled"].includes(data.status)
               ) {
                 shouldExpire = true;
+                console.log(`⏰ Expiring past booking: ${docSnap.id} - Date: ${data.date}, Status: ${data.status}`);
               }
               
-              // 2. Same day bookings that are 1 hour past their time and still pending
+              // 2. Same day bookings that are 1 hour past their time and still pending/assigned
               if (
                 data.date === today &&
                 data.time &&
-                data.status === "pending"
+                ["pending", "assigned"].includes(data.status)
               ) {
                 const [hours, minutes] = data.time.split(':').map(Number);
                 const bookingTime = hours * 60 + minutes; // Booking time in minutes
@@ -292,6 +297,7 @@ const Bookings = () => {
                 // If more than 60 minutes past the booking time, expire it
                 if (timeDiff > 60) {
                   shouldExpire = true;
+                  console.log(`⏰ Expiring late booking: ${docSnap.id} - Time: ${data.time}, Status: ${data.status}`);
                 }
               }
 
@@ -458,96 +464,71 @@ const Bookings = () => {
         try {
           const user = auth.currentUser;
       
-      // 1️⃣ Update Firestore booking status with user tracking
-      await updateDoc(
-        doc(db, "service_bookings", booking.id),
-        {
-          status: "rejected",
-          rejectedAt: new Date(),
-          rejectedBy: user?.uid,
-        }
-      );
+          // 1️⃣ Update Firestore booking status immediately (this is fast)
+          await updateDoc(
+            doc(db, "service_bookings", booking.id),
+            {
+              status: "rejected",
+              rejectedAt: new Date(),
+              rejectedBy: user?.uid,
+            }
+          );
 
-      // 2️⃣ Create a rejection record for admin tracking
-      const rejectionData = {
-        bookingId: booking.id,
-        companyId: booking.companyId,
-        companyName: booking.companyName || "Unknown Company",
-        serviceName: booking.serviceName,
-        workName: booking.workName,
-        customerName: booking.customerName,
-        customerPhone: booking.customerPhone,
-        bookingDate: booking.date,
-        bookingTime: booking.time,
-        amount: getBookingPrice(booking),
-        rejectedAt: new Date(),
-        rejectedBy: user?.uid,
-        status: "pending_review", // Admin can review this
-      };
+          // Show success immediately - don't wait for background tasks
+          toast.success("Booking Rejected", "The booking has been rejected successfully.");
+          setConfirmDialog({ isOpen: false, title: '', message: '', onConfirm: null, type: 'warning' });
 
-      // Add to rejected_bookings collection for admin review
-      await setDoc(
-        doc(db, "rejected_bookings", booking.id),
-        rejectionData
-      );
+          // 2️⃣ Create rejection record in background (don't await)
+          const rejectionData = {
+            bookingId: booking.id,
+            companyId: booking.companyId,
+            companyName: booking.companyName || "Unknown Company",
+            serviceName: booking.serviceName,
+            workName: booking.workName,
+            customerName: booking.customerName,
+            customerPhone: booking.customerPhone,
+            bookingDate: booking.date,
+            bookingTime: booking.time,
+            amount: getBookingPrice(booking),
+            rejectedAt: new Date(),
+            rejectedBy: user?.uid,
+            status: "pending_review",
+          };
 
-      // 3️⃣ Send WhatsApp notification via Cloud Function
-      try {
-        // await fetch(
-        //   "https://us-central1-ninjadeliveries-91007.cloudfunctions.net/sendWhatsAppMessage",
-        //   {
-        //     method: "POST",
-        //     headers: {
-        //       "Content-Type": "application/json",
-        //     },
-        //     body: JSON.stringify({
-        //       bookingId: booking.id,
-        //       companyName: booking.companyName || "Unknown Company",
-        //       customerName: booking.customerName,
-        //       customerPhone: booking.customerPhone,
-        //       service: booking.workName || booking.serviceName,
-        //       amount: booking.totalPrice || booking.price || 0,
-        //       date: booking.date,
-        //       time: booking.time,
-        //       address: booking.customerAddress || booking.location,
-        //     }),
-        //   }
-        // );
-        try {
-  const response = await fetch(
-    "https://us-central1-ninjadeliveries-91007.cloudfunctions.net/sendWhatsAppMessage",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        bookingId: booking.id,
-        companyName: booking.companyName || "Unknown Company",
-        customerName: booking.customerName,
-        customerPhone: booking.customerPhone,
-        service: booking.workName || booking.serviceName,
-        amount: getBookingPrice(booking),
-        date: booking.date,
-        time: booking.time,
-        address: booking.customerAddress || booking.location,
-      }),
-    }
-  );
+          // Run in background - don't block UI
+          setDoc(doc(db, "rejected_bookings", booking.id), rejectionData).catch(err => {
+            console.error("Failed to create rejection record:", err);
+          });
 
-  const text = await response.text();
-} catch (err) {
-}
-      } catch (whatsappError) {
-        // Don't fail the whole operation if WhatsApp fails
-      }
+          // 3️⃣ Send WhatsApp notification in background (don't await)
+          fetch(
+            "https://us-central1-ninjadeliveries-91007.cloudfunctions.net/sendWhatsAppMessage",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                bookingId: booking.id,
+                companyName: booking.companyName || "Unknown Company",
+                customerName: booking.customerName,
+                customerPhone: booking.customerPhone,
+                service: booking.workName || booking.serviceName,
+                amount: getBookingPrice(booking),
+                date: booking.date,
+                time: booking.time,
+                address: booking.customerAddress || booking.location,
+              }),
+            }
+          ).catch(err => {
+            console.error("Failed to send WhatsApp notification:", err);
+          });
 
-      // No need to call fetchBookings() - real-time listener will update automatically
-      toast.success("Booking Rejected", "The booking has been rejected successfully.");
         } catch (err) {
+          console.error("Failed to reject booking:", err);
           toast.error("Failed to Reject", "Could not reject the booking. Please try again.");
+          setConfirmDialog({ isOpen: false, title: '', message: '', onConfirm: null, type: 'warning' });
         }
-        setConfirmDialog({ isOpen: false, title: '', message: '', onConfirm: null, type: 'warning' });
       }
     });
   };
@@ -1124,7 +1105,8 @@ const Bookings = () => {
                 packageStartDate: firstBooking.packageStartDate || bookings[0].date,
                 packageEndDate: firstBooking.packageEndDate || bookings[bookings.length - 1].date,
                 totalBookings: bookings.length,
-                totalPrice: firstBooking.packagePrice || firstBooking.totalPrice || firstBooking.price || firstBooking.amount || 0
+                // Use packagePrice (total package price), not individual booking price
+                totalPrice: firstBooking.packagePrice || 0
               };
             };
             
@@ -1266,10 +1248,25 @@ const Bookings = () => {
                                     <div className="bookings-amount">
                                       <div className="bookings-price">
                                         <span className="price-display">
-                                          <span className="rupee-symbol">₹</span>
-                                          <span className="price-amount">
-                                            {getBookingPrice(booking).toLocaleString()}
-                                          </span>
+                                          {getBookingPrice(booking) === 0 ? (
+                                            <span style={{
+                                              fontSize: '12px',
+                                              color: '#059669',
+                                              background: '#d1fae5',
+                                              padding: '4px 10px',
+                                              borderRadius: '6px',
+                                              fontWeight: '500'
+                                            }}>
+                                              📦 Included in Package
+                                            </span>
+                                          ) : (
+                                            <>
+                                              <span className="rupee-symbol">₹</span>
+                                              <span className="price-amount">
+                                                {getBookingPrice(booking).toLocaleString()}
+                                              </span>
+                                            </>
+                                          )}
                                         </span>
                                       </div>
                                     </div>
@@ -1424,10 +1421,25 @@ const Bookings = () => {
                                   <div className="bookings-amount">
                                     <div className="bookings-price">
                                       <span className="price-display">
-                                        <span className="rupee-symbol">₹</span>
-                                        <span className="price-amount">
-                                          {getBookingPrice(booking).toLocaleString()}
-                                        </span>
+                                        {getBookingPrice(booking) === 0 ? (
+                                          <span style={{
+                                            fontSize: '12px',
+                                            color: '#059669',
+                                            background: '#d1fae5',
+                                            padding: '4px 10px',
+                                            borderRadius: '6px',
+                                            fontWeight: '500'
+                                          }}>
+                                            📦 Included in Package
+                                          </span>
+                                        ) : (
+                                          <>
+                                            <span className="rupee-symbol">₹</span>
+                                            <span className="price-amount">
+                                              {getBookingPrice(booking).toLocaleString()}
+                                            </span>
+                                          </>
+                                        )}
                                       </span>
                                     </div>
                                   </div>
