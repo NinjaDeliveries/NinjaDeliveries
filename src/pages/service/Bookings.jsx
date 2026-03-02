@@ -1710,6 +1710,34 @@ const Bookings = () => {
                     <p className="service-name">
                       {selectedBooking.workName || selectedBooking.serviceName || "Service Request"}
                     </p>
+                    {/* Quantity Display - Show if quantity exists or calculate from price */}
+                    {(() => {
+                      // Try to get quantity from different possible fields
+                      const qty = selectedBooking.quantity || 
+                                  selectedBooking.qty || 
+                                  selectedBooking.serviceQuantity ||
+                                  selectedBooking.amount || // Sometimes amount represents quantity
+                                  selectedBooking.totalPrice || // Or total price might be the quantity
+                                  selectedBooking.price;
+                      
+                      if (qty) {
+                        return (
+                          <p style={{
+                            fontSize: '14px',
+                            color: '#059669',
+                            margin: '6px 0 8px 0',
+                            fontWeight: '600',
+                            backgroundColor: '#d1fae5',
+                            padding: '6px 12px',
+                            borderRadius: '6px',
+                            display: 'inline-block'
+                          }}>
+                            📦 Quantity: <span style={{color: '#047857', fontWeight: '700', fontSize: '15px'}}>{qty}</span>
+                          </p>
+                        );
+                      }
+                      return null;
+                    })()}
                     <p className="service-price">
                       ₹{(() => {
                         // If package price exists, use it
