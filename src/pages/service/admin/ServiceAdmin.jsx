@@ -33,6 +33,14 @@ const ServiceAdmin = () => {
   const [bookingSearchTerm, setBookingSearchTerm] = useState('');
   const [bookingStatusFilter, setBookingStatusFilter] = useState('all');
   const [bookingDateFilter, setBookingDateFilter] = useState('all');
+  const [workerCountMap, setWorkerCountMap] = useState({}); // NEW: Worker count per company
+  
+  // Export modal state
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportData, setExportData] = useState([]);
+  const [exportFilename, setExportFilename] = useState('');
+  const [selectedFields, setSelectedFields] = useState([]);
+  const [availableFields, setAvailableFields] = useState([]);
 
   // Refs for cleanup
   const unsubscribeRefs = useRef({});
@@ -101,23 +109,176 @@ const ServiceAdmin = () => {
 
   // Removed demo data generation - only use real Firestore data
 
-  const exportToCSV = (data, filename) => {
+  // Open export modal with field selection
+  const openExportModal = (data, filename) => {
     if (data.length === 0) {
       toast.error('No data to export');
       return;
     }
 
-    const headers = Object.keys(data[0]);
+    // Enrich data based on type
+    let enrichedData = data;
+    let priorityFields = []; // Fields to show first
+    
+    if (filename === 'service_companies') {
+      // Enrich company data with computed fields
+      enrichedData = data.map(company => {
+        const companyServices = services.filter(s => s.companyId === company.id);
+        const workerCount = workerCountMap[company.id] || 0;
+        const isOnline = onlineCompanies.has(company.id);
+        
+        return {
+          // Basic Info (Priority fields)
+          companyName: company.companyName || company.name || company.businessName || 'Unknown',
+          email: company.email || 'N/A',
+          phone: company.phone || company.phoneNumber || company.mobile || 'N/A',
+          status: company.isActive ? 'Active' : 'Inactive',
+          onlineStatus: isOnline ? 'Online' : 'Offline',
+          totalServices: companyServices.length,
+          totalWorkers: workerCount,
+          
+          // Additional Info
+          ownerName: company.ownerName || company.owner || 'N/A',
+          ownerPhone: company.ownerPhone || 'N/A',
+          address: company.address || 'N/A',
+          city: company.city || 'N/A',
+          state: company.state || 'N/A',
+          pincode: company.pincode || 'N/A',
+          
+          // Dates
+          createdAt: company.createdAt ? new Date(company.createdAt).toLocaleString() : 'N/A',
+          lastActive: company.lastActive ? new Date(company.lastActive).toLocaleString() : 'Never',
+          lastLogin: company.lastLogin ? new Date(company.lastLogin).toLocaleString() : 'Never',
+          
+          // Technical (less priority)
+          id: company.id,
+          deliveryZoneName: company.deliveryZoneName || 'N/A',
+          type: company.type || 'N/A'
+        };
+      });
+      
+      // Priority fields for companies
+      priorityFields = [
+        'companyName', 'email', 'phone', 'status', 'onlineStatus', 
+        'totalServices', 'totalWorkers', 'ownerName', 'ownerPhone',
+        'address', 'city', 'state', 'createdAt', 'lastActive'
+      ];
+      
+    } else if (filename === 'service_services') {
+      // Enrich service data
+      enrichedData = data.map(service => {
+        const company = companies.find(c => c.id === service.companyId);
+        const category = categories.find(cat => cat.id === service.categoryId);
+        
+        return {
+          serviceName: service.serviceName || service.name || service.title || 'Unknown',
+          companyName: company?.companyName || company?.name || 'Unknown Company',
+          categoryName: category?.name || service.categoryName || service.category || 'Uncategorized',
+          price: service.price || 0,
+          duration: service.duration || 'N/A',
+          status: service.isActive ? 'Active' : 'Inactive',
+          description: service.description || 'N/A',
+          createdAt: service.createdAt ? new Date(service.createdAt).toLocaleString() : 'N/A',
+          id: service.id
+        };
+      });
+      
+      priorityFields = [
+        'serviceName', 'companyName', 'categoryName', 'price', 
+        'duration', 'status', 'description', 'createdAt'
+      ];
+      
+    } else if (filename === 'service_bookings') {
+      // Enrich booking data
+      enrichedData = data.map(booking => ({
+        bookingId: booking.bookingId || booking.id,
+        companyName: booking.companyName || 'Unknown',
+        customerName: booking.customerName || 'Unknown',
+        customerPhone: booking.customerPhone || 'N/A',
+        customerEmail: booking.customerEmail || 'N/A',
+        serviceName: booking.serviceName || 'N/A',
+        status: booking.status || 'PENDING',
+        totalPrice: booking.totalPrice || booking.price || 0,
+        bookingDate: booking.displayDateTime || (booking.bookingDate ? new Date(booking.bookingDate).toLocaleString() : 'N/A'),
+        createdAt: booking.createdAt ? new Date(booking.createdAt).toLocaleString() : 'N/A',
+        isPackage: booking.isPackage ? 'Yes' : 'No',
+        id: booking.id
+      }));
+      
+      priorityFields = [
+        'bookingId', 'companyName', 'customerName', 'customerPhone', 
+        'serviceName', 'status', 'totalPrice', 'bookingDate', 'isPackage'
+      ];
+      
+    } else if (filename === 'service_activity_logs') {
+      // Enrich activity logs
+      enrichedData = data.map(log => ({
+        companyName: log.companyName || 'Unknown',
+        action: log.action || 'N/A',
+        timestamp: log.timestamp ? new Date(log.timestamp).toLocaleString() : 'N/A',
+        device: log.device || 'Unknown',
+        ipAddress: log.ipAddress || 'N/A',
+        success: log.success ? 'Yes' : 'No',
+        id: log.id
+      }));
+      
+      priorityFields = [
+        'companyName', 'action', 'timestamp', 'device', 'success'
+      ];
+    }
+
+    // Get only the fields we defined (no extra fields)
+    const fields = Object.keys(enrichedData[0]);
+
+    setExportData(enrichedData);
+    setExportFilename(filename);
+    setAvailableFields(fields);
+    // Select priority fields by default
+    setSelectedFields(priorityFields.length > 0 ? priorityFields : fields);
+    setShowExportModal(true);
+  };
+
+  // Export selected fields to CSV
+  const exportToCSV = () => {
+    if (exportData.length === 0) {
+      toast.error('No data to export');
+      return;
+    }
+
+    if (selectedFields.length === 0) {
+      toast.error('Please select at least one field to export');
+      return;
+    }
+
     const csvContent = [
-      headers.join(','),
-      ...data.map(row =>
-        headers.map(header => {
-          const value = row[header];
+      selectedFields.join(','),
+      ...exportData.map(row =>
+        selectedFields.map(field => {
+          let value = row[field];
+          
+          // Handle dates
+          if (value instanceof Date) {
+            value = value.toISOString();
+          }
+          
+          // Handle objects
+          if (typeof value === 'object' && value !== null) {
+            value = JSON.stringify(value);
+          }
+          
+          // Handle null/undefined
+          if (value === null || value === undefined) {
+            value = '';
+          }
+          
+          // Convert to string
+          value = String(value);
+          
           // Handle values that might contain commas or quotes
-          if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
+          if (value.includes(',') || value.includes('"') || value.includes('\n')) {
             return `"${value.replace(/"/g, '""')}"`;
           }
-          return value || '';
+          return value;
         }).join(',')
       )
     ].join('\n');
@@ -126,13 +287,85 @@ const ServiceAdmin = () => {
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `${filename}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `${exportFilename}_${new Date().toISOString().split('T')[0]}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
 
-    toast.success(`${filename} exported successfully`);
+    toast.success(`${exportFilename} exported successfully with ${selectedFields.length} fields`);
+    setShowExportModal(false);
+  };
+
+  // Toggle field selection
+  const toggleFieldSelection = (field) => {
+    setSelectedFields(prev => {
+      if (prev.includes(field)) {
+        return prev.filter(f => f !== field);
+      } else {
+        return [...prev, field];
+      }
+    });
+  };
+
+  // Select/Deselect all fields
+  const toggleAllFields = () => {
+    if (selectedFields.length === availableFields.length) {
+      setSelectedFields([]);
+    } else {
+      setSelectedFields([...availableFields]);
+    }
+  };
+
+  // Get user-friendly field label
+  const getFieldLabel = (field) => {
+    const labels = {
+      // Company fields
+      companyName: '🏢 Company Name',
+      email: '📧 Email',
+      phone: '📱 Phone',
+      status: '✅ Status',
+      onlineStatus: '🟢 Online Status',
+      totalServices: '🛠️ Total Services',
+      totalWorkers: '👷 Total Workers',
+      ownerName: '👤 Owner Name',
+      ownerPhone: '📞 Owner Phone',
+      address: '📍 Address',
+      city: '🏙️ City',
+      state: '🗺️ State',
+      pincode: '📮 PIN Code',
+      createdAt: '📅 Created Date',
+      lastActive: '⏰ Last Active',
+      lastLogin: '🔐 Last Login',
+      id: '🆔 ID',
+      deliveryZoneName: '🚚 Delivery Zone',
+      type: '📋 Type',
+      
+      // Service fields
+      serviceName: '🛠️ Service Name',
+      categoryName: '📂 Category',
+      price: '💰 Price',
+      duration: '⏱️ Duration',
+      description: '📝 Description',
+      
+      // Booking fields
+      bookingId: '🎫 Booking ID',
+      customerName: '👤 Customer Name',
+      customerPhone: '📱 Customer Phone',
+      customerEmail: '📧 Customer Email',
+      totalPrice: '💰 Total Price',
+      bookingDate: '📅 Booking Date',
+      isPackage: '📦 Is Package',
+      
+      // Activity fields
+      action: '⚡ Action',
+      timestamp: '⏰ Timestamp',
+      device: '📱 Device',
+      ipAddress: '🌐 IP Address',
+      success: '✅ Success'
+    };
+    
+    return labels[field] || field.charAt(0).toUpperCase() + field.slice(1).replace(/([A-Z])/g, ' $1');
   };
 
   const toggleDarkMode = () => {
@@ -548,6 +781,57 @@ const ServiceAdmin = () => {
     }
   }, [companies]); // Re-run when companies change to update company details
 
+  // Setup real-time workers count listener
+  const setupWorkersListener = useCallback(() => {
+    try {
+      // Cleanup existing workers listener
+      if (unsubscribeRefs.current.workers) {
+        unsubscribeRefs.current.workers();
+      }
+
+      // Workers listener - fetch all workers and count by companyId
+      const workersQuery = query(
+        collection(db, 'service_workers'),
+        where('isActive', '==', true) // Only count active workers
+      );
+
+      const unsubscribeWorkers = onSnapshot(
+        workersQuery,
+        (snapshot) => {
+          try {
+            // Create a map of companyId -> worker count
+            const countMap = {};
+            
+            snapshot.docs.forEach(doc => {
+              const data = doc.data();
+              const companyId = data.companyId;
+              
+              if (companyId) {
+                countMap[companyId] = (countMap[companyId] || 0) + 1;
+              }
+            });
+
+            setWorkerCountMap(countMap);
+            console.log('✅ Worker counts updated:', countMap);
+          } catch (error) {
+            console.error('Error processing workers data:', error);
+            setWorkerCountMap({});
+          }
+        },
+        (error) => {
+          console.error('Workers listener error:', error);
+          setWorkerCountMap({});
+        }
+      );
+      
+      unsubscribeRefs.current.workers = unsubscribeWorkers;
+      
+    } catch (error) {
+      console.error('Error setting up workers listener:', error);
+      setWorkerCountMap({});
+    }
+  }, []);
+
   const filteredServices = services.filter(service => {
     const matchesSearch = !searchTerm ||
       (service.serviceName || service.name || service.title || '').toLowerCase().includes(searchTerm.toLowerCase());
@@ -639,6 +923,7 @@ const ServiceAdmin = () => {
   // Set up real-time listeners when component mounts
   useEffect(() => {
     setupRealtimeListeners();
+    setupWorkersListener(); // NEW: Setup workers listener
     
     // Setup bookings listener after a short delay to ensure companies are loaded
     const timer = setTimeout(() => {
@@ -652,7 +937,7 @@ const ServiceAdmin = () => {
       cleanupListeners();
       clearTimeout(timer);
     };
-  }, [setupRealtimeListeners, cleanupListeners]);
+  }, [setupRealtimeListeners, setupWorkersListener, cleanupListeners]);
 
   // Setup bookings listener when companies are loaded or change
   useEffect(() => {
@@ -1031,7 +1316,7 @@ const ServiceAdmin = () => {
                     Showing {getPaginatedData(filteredCompanies, currentPage).length} of {filteredCompanies.length} companies
                   </span>
                   <button
-                    onClick={() => exportToCSV(filteredCompanies, 'service_companies')}
+                    onClick={() => openExportModal(filteredCompanies, 'service_companies')}
                     style={{
                       ...styles.button,
                       backgroundColor: '#10b981',
@@ -1053,6 +1338,7 @@ const ServiceAdmin = () => {
               darkMode={darkMode}
               totalCompanies={filteredCompanies.length}
               onlineCompanies={onlineCompanies}
+              workerCountMap={workerCountMap}
               onCompanyClick={(company) => {
                 setSelectedCompany(company);
                 setShowActivityModal(true);
@@ -1130,7 +1416,7 @@ const ServiceAdmin = () => {
                     Showing {getPaginatedData(filteredServices, currentPage).length} of {filteredServices.length} services
                   </span>
                   <button
-                    onClick={() => exportToCSV(filteredServices, 'service_services')}
+                    onClick={() => openExportModal(filteredServices, 'service_services')}
                     style={{
                       ...styles.button,
                       backgroundColor: '#10b981',
@@ -1247,7 +1533,7 @@ const ServiceAdmin = () => {
                     {bookingsLoading && ' (Loading...)'}
                   </span>
                   <button
-                    onClick={() => exportToCSV(filteredBookings, 'service_bookings')}
+                    onClick={() => openExportModal(filteredBookings, 'service_bookings')}
                     style={{
                       ...styles.button,
                       backgroundColor: '#10b981',
@@ -1321,7 +1607,7 @@ const ServiceAdmin = () => {
                     Showing {getPaginatedData(filteredLogs, currentPage).length} of {filteredLogs.length} activities
                   </span>
                   <button
-                    onClick={() => exportToCSV(filteredLogs, 'service_activity_logs')}
+                    onClick={() => openExportModal(filteredLogs, 'service_activity_logs')}
                     style={{
                       ...styles.button,
                       backgroundColor: '#10b981',
@@ -1566,6 +1852,213 @@ const ServiceAdmin = () => {
           </div>
         </div>
       )}
+
+      {/* Export Modal */}
+      {showExportModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: darkMode ? '#1e293b' : '#ffffff',
+            borderRadius: '12px',
+            padding: '24px',
+            maxWidth: '600px',
+            width: '90%',
+            maxHeight: '80vh',
+            overflow: 'auto',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+          }}>
+            <div style={{ marginBottom: '20px' }}>
+              <h3 style={{ 
+                margin: '0 0 8px 0', 
+                color: darkMode ? '#ffffff' : '#1e293b',
+                fontSize: '20px',
+                fontWeight: '600'
+              }}>
+                📊 Export to CSV
+              </h3>
+              <p style={{ 
+                margin: 0, 
+                color: darkMode ? '#94a3b8' : '#64748b',
+                fontSize: '14px'
+              }}>
+                Select the fields you want to export ({exportData.length} records)
+              </p>
+            </div>
+
+            {/* Select All Checkbox */}
+            <div style={{
+              padding: '12px',
+              backgroundColor: darkMode ? '#334155' : '#f8fafc',
+              borderRadius: '8px',
+              marginBottom: '16px',
+              border: `1px solid ${darkMode ? '#475569' : '#e2e8f0'}`
+            }}>
+              <label style={{
+                display: 'flex',
+                alignItems: 'center',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '600',
+                color: darkMode ? '#e2e8f0' : '#1e293b'
+              }}>
+                <input
+                  type="checkbox"
+                  checked={selectedFields.length === availableFields.length}
+                  onChange={toggleAllFields}
+                  style={{
+                    marginRight: '8px',
+                    width: '18px',
+                    height: '18px',
+                    cursor: 'pointer'
+                  }}
+                />
+                {selectedFields.length === availableFields.length ? 'Deselect All' : 'Select All'} ({selectedFields.length}/{availableFields.length})
+              </label>
+            </div>
+
+            {/* Fields List */}
+            <div style={{
+              maxHeight: '400px',
+              overflow: 'auto',
+              marginBottom: '20px'
+            }}>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                gap: '8px'
+              }}>
+                {availableFields.map(field => (
+                  <label
+                    key={field}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: '10px 12px',
+                      backgroundColor: darkMode ? '#334155' : '#ffffff',
+                      border: `2px solid ${selectedFields.includes(field) 
+                        ? '#3b82f6' 
+                        : (darkMode ? '#475569' : '#e2e8f0')}`,
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      fontSize: '13px',
+                      fontWeight: selectedFields.includes(field) ? '600' : '400',
+                      color: darkMode ? '#e2e8f0' : '#374151',
+                      boxShadow: selectedFields.includes(field) 
+                        ? '0 2px 4px rgba(59, 130, 246, 0.2)' 
+                        : 'none'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = darkMode ? '#475569' : '#f8fafc';
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = darkMode ? '#334155' : '#ffffff';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedFields.includes(field)}
+                      onChange={() => toggleFieldSelection(field)}
+                      style={{
+                        marginRight: '10px',
+                        width: '18px',
+                        height: '18px',
+                        cursor: 'pointer',
+                        accentColor: '#3b82f6'
+                      }}
+                    />
+                    <span style={{
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      flex: 1
+                    }}>
+                      {getFieldLabel(field)}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'flex-end', 
+              gap: '12px',
+              paddingTop: '16px',
+              borderTop: `1px solid ${darkMode ? '#334155' : '#e2e8f0'}`
+            }}>
+              <button
+                onClick={() => {
+                  setShowExportModal(false);
+                  setSelectedFields([]);
+                  setAvailableFields([]);
+                  setExportData([]);
+                }}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: darkMode ? '#334155' : '#e2e8f0',
+                  color: darkMode ? '#e2e8f0' : '#1e293b',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = darkMode ? '#475569' : '#cbd5e1';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = darkMode ? '#334155' : '#e2e8f0';
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={exportToCSV}
+                disabled={selectedFields.length === 0}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: selectedFields.length === 0 ? '#94a3b8' : '#10b981',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: selectedFields.length === 0 ? 'not-allowed' : 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  transition: 'all 0.2s ease',
+                  opacity: selectedFields.length === 0 ? 0.5 : 1
+                }}
+                onMouseEnter={(e) => {
+                  if (selectedFields.length > 0) {
+                    e.currentTarget.style.backgroundColor = '#059669';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (selectedFields.length > 0) {
+                    e.currentTarget.style.backgroundColor = '#10b981';
+                  }
+                }}
+              >
+                📥 Export CSV ({selectedFields.length} fields)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -1619,7 +2112,7 @@ const StatsCard = ({ title, value, subtitle, icon, darkMode, trend }) => {
 };
 
 // Companies Table Component
-const CompaniesTable = ({ companies, services, darkMode, totalCompanies, onlineCompanies, onCompanyClick }) => {
+const CompaniesTable = ({ companies, services, darkMode, totalCompanies, onlineCompanies, workerCountMap, onCompanyClick }) => {
   if (companies.length === 0) {
     return (
       <div style={{
@@ -1682,6 +2175,10 @@ const CompaniesTable = ({ companies, services, darkMode, totalCompanies, onlineC
                 ...styles.th,
                 color: darkMode ? '#e2e8f0' : '#374151'
               }}>Services</th>
+              <th style={{
+                ...styles.th,
+                color: darkMode ? '#e2e8f0' : '#374151'
+              }}>Workers</th>
               <th style={{
                 ...styles.th,
                 color: darkMode ? '#e2e8f0' : '#374151'
@@ -1764,6 +2261,24 @@ const CompaniesTable = ({ companies, services, darkMode, totalCompanies, onlineC
                   }}>
                     {services.filter(s => s.companyId === company.id).length} Services
                   </span>
+                </td>
+                <td style={styles.td}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '4px 10px',
+                      backgroundColor: darkMode ? '#334155' : '#f0f9ff',
+                      color: darkMode ? '#60a5fa' : '#0369a1',
+                      borderRadius: '12px',
+                      fontSize: '13px',
+                      fontWeight: '500',
+                      border: `1px solid ${darkMode ? '#475569' : '#bae6fd'}`
+                    }}>
+                      👷 {workerCountMap[company.id] || 0}
+                    </span>
+                  </div>
                 </td>
                 <td style={styles.td}>
                   <span style={{
