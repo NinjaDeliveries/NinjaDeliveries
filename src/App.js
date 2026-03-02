@@ -28,6 +28,7 @@ import HotspotForm from "./pages/Hotspot";
 import OrderQRCodeQueue from "./pages/QrCodepage";
 import BannerAdmin from "./pages/Banner";
 import CouponCampaignManager from "./pages/Coupons";
+import { ToastProvider } from "./components/ToastContainer";
 import RiderCharges from "./pages/RiderCharges";
 import FreshGreens from "./pages/freshGreenCard";
 import RadiusMap from "./pages/locationRadiusMap";
@@ -111,8 +112,9 @@ function App() {
   // No need for additional loader here
 
   return (
-    <NotificationProvider>
-      <div>
+    <ToastProvider>
+      <NotificationProvider>
+        <div>
         {nav && isAdmin && <Navbar />}
         <NotificationAlert />
         
@@ -388,6 +390,7 @@ function App() {
         
       </div>
     </NotificationProvider>
+    </ToastProvider>
   );
 }
 

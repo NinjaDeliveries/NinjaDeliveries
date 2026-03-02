@@ -460,16 +460,27 @@ function ServiceBannerManagement({ onBack }) {
 
                 <div className="modern-banner-image">
                   {banner.imageUrl ? (
-                    <img src={banner.imageUrl} alt={banner.serviceName} />
-                  ) : (
-                    <div className="modern-banner-placeholder">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                        <circle cx="8.5" cy="8.5" r="1.5"/>
-                        <polyline points="21,15 16,10 5,21"/>
-                      </svg>
-                    </div>
-                  )}
+                    <img 
+                      src={banner.imageUrl} 
+                      alt={banner.serviceName}
+                      onError={(e) => {
+                        console.error(`Failed to load banner image: ${banner.imageUrl}`);
+                        e.target.style.display = 'none';
+                        // Show placeholder instead
+                        const placeholder = e.target.parentElement.querySelector('.modern-banner-placeholder');
+                        if (placeholder) {
+                          placeholder.style.display = 'block';
+                        }
+                      }}
+                    />
+                  ) : null}
+                  <div className="modern-banner-placeholder" style={{ display: banner.imageUrl ? 'none' : 'block' }}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                      <circle cx="8.5" cy="8.5" r="1.5"/>
+                      <polyline points="21,15 16,10 5,21"/>
+                    </svg>
+                  </div>
                 </div>
 
                 <div className="modern-banner-info">

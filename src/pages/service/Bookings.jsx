@@ -13,7 +13,14 @@ import {
 } from "firebase/firestore";
 import AssignWorkerModal from "./AssignWorkerModal";
 import "../../style/ServiceDashboard.css";
+import "../../style/date-filter-tabs.css";
+import { useToast } from "../../components/ToastContainer";
+import ConfirmDialog from "../../components/ConfirmDialog";
+import { getBookingPrice } from "../../utils/packagePricingFix";
+import { getTodayIST, toISTDateString, isToday, isInPast, formatDateForDisplay, formatTime12Hour } from "../../utils/dateHelpers";
+
 const Bookings = () => {
+  const toast = useToast();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openAssign, setOpenAssign] = useState(false);
@@ -26,6 +33,24 @@ const Bookings = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState(""); // New date filter state
   const [expandedPackageGroups, setExpandedPackageGroups] = useState({}); // Track expanded package groups
+  
+  // Simple date view mode: 'today' or 'all'
+  const [dateViewMode, setDateViewMode] = useState("today");
+  
+  // Helper function to get today's date in YYYY-MM-DD format
+  const getTodayDateString = () => {
+    return getTodayIST();
+  };
+  
+  // Confirm dialog state
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: null,
+    type: 'warning'
+  });
+  
   const statusConfig = {
     pending: {
       label: "Pending",
@@ -115,7 +140,7 @@ const Bookings = () => {
 
       const snap = await getDocs(q);
       const now = new Date();
-      const today = now.toISOString().split("T")[0];
+      const today = getTodayIST(); // Use IST date helper
       const currentTime = now.getHours() * 60 + now.getMinutes(); // Current time in minutes
 
       const list = [];
@@ -127,19 +152,21 @@ const Bookings = () => {
         // Auto-expire logic - check if booking should be expired
         let shouldExpire = false;
         
-        // 1. Past date bookings that are not completed/rejected/expired
+        // 1. Past date bookings that are not completed/rejected/expired/cancelled
+        // This will expire pending, assigned, and started bookings from past dates
         if (
           data.date < today &&
-          !["completed", "rejected", "expired"].includes(data.status)
+          !["completed", "rejected", "expired", "cancelled"].includes(data.status)
         ) {
           shouldExpire = true;
+          console.log(`⏰ Expiring past booking: ${docSnap.id} - Date: ${data.date}, Status: ${data.status}`);
         }
         
-        // 2. Same day bookings that are 1 hour past their time and still pending
+        // 2. Same day bookings that are 1 hour past their time and still pending/assigned
         if (
           data.date === today &&
           data.time &&
-          data.status === "pending"
+          ["pending", "assigned"].includes(data.status)
         ) {
           const [hours, minutes] = data.time.split(':').map(Number);
           const bookingTime = hours * 60 + minutes; // Booking time in minutes
@@ -148,6 +175,7 @@ const Bookings = () => {
           // If more than 60 minutes past the booking time, expire it
           if (timeDiff > 60) {
             shouldExpire = true;
+            console.log(`⏰ Expiring late booking: ${docSnap.id} - Time: ${data.time}, Status: ${data.status}`);
           }
         }
 
@@ -198,10 +226,24 @@ const Bookings = () => {
       return null;
     }
 
-    const q = query(
-      collection(db, "service_bookings"),
-      where("companyId", "==", user.uid)
-    );
+    // Build query based on dateViewMode
+    let q;
+    if (dateViewMode === "today") {
+      // Today's bookings only
+      q = query(
+        collection(db, "service_bookings"),
+        where("companyId", "==", user.uid),
+        where("date", "==", getTodayDateString())
+      );
+    } else {
+      // All bookings (no date filter)
+      q = query(
+        collection(db, "service_bookings"),
+        where("companyId", "==", user.uid)
+      );
+    }
+
+    console.log("📡 Setting up bookings listener with mode:", dateViewMode);
 
     // Set up real-time listener with better error handling
     const unsubscribe = onSnapshot(q, 
@@ -219,7 +261,7 @@ const Bookings = () => {
           
           // Process both cached and server data, but log the source
           const now = new Date();
-          const today = now.toISOString().split("T")[0];
+          const today = getTodayIST(); // Use IST date helper
           const currentTime = now.getHours() * 60 + now.getMinutes(); // Current time in minutes
 
           const list = [];
@@ -232,19 +274,21 @@ const Bookings = () => {
               // Auto-expire logic - check if booking should be expired
               let shouldExpire = false;
               
-              // 1. Past date bookings that are not completed/rejected/expired
+              // 1. Past date bookings that are not completed/rejected/expired/cancelled
+              // This will expire pending, assigned, and started bookings from past dates
               if (
                 data.date < today &&
-                !["completed", "rejected", "expired"].includes(data.status)
+                !["completed", "rejected", "expired", "cancelled"].includes(data.status)
               ) {
                 shouldExpire = true;
+                console.log(`⏰ Expiring past booking: ${docSnap.id} - Date: ${data.date}, Status: ${data.status}`);
               }
               
-              // 2. Same day bookings that are 1 hour past their time and still pending
+              // 2. Same day bookings that are 1 hour past their time and still pending/assigned
               if (
                 data.date === today &&
                 data.time &&
-                data.status === "pending"
+                ["pending", "assigned"].includes(data.status)
               ) {
                 const [hours, minutes] = data.time.split(':').map(Number);
                 const bookingTime = hours * 60 + minutes; // Booking time in minutes
@@ -253,6 +297,7 @@ const Bookings = () => {
                 // If more than 60 minutes past the booking time, expire it
                 if (timeDiff > 60) {
                   shouldExpire = true;
+                  console.log(`⏰ Expiring late booking: ${docSnap.id} - Time: ${data.time}, Status: ${data.status}`);
                 }
               }
 
@@ -305,7 +350,7 @@ const Bookings = () => {
     );
 
     return unsubscribe;
-  }, [setBookings, setLoading]);
+  }, [dateViewMode, setBookings, setLoading]);
 
 
   const fetchCategories = async () => {
@@ -410,100 +455,82 @@ const Bookings = () => {
   }, [setupBookingsListener]);
 
   const handleRejectBooking = async (booking) => {
-    if (!window.confirm("Are you sure you want to reject this booking?")) return;
-
-    try {
-      const user = auth.currentUser;
-      
-      // 1️⃣ Update Firestore booking status with user tracking
-      await updateDoc(
-        doc(db, "service_bookings", booking.id),
-        {
-          status: "rejected",
-          rejectedAt: new Date(),
-          rejectedBy: user?.uid,
-        }
-      );
-
-      // 2️⃣ Create a rejection record for admin tracking
-      const rejectionData = {
-        bookingId: booking.id,
-        companyId: booking.companyId,
-        companyName: booking.companyName || "Unknown Company",
-        serviceName: booking.serviceName,
-        workName: booking.workName,
-        customerName: booking.customerName,
-        customerPhone: booking.customerPhone,
-        bookingDate: booking.date,
-        bookingTime: booking.time,
-        amount: booking.totalPrice || booking.price || booking.amount || 0,
-        rejectedAt: new Date(),
-        rejectedBy: user?.uid,
-        status: "pending_review", // Admin can review this
-      };
-
-      // Add to rejected_bookings collection for admin review
-      await setDoc(
-        doc(db, "rejected_bookings", booking.id),
-        rejectionData
-      );
-
-      // 3️⃣ Send WhatsApp notification via Cloud Function
-      try {
-        // await fetch(
-        //   "https://us-central1-ninjadeliveries-91007.cloudfunctions.net/sendWhatsAppMessage",
-        //   {
-        //     method: "POST",
-        //     headers: {
-        //       "Content-Type": "application/json",
-        //     },
-        //     body: JSON.stringify({
-        //       bookingId: booking.id,
-        //       companyName: booking.companyName || "Unknown Company",
-        //       customerName: booking.customerName,
-        //       customerPhone: booking.customerPhone,
-        //       service: booking.workName || booking.serviceName,
-        //       amount: booking.totalPrice || booking.price || 0,
-        //       date: booking.date,
-        //       time: booking.time,
-        //       address: booking.customerAddress || booking.location,
-        //     }),
-        //   }
-        // );
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Reject Booking',
+      message: `Are you sure you want to reject the booking for ${booking.customerName}?`,
+      type: 'danger',
+      onConfirm: async () => {
         try {
-  const response = await fetch(
-    "https://us-central1-ninjadeliveries-91007.cloudfunctions.net/sendWhatsAppMessage",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        bookingId: booking.id,
-        companyName: booking.companyName || "Unknown Company",
-        customerName: booking.customerName,
-        customerPhone: booking.customerPhone,
-        service: booking.workName || booking.serviceName,
-        amount: booking.totalPrice || booking.price || 0,
-        date: booking.date,
-        time: booking.time,
-        address: booking.customerAddress || booking.location,
-      }),
-    }
-  );
+          const user = auth.currentUser;
+      
+          // 1️⃣ Update Firestore booking status immediately (this is fast)
+          await updateDoc(
+            doc(db, "service_bookings", booking.id),
+            {
+              status: "rejected",
+              rejectedAt: new Date(),
+              rejectedBy: user?.uid,
+            }
+          );
 
-  const text = await response.text();
-} catch (err) {
-}
-      } catch (whatsappError) {
-        // Don't fail the whole operation if WhatsApp fails
+          // Show success immediately - don't wait for background tasks
+          toast.success("Booking Rejected", "The booking has been rejected successfully.");
+          setConfirmDialog({ isOpen: false, title: '', message: '', onConfirm: null, type: 'warning' });
+
+          // 2️⃣ Create rejection record in background (don't await)
+          const rejectionData = {
+            bookingId: booking.id,
+            companyId: booking.companyId,
+            companyName: booking.companyName || "Unknown Company",
+            serviceName: booking.serviceName,
+            workName: booking.workName,
+            customerName: booking.customerName,
+            customerPhone: booking.customerPhone,
+            bookingDate: booking.date,
+            bookingTime: booking.time,
+            amount: getBookingPrice(booking),
+            rejectedAt: new Date(),
+            rejectedBy: user?.uid,
+            status: "pending_review",
+          };
+
+          // Run in background - don't block UI
+          setDoc(doc(db, "rejected_bookings", booking.id), rejectionData).catch(err => {
+            console.error("Failed to create rejection record:", err);
+          });
+
+          // 3️⃣ Send WhatsApp notification in background (don't await)
+          fetch(
+            "https://us-central1-ninjadeliveries-91007.cloudfunctions.net/sendWhatsAppMessage",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                bookingId: booking.id,
+                companyName: booking.companyName || "Unknown Company",
+                customerName: booking.customerName,
+                customerPhone: booking.customerPhone,
+                service: booking.workName || booking.serviceName,
+                amount: getBookingPrice(booking),
+                date: booking.date,
+                time: booking.time,
+                address: booking.customerAddress || booking.location,
+              }),
+            }
+          ).catch(err => {
+            console.error("Failed to send WhatsApp notification:", err);
+          });
+
+        } catch (err) {
+          console.error("Failed to reject booking:", err);
+          toast.error("Failed to Reject", "Could not reject the booking. Please try again.");
+          setConfirmDialog({ isOpen: false, title: '', message: '', onConfirm: null, type: 'warning' });
+        }
       }
-
-      // No need to call fetchBookings() - real-time listener will update automatically
-      alert("Booking rejected successfully");
-    } catch (err) {
-      alert("Failed to reject booking. Please try again.");
-    }
+    });
   };
 
   const generateOtp = () => {
@@ -534,12 +561,12 @@ const Bookings = () => {
   const handleCompleteWork = async (booking) => {
     try {
       if (!otpInput) {
-        alert("Enter OTP");
+        toast.warning("OTP Required", "Please enter the OTP to complete the booking.");
         return;
       }
 
       if (otpInput !== booking.startOtp) {
-        alert("Invalid OTP");
+        toast.error("Invalid OTP", "The OTP you entered is incorrect. Please try again.");
         return;
       }
 
@@ -559,7 +586,7 @@ const Bookings = () => {
       
       // No need to call fetchBookings() - real-time listener will update automatically
     } catch (err) {
-      alert("Failed to complete booking. Please try again.");
+      toast.error("Failed to Complete", "Could not complete the booking. Please try again.");
     }
   };
 
@@ -745,70 +772,6 @@ const Bookings = () => {
             </svg>
             Refresh
           </button>
-          
-          {/* Delete All Bookings Button (Dev Mode Only) */}
-          {process.env.NODE_ENV === 'development' && (
-            <button
-              onClick={async () => {
-                if (!window.confirm("⚠️ DANGER: This will delete ALL bookings for your company. This action cannot be undone. Are you sure?")) return;
-                
-                setLoading(true);
-                try {
-                  const user = auth.currentUser;
-                  if (!user) return;
-                  
-                  // Get all bookings for this company
-                  const q = query(
-                    collection(db, "service_bookings"),
-                    where("companyId", "==", user.uid)
-                  );
-                  
-                  const snap = await getDocs(q);
-                  const deletePromises = [];
-                  
-                  // Delete each booking
-                  for (const docSnap of snap.docs) {
-                    deletePromises.push(deleteDoc(doc(db, "service_bookings", docSnap.id)));
-                  }
-                  
-                  // Wait for all deletions to complete
-                  await Promise.all(deletePromises);
-                  
-                  alert(`✅ Successfully deleted ${snap.docs.length} bookings`);
-                  // Refresh the list
-                  await fetchBookings();
-                } catch (err) {
-                  alert("Failed to delete bookings: " + err.message);
-                } finally {
-                  setLoading(false);
-                }
-              }}
-              style={{
-                backgroundColor: '#ef4444',
-                color: 'white',
-                border: 'none',
-                padding: '8px 16px',
-                borderRadius: '6px',
-                fontSize: '14px',
-                fontWeight: '500',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                marginLeft: '8px'
-              }}
-              title="Delete All Bookings (Dev Mode Only)"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path d="M3 6h18"/>
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
-                <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                <line x1="10" y1="11" x2="10" y2="17"/>
-                <line x1="14" y1="11" x2="14" y2="17"/>
-              </svg>
-              Delete All (Dev)
-            </button>
-          )}
         </div>
       </div>
 
@@ -901,6 +864,41 @@ const Bookings = () => {
             <p className="bookings-stat-value">{getStatusCount("completed")}</p>
           </div>
         </div>
+      </div>
+
+      {/* Date Filter Tabs */}
+      <div className="bookings-date-filter-tabs">
+        <button
+          className={`bookings-filter-tab ${dateViewMode === 'today' ? 'active' : ''}`}
+          onClick={() => {
+            setDateViewMode('today');
+            console.log("📅 Switched to Today's Bookings");
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          Today's Bookings
+          {dateViewMode === 'today' && <span className="bookings-tab-badge">{bookings.length}</span>}
+        </button>
+
+        <button
+          className={`bookings-filter-tab ${dateViewMode === 'all' ? 'active' : ''}`}
+          onClick={() => {
+            setDateViewMode('all');
+            console.log("📅 Switched to All Bookings");
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+          All Bookings
+          {dateViewMode === 'all' && <span className="bookings-tab-badge">{bookings.length}</span>}
+        </button>
       </div>
 
       {/* Filters */}
@@ -1107,7 +1105,8 @@ const Bookings = () => {
                 packageStartDate: firstBooking.packageStartDate || bookings[0].date,
                 packageEndDate: firstBooking.packageEndDate || bookings[bookings.length - 1].date,
                 totalBookings: bookings.length,
-                totalPrice: bookings.reduce((sum, b) => sum + (b.totalPrice || b.price || b.amount || 0), 0)
+                // Use packagePrice (total package price), not individual booking price
+                totalPrice: firstBooking.packagePrice || 0
               };
             };
             
@@ -1249,10 +1248,25 @@ const Bookings = () => {
                                     <div className="bookings-amount">
                                       <div className="bookings-price">
                                         <span className="price-display">
-                                          <span className="rupee-symbol">₹</span>
-                                          <span className="price-amount">
-                                            {(booking.totalPrice || booking.price || booking.amount || 0).toLocaleString()}
-                                          </span>
+                                          {getBookingPrice(booking) === 0 ? (
+                                            <span style={{
+                                              fontSize: '12px',
+                                              color: '#059669',
+                                              background: '#d1fae5',
+                                              padding: '4px 10px',
+                                              borderRadius: '6px',
+                                              fontWeight: '500'
+                                            }}>
+                                              📦 Included in Package
+                                            </span>
+                                          ) : (
+                                            <>
+                                              <span className="rupee-symbol">₹</span>
+                                              <span className="price-amount">
+                                                {getBookingPrice(booking).toLocaleString()}
+                                              </span>
+                                            </>
+                                          )}
                                         </span>
                                       </div>
                                     </div>
@@ -1407,10 +1421,25 @@ const Bookings = () => {
                                   <div className="bookings-amount">
                                     <div className="bookings-price">
                                       <span className="price-display">
-                                        <span className="rupee-symbol">₹</span>
-                                        <span className="price-amount">
-                                          {(booking.totalPrice || booking.price || booking.amount || 0).toLocaleString()}
-                                        </span>
+                                        {getBookingPrice(booking) === 0 ? (
+                                          <span style={{
+                                            fontSize: '12px',
+                                            color: '#059669',
+                                            background: '#d1fae5',
+                                            padding: '4px 10px',
+                                            borderRadius: '6px',
+                                            fontWeight: '500'
+                                          }}>
+                                            📦 Included in Package
+                                          </span>
+                                        ) : (
+                                          <>
+                                            <span className="rupee-symbol">₹</span>
+                                            <span className="price-amount">
+                                              {getBookingPrice(booking).toLocaleString()}
+                                            </span>
+                                          </>
+                                        )}
                                       </span>
                                     </div>
                                   </div>
@@ -1722,7 +1751,7 @@ const Bookings = () => {
                           return originalPrice.toLocaleString();
                         }
                         // Otherwise use the existing price
-                        return (selectedBooking.totalPrice || selectedBooking.price || selectedBooking.amount || 0).toLocaleString();
+                        return (getBookingPrice(selectedBooking) || 0).toLocaleString();
                       })()}
                     </p>
                   </div>
@@ -1882,7 +1911,7 @@ const Bookings = () => {
                   <div className="total-services-summary">
                     <strong>
                       Total: {selectedBooking.addOns.length + 1} services - ₹
-                      {(selectedBooking.totalPrice || selectedBooking.price || selectedBooking.amount || 0).toLocaleString()}
+                      {(getBookingPrice(selectedBooking) || 0).toLocaleString()}
                     </strong>
                   </div>
                 )}
@@ -1942,7 +1971,7 @@ const Bookings = () => {
                             return selectedBooking.totalPrice.toLocaleString();
                           }
                           
-                          const basePrice = selectedBooking.totalPrice || selectedBooking.price || selectedBooking.amount || 0;
+                          const basePrice = getBookingPrice(selectedBooking) || 0;
                           const addOnsPrice = selectedBooking.addOns ? selectedBooking.addOns.reduce((total, addon) => total + (addon.price || 0), 0) : 0;
                           return (basePrice + addOnsPrice).toLocaleString();
                         })()}
@@ -2027,6 +2056,16 @@ const Bookings = () => {
           </div>
         </div>
       )}
+      
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        type={confirmDialog.type}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={() => setConfirmDialog({ isOpen: false, title: '', message: '', onConfirm: null, type: 'warning' })}
+      />
     </div>
   );
 };

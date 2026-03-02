@@ -1,44 +1,38 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '../context/NotificationContext';
 import '../style/NotificationAlert.css';
 
 const NotificationAlert = () => {
+  const navigate = useNavigate();
   const { notifications, removeNotification, clearAllNotifications, formatTimestamp } = useNotifications();
 
   console.log('🔔 NotificationAlert render - notifications:', notifications.length);
 
   if (notifications.length === 0) return null;
 
-  const getNotificationIcon = (type) => {
-    switch (type) {
-      case 'booking':
-        return '📅';
-      case 'payment':
-        return '💰';
-      case 'review':
-        return '⭐';
-      default:
-        return '🔔';
-    }
+  const handleViewBooking = (notification) => {
+    // Navigate to bookings page
+    navigate('/service-dashboard/bookings');
+    // Mark as read
+    removeNotification(notification.id);
   };
 
-  const getNotificationColor = (type) => {
-    switch (type) {
-      case 'booking':
-        return 'notification-booking';
-      case 'payment':
-        return 'notification-payment';
-      case 'review':
-        return 'notification-review';
-      default:
-        return 'notification-default';
-    }
+  const handleMarkAsRead = (notificationId) => {
+    removeNotification(notificationId);
+  };
+
+  // Check if notification is booking related
+  const isBookingNotification = (notification) => {
+    return notification.type === 'booking' || 
+           notification.title?.toLowerCase().includes('booking') ||
+           notification.message?.toLowerCase().includes('booking');
   };
 
   return (
     <div className="notification-container">
       <div className="notification-header">
-        <h4>Notifications ({notifications.length})</h4>
+        <h4>🔔 Notifications ({notifications.length})</h4>
         {notifications.length > 1 && (
           <button 
             className="clear-all-btn"
@@ -54,27 +48,40 @@ const NotificationAlert = () => {
         {notifications.map((notification) => (
           <div 
             key={notification.id} 
-            className={`notification-alert ${getNotificationColor(notification.type)}`}
+            className="notification-card"
           >
-            <div className="notification-content">
-              <div className="notification-icon">
-                {getNotificationIcon(notification.type)}
+            <div className="notification-card-container">
+              <div className="notification-left">
+                <div className="notification-status-indicator" />
               </div>
-              <div className="notification-text">
-                <div className="notification-title">{notification.title}</div>
-                <div className="notification-message">{notification.message}</div>
-                <div className="notification-time">
-                  {formatTimestamp(notification.timestamp)}
+              <div className="notification-right">
+                <div className="notification-text-wrap">
+                  <p className="notification-text-content">
+                    <span className="notification-text-link">{notification.title}</span>
+                    {' '}{notification.message}
+                  </p>
+                  <p className="notification-time">
+                    {formatTimestamp(notification.timestamp)}
+                  </p>
+                </div>
+                <div className="notification-button-wrap">
+                  {isBookingNotification(notification) && (
+                    <button 
+                      className="notification-primary-cta"
+                      onClick={() => handleViewBooking(notification)}
+                    >
+                      View Booking
+                    </button>
+                  )}
+                  <button 
+                    className="notification-secondary-cta"
+                    onClick={() => handleMarkAsRead(notification.id)}
+                  >
+                    Dismiss
+                  </button>
                 </div>
               </div>
             </div>
-            <button 
-              className="notification-close"
-              onClick={() => removeNotification(notification.id)}
-              title="Dismiss notification"
-            >
-              ✕
-            </button>
           </div>
         ))}
       </div>

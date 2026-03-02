@@ -4,8 +4,11 @@ import { collection, query, where, getDocs, addDoc, doc, updateDoc, deleteDoc, o
 import "../../style/ServiceDashboard.css";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "../../context/Firebase";
+import { useToast } from "../../components/ToastContainer";
+import ConfirmDialog from "../../components/ConfirmDialog";
 
 const Categories = () => {
+  const toast = useToast();
   const [categoryImage, setCategoryImage] = useState(null);
   const [imagePreview, setImagePreview] = useState("");
   const [categories, setCategories] = useState([]);
@@ -17,6 +20,15 @@ const Categories = () => {
 
   const [adminCategories, setAdminCategories] = useState([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
+  
+  // Confirm dialog state
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: null,
+    type: 'warning'
+  });
   
   // Search and filter states
   const [searchQuery, setSearchQuery] = useState("");
@@ -48,14 +60,17 @@ const Categories = () => {
     setAdminCategories(list.filter(c => c.isActive));
   };
 
-  // Function to sync from master category status
-  const syncFromMasterCategory = async (masterCategoryId, isActive) => {
+  // Function to sync from master category status AND images
+  const syncFromMasterCategory = async (masterCategoryId, masterData) => {
     try {
       const user = auth.currentUser;
       if (!user) return;
       
       let totalCategoriesUpdated = 0;
       let totalServicesUpdated = 0;
+      const masterIsActive = masterData?.isActive ?? true;
+      const masterImageUrl = masterData?.imageUrl || null;
+      const masterDescription = masterData?.description || null;
 
       // Update all company categories that use this master category
       const companyCatQ = query(
@@ -67,10 +82,14 @@ const Categories = () => {
       const companyCatSnap = await getDocs(companyCatQ);
 
       for (const catDoc of companyCatSnap.docs) {
+        // Update category with latest master data (image, description, status)
         await updateDoc(catDoc.ref, {
-          isActive: isActive,
+          isActive: masterIsActive,
           updatedAt: new Date(),
-          syncedFromMaster: true
+          syncedFromMaster: true,
+          // Update image if master has one
+          ...(masterImageUrl && { imageUrl: masterImageUrl }),
+          ...(masterDescription && { description: masterDescription })
         });
         
         totalCategoriesUpdated++;
@@ -85,19 +104,16 @@ const Categories = () => {
         const serviceSnap = await getDocs(serviceQ);
 
         for (const svcDoc of serviceSnap.docs) {
+          const svcData = svcDoc.data();
+          
+          // Update service status
           await updateDoc(svcDoc.ref, {
-            isActive: isActive,
+            isActive: masterIsActive,
             updatedAt: new Date(),
             syncedFromMaster: true
           });
 
           totalServicesUpdated++;
-
-          const svcData = svcDoc.data();
-          // Sync app_services if it's an admin service
-          if (svcData.serviceType === "admin" && svcData.adminServiceId) {
-            await syncAppServiceVisibility(svcData.adminServiceId);
-          }
         }
       }
 
@@ -141,7 +157,7 @@ const Categories = () => {
             
             if (!companyCatSnap.empty) {
               try {
-                await syncFromMasterCategory(masterId, masterIsActive);
+                await syncFromMasterCategory(masterId, masterData);
                 // Refresh the display silently
                 fetchCategories();
               } catch (error) {
@@ -351,7 +367,8 @@ const handleToggleCategoryStatus = async (categoryId, currentStatus) => {
           id: doc.id,
           ...categoryData,
           // ALWAYS use image from master category (latest)
-          imageUrl: adminCategory?.imageUrl || categoryData.imageUrl || null,
+          // Handle both image and imageUrl field names
+          imageUrl: adminCategory?.imageUrl || categoryData.imageUrl || categoryData.image || null,
           description: adminCategory?.description || categoryData.description,
           _masterImageUrl: adminCategory?.imageUrl || null,
         });
@@ -370,12 +387,12 @@ const handleToggleCategoryStatus = async (categoryId, currentStatus) => {
   if (!file) return;
 
   if (!file.type.startsWith("image/")) {
-    alert("Please select an image file");
+    toast.warning("Please select an image file");
     return;
   }
 
   if (file.size > 5 * 1024 * 1024) {
-    alert("Image size should be less than 5MB");
+    toast.warning("Image size should be less than 5MB");
     return;
   }
 
@@ -426,7 +443,7 @@ const syncAppCategory = async (adminCat) => {
   const handleSaveCategory = async () => {
   const user = auth.currentUser;
   if (!user || !selectedCategoryId) {
-    alert("Select a category");
+    toast.warning("Select a category");
     return;
   }
 
@@ -441,7 +458,7 @@ const syncAppCategory = async (adminCat) => {
 );
 
   if (exists && !editCategory) {
-    alert("Category already added");
+    toast.warning("Category already added");
     return;
   }
 
@@ -537,43 +554,50 @@ const syncAppCategory = async (adminCat) => {
 };
 
   const handleDeleteCategory = async (categoryId) => {
-  if (!window.confirm("Are you sure you want to delete this category?")) return;
-
-  try {
-    // find category being deleted
     const cat = categories.find(c => c.id === categoryId);
     if (!cat) return;
 
-    // delete from company collection
-    await deleteDoc(doc(db, "service_categories", categoryId));
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Delete Category',
+      message: `Are you sure you want to delete "${cat.name}"? This action cannot be undone.`,
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          // delete from company collection
+          await deleteDoc(doc(db, "service_categories", categoryId));
 
-    // check if any company still uses this category
-    const q = query(
-      collection(db, "service_categories"),
-      where("masterCategoryId", "==", cat.masterCategoryId)
-    );
+          // check if any company still uses this category
+          const q = query(
+            collection(db, "service_categories"),
+            where("masterCategoryId", "==", cat.masterCategoryId)
+          );
 
-    const snap = await getDocs(q);
+          const snap = await getDocs(q);
 
-    // if nobody uses it → remove from app_categories
-    if (snap.empty) {
-      const appQ = query(
-        collection(db, "app_categories"),
-        where("masterCategoryId", "==", cat.masterCategoryId)
-      );
+          // if nobody uses it → remove from app_categories
+          if (snap.empty) {
+            const appQ = query(
+              collection(db, "app_categories"),
+              where("masterCategoryId", "==", cat.masterCategoryId)
+            );
 
-      const appSnap = await getDocs(appQ);
-      for (const d of appSnap.docs) {
-        await deleteDoc(d.ref);
+            const appSnap = await getDocs(appQ);
+            for (const d of appSnap.docs) {
+              await deleteDoc(d.ref);
+            }
+          }
+
+          toast.success("Category deleted successfully!");
+          fetchCategories();
+        } catch (error) {
+          console.error("Error deleting category:", error);
+          toast.error("Error deleting category. Please try again.");
+        }
+        setConfirmDialog({ isOpen: false, title: '', message: '', onConfirm: null, type: 'warning' });
       }
-    }
-
-    fetchCategories();
-  } catch (error) {
-    console.error("Error deleting category:", error);
-    alert("Error deleting category");
-  }
-};
+    });
+  };
 
   const handleCloseModal = () => {
     setShowModal(false);
@@ -735,14 +759,22 @@ const syncAppCategory = async (adminCat) => {
                           src={category.imageUrl} 
                           alt={category.name}
                           className="categories-image"
+                          onError={(e) => {
+                            console.error(`Failed to load category image: ${category.imageUrl}`);
+                            e.target.style.display = 'none';
+                            // Show placeholder instead
+                            const placeholder = e.target.parentElement.querySelector('.categories-placeholder');
+                            if (placeholder) {
+                              placeholder.style.display = 'block';
+                            }
+                          }}
                         />
-                      ) : (
-                        <div className="categories-placeholder">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v11z"/>
-                          </svg>
-                        </div>
-                      )}
+                      ) : null}
+                      <div className="categories-placeholder" style={{ display: category.imageUrl ? 'none' : 'block' }}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v11z"/>
+                        </svg>
+                      </div>
                     </div>
                     
                     <div className="categories-info">
@@ -891,13 +923,17 @@ const syncAppCategory = async (adminCat) => {
                     const selectedCat = adminCategories.find(c => c.id === selectedCategoryId);
                     return selectedCat ? (
                       <div className="categories-preview-card">
-                        {selectedCat.imageUrl && (
+                        {selectedCat.imageUrl ? (
                           <img 
                             src={selectedCat.imageUrl} 
                             alt={selectedCat.name}
                             className="categories-preview-image"
+                            onError={(e) => {
+                              console.error(`Failed to load preview category image: ${selectedCat.imageUrl}`);
+                              e.target.style.display = 'none';
+                            }}
                           />
-                        )}
+                        ) : null}
                         <div className="categories-preview-info">
                           <h4>{selectedCat.name}</h4>
                           <p>This category will be added to your service offerings</p>
@@ -930,6 +966,16 @@ const syncAppCategory = async (adminCat) => {
           </div>
         </div>
       )}
+      
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        type={confirmDialog.type}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={() => setConfirmDialog({ isOpen: false, title: '', message: '', onConfirm: null, type: 'warning' })}
+      />
     </div>
   );
 };

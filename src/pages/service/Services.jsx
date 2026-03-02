@@ -8,16 +8,27 @@ import {
   addDoc, 
   deleteDoc, 
   doc, 
-  updateDoc 
+  updateDoc,
+  onSnapshot 
 } from "firebase/firestore";
 import AddServiceModal from "./AddServiceModal";
 import "../../style/ServiceDashboard.css";
 import AddGlobalServiceModal from "./AddGlobalServiceModal";
+import { useToast } from "../../components/ToastContainer";
+import ConfirmDialog from "../../components/ConfirmDialog";
 
 const Services = () => {
+  const toast = useToast();
   const [services, setServices] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: null,
+    type: 'warning'
+  });
   const [openModal, setOpenModal] = useState(false);
   const [editService, setEditService] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState("");
@@ -97,9 +108,10 @@ const fetchServices = async () => {
       
       // For admin services, ALWAYS use the master service image (latest)
       // For custom services, use their own image
+      // Handle both image and imageUrl field names
       const imageUrl = serviceData.serviceType === "admin" && masterService?.imageUrl
         ? masterService.imageUrl
-        : serviceData.imageUrl || null;
+        : serviceData.imageUrl || serviceData.image || null;
       
       return {
         id: doc.id,
@@ -159,7 +171,8 @@ const fetchServices = async () => {
   // Only add if it doesn't exist
   if (snap.empty) {
     // Get image URL from master service
-    let imageUrl = service.imageUrl;
+    // Handle both image and imageUrl field names
+    let imageUrl = service.imageUrl || service.image;
     if (!imageUrl && service.adminServiceId) {
       const master = serviceMasters.find(s => s.id === service.adminServiceId);
       imageUrl = master?.imageUrl || null;
@@ -220,61 +233,69 @@ const fetchServices = async () => {
   };
 
   const handleDeleteService = async (serviceId) => {
-  if (!window.confirm("Delete service? This will remove it from your company and the app if no other company uses it.")) return;
-
-  try {
     const service = services.find(s => s.id === serviceId);
     if (!service) return;
 
-    console.log("🗑️ Deleting service:", service.name);
+    setConfirmDialog({
+      isOpen: true,
+      title: "Delete Service",
+      message: `Are you sure you want to delete "${service.name}"? This will remove it from your company and the app if no other company uses it.`,
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          console.log("🗑️ Deleting service:", service.name);
 
-    // 1️⃣ Delete company service from service_services
-    await deleteDoc(doc(db, "service_services", serviceId));
-    console.log("✅ Deleted from service_services");
+          // 1️⃣ Delete company service from service_services
+          await deleteDoc(doc(db, "service_services", serviceId));
+          console.log("✅ Deleted from service_services");
 
-    // 2️⃣ Check if any other company still uses this service (only for admin services)
-    if (service.serviceType === "admin" && service.adminServiceId) {
-      const q = query(
-        collection(db, "service_services"),
-        where("adminServiceId", "==", service.adminServiceId),
-        where("isActive", "==", true)
-      );
+          // 2️⃣ Check if any other company still uses this service (only for admin services)
+          if (service.serviceType === "admin" && service.adminServiceId) {
+            const q = query(
+              collection(db, "service_services"),
+              where("adminServiceId", "==", service.adminServiceId),
+              where("isActive", "==", true)
+            );
 
-      const snap = await getDocs(q);
-      console.log(`📊 Other companies using this service: ${snap.size}`);
+            const snap = await getDocs(q);
+            console.log(`📊 Other companies using this service: ${snap.size}`);
 
-      // 3️⃣ If nobody else uses it, delete from app_services
-      if (snap.empty) {
-        console.log("🗑️ No other companies use this service, removing from app_services");
-        
-        const appQ = query(
-          collection(db, "app_services"),
-          where("masterServiceId", "==", service.adminServiceId)
-        );
+            // 3️⃣ If nobody else uses it, delete from app_services
+            if (snap.empty) {
+              console.log("🗑️ No other companies use this service, removing from app_services");
+              
+              const appQ = query(
+                collection(db, "app_services"),
+                where("masterServiceId", "==", service.adminServiceId)
+              );
 
-        const appSnap = await getDocs(appQ);
-        console.log(`📊 Found ${appSnap.size} entries in app_services to delete`);
-        
-        for (const d of appSnap.docs) {
-          await deleteDoc(d.ref);
-          console.log(`✅ Deleted from app_services: ${d.id}`);
+              const appSnap = await getDocs(appQ);
+              console.log(`📊 Found ${appSnap.size} entries in app_services to delete`);
+              
+              for (const d of appSnap.docs) {
+                await deleteDoc(d.ref);
+                console.log(`✅ Deleted from app_services: ${d.id}`);
+              }
+            } else {
+              console.log("ℹ️ Other companies still use this service, keeping in app_services");
+            }
+          } else if (service.serviceType === "custom") {
+            // For custom services, just delete from company collection
+            console.log("ℹ️ Custom service deleted (not in app_services)");
+          }
+
+          console.log("✅ Service deletion complete");
+          fetchServices();
+          toast.success("Service Deleted", "The service has been deleted successfully!");
+        } catch (err) {
+          console.error("❌ Delete error:", err);
+          toast.error("Delete Failed", `Could not delete service: ${err.message}`);
         }
-      } else {
-        console.log("ℹ️ Other companies still use this service, keeping in app_services");
+        setConfirmDialog({ isOpen: false, title: '', message: '', onConfirm: null, type: 'warning' });
       }
-    } else if (service.serviceType === "custom") {
-      // For custom services, just delete from company collection
-      console.log("ℹ️ Custom service deleted (not in app_services)");
-    }
+    });
+  };
 
-    console.log("✅ Service deletion complete");
-    fetchServices();
-    alert("Service deleted successfully!");
-  } catch (err) {
-    console.error("❌ Delete error:", err);
-    alert(`Delete failed: ${err.message}`);
-  }
-};
 const syncAppServiceVisibility = async (adminServiceId) => {
   // 1️⃣ Check if ANY active company still provides this service
   const q = query(
@@ -323,7 +344,7 @@ const syncAppServiceVisibility = async (adminServiceId) => {
     fetchServices();
   } catch (error) {
     console.error("Error updating service status:", error);
-    alert("Error updating service status");
+    toast.error("Update Failed", "Could not update service status. Please try again.");
   }
 };
 
@@ -376,7 +397,9 @@ const getServiceImageUrl = (service) => {
   if (!service) return null;
   
   // Image should already be merged from fetchServices
+  // Handle both image and imageUrl field names
   if (service.imageUrl) return service.imageUrl;
+  if (service.image) return service.image; // Fallback to image field
   
   // Fallback: try to get from master (shouldn't be needed now)
   if (service.serviceType === "admin" && service.adminServiceId) {
@@ -1021,7 +1044,16 @@ const formatAvailability = (availability, unit) => {
     }}
   />
 )}
-{/*  */}
+
+{/* Confirm Dialog */}
+<ConfirmDialog
+  isOpen={confirmDialog.isOpen}
+  title={confirmDialog.title}
+  message={confirmDialog.message}
+  type={confirmDialog.type}
+  onConfirm={confirmDialog.onConfirm}
+  onCancel={() => setConfirmDialog({ isOpen: false, title: '', message: '', onConfirm: null, type: 'warning' })}
+/>
     </div>
   );
 };

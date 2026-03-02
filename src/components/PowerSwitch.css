@@ -1,4 +1,4 @@
-/* Power Switch Styles */
+/* Power Switch Styles - Modern Design */
 .power-switch-wrapper {
   display: inline-block;
 }
@@ -9,81 +9,109 @@
 
 .power-switch {
   position: relative;
-  width: 60px;
-  height: 60px;
-  background-color: rgb(99, 99, 99);
+  width: 70px;
+  height: 70px;
+  background: linear-gradient(145deg, #4a5568, #2d3748);
   border-radius: 50%;
   z-index: 1;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid rgb(126, 126, 126);
-  box-shadow: 0px 0px 3px rgb(2, 2, 2) inset;
-  transition: all 0.3s ease;
+  border: 3px solid #1a202c;
+  box-shadow: 
+    0 8px 16px rgba(0, 0, 0, 0.3),
+    inset 0 2px 4px rgba(0, 0, 0, 0.5),
+    inset 0 -2px 4px rgba(255, 255, 255, 0.1);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .power-switch:hover {
-  transform: scale(1.05);
+  transform: scale(1.08) translateY(-2px);
+  box-shadow: 
+    0 12px 24px rgba(0, 0, 0, 0.4),
+    inset 0 2px 4px rgba(0, 0, 0, 0.5),
+    inset 0 -2px 4px rgba(255, 255, 255, 0.1);
+}
+
+.power-switch:active {
+  transform: scale(1.02);
 }
 
 .power-switch svg {
-  width: 1.2em;
-  transition: all 0.3s ease;
+  width: 1.4em;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
 }
 
 .power-switch svg path {
-  fill: rgb(48, 48, 48);
-  transition: all 0.3s ease;
+  fill: #718096;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Checked state - ON */
+/* Checked state - ON (Green Theme) */
 #power-checkbox:checked + .power-switch {
-  box-shadow: 0px 0px 1px rgb(151, 243, 255) inset,
-    0px 0px 2px rgb(151, 243, 255) inset, 
-    0px 0px 10px rgb(151, 243, 255) inset,
-    0px 0px 40px rgb(151, 243, 255), 
-    0px 0px 100px rgb(151, 243, 255),
-    0px 0px 5px rgb(151, 243, 255);
-  border: 2px solid rgb(255, 255, 255);
-  background-color: rgb(146, 180, 184);
-  animation: pulse-glow 2s infinite;
+  background: linear-gradient(145deg, #10b981, #059669);
+  border: 3px solid #047857;
+  box-shadow: 
+    0 0 2px #10b981 inset,
+    0 0 5px #10b981 inset, 
+    0 0 15px #10b981 inset,
+    0 0 30px #10b981, 
+    0 0 60px #10b981,
+    0 8px 24px rgba(16, 185, 129, 0.4);
+  animation: pulse-glow-green 2s ease-in-out infinite;
+}
+
+#power-checkbox:checked + .power-switch:hover {
+  transform: scale(1.08) translateY(-2px);
+  box-shadow: 
+    0 0 2px #10b981 inset,
+    0 0 5px #10b981 inset, 
+    0 0 15px #10b981 inset,
+    0 0 40px #10b981, 
+    0 0 80px #10b981,
+    0 12px 32px rgba(16, 185, 129, 0.5);
 }
 
 #power-checkbox:checked + .power-switch svg {
-  filter: drop-shadow(0px 0px 5px rgb(151, 243, 255));
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.8));
+  transform: rotate(180deg);
 }
 
 #power-checkbox:checked + .power-switch svg path {
-  fill: rgb(255, 255, 255);
+  fill: #ffffff;
 }
 
 /* Disabled state */
 #power-checkbox:disabled + .power-switch {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
+  filter: grayscale(1);
 }
 
 #power-checkbox:disabled + .power-switch:hover {
   transform: none;
 }
 
-/* Pulse animation for ON state */
-@keyframes pulse-glow {
+/* Pulse animation for ON state - Green */
+@keyframes pulse-glow-green {
   0%, 100% {
-    box-shadow: 0px 0px 1px rgb(151, 243, 255) inset,
-      0px 0px 2px rgb(151, 243, 255) inset, 
-      0px 0px 10px rgb(151, 243, 255) inset,
-      0px 0px 40px rgb(151, 243, 255), 
-      0px 0px 100px rgb(151, 243, 255),
-      0px 0px 5px rgb(151, 243, 255);
+    box-shadow: 
+      0 0 2px #10b981 inset,
+      0 0 5px #10b981 inset, 
+      0 0 15px #10b981 inset,
+      0 0 30px #10b981, 
+      0 0 60px #10b981,
+      0 8px 24px rgba(16, 185, 129, 0.4);
   }
   50% {
-    box-shadow: 0px 0px 1px rgb(151, 243, 255) inset,
-      0px 0px 2px rgb(151, 243, 255) inset, 
-      0px 0px 10px rgb(151, 243, 255) inset,
-      0px 0px 50px rgb(151, 243, 255), 
-      0px 0px 120px rgb(151, 243, 255),
-      0px 0px 8px rgb(151, 243, 255);
+    box-shadow: 
+      0 0 3px #10b981 inset,
+      0 0 8px #10b981 inset, 
+      0 0 20px #10b981 inset,
+      0 0 40px #10b981, 
+      0 0 80px #10b981,
+      0 8px 32px rgba(16, 185, 129, 0.6);
   }
 }

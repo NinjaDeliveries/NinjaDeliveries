@@ -15,16 +15,23 @@ import "../../style/ServiceDashboard.css";
 import "./Slots.css";
 import AssignWorkerModal from "./AssignWorkerModal";
 import PowerSwitch from "../../components/PowerSwitch";
+import { useToast } from "../../components/ToastContainer";
+import { 
+  getTodayIST, 
+  toISTDateString, 
+  isToday as checkIsToday,
+  isPast,
+  formatDateForDisplay,
+  getRelativeDateLabel
+} from "../../utils/dateHelpers";
+
 export default function Slots() {
+  const toast = useToast();
   const [loading, setLoading] = useState(true);
   const [bookings, setBookings] = useState([]);
   const [selectedDate, setSelectedDate] = useState(() => {
-    // Ensure we get today's date in local timezone
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    // Use IST date helper to get today's date
+    return getTodayIST();
   });
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [viewMode, setViewMode] = useState('calendar'); // 'calendar' or 'list'
@@ -149,7 +156,7 @@ export default function Slots() {
       setBookings(bookingsList);
     } catch (error) {
       console.error("Error fetching bookings:", error);
-      alert("Error loading bookings. Please refresh the page.");
+      toast.error("Error loading bookings", "Please refresh the page to try again.");
     }
   };
 
@@ -230,6 +237,7 @@ export default function Slots() {
   };
 
   useEffect(() => {
+    console.log("Toast object:", toast); // Debug log
     let bookingsUnsubscribe = null;
 
     const initializeData = async () => {
@@ -300,7 +308,7 @@ export default function Slots() {
 
     const checkStatus = async () => {
       const now = new Date();
-      const today = now.toISOString().split("T")[0];
+      const today = getTodayIST();
       const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
       const isInOfflineWindow = offlineWindows.some((w) => {
@@ -410,10 +418,21 @@ export default function Slots() {
 
       console.log(`Successfully updated ${categoriesSnap.size} categories, ${servicesSnap.size} services, and ${techniciansSnap.size} technicians`);
       
-      alert(`Company is now ${status ? 'ONLINE' : 'OFFLINE'}!\n\nUpdated:\n- ${categoriesSnap.size} Categories\n- ${servicesSnap.size} Services\n- ${techniciansSnap.size} Technicians`);
+      console.log("About to show toast, toast object:", toast); // Debug log
+      
+      toast.success(
+        `Company is now ${status ? 'ONLINE' : 'OFFLINE'}!`,
+        [
+          `${categoriesSnap.size} Categories updated`,
+          `${servicesSnap.size} Services updated`,
+          `${techniciansSnap.size} Technicians updated`
+        ]
+      );
+      
+      console.log("Toast called successfully"); // Debug log
     } catch (error) {
       console.error("Error updating company service availability:", error);
-      alert("Failed to update status. Please try again.");
+      toast.error("Failed to update status", "Please try again.");
       setIsOnline(!status);
     } finally {
       setUpdating(false);
@@ -423,12 +442,12 @@ export default function Slots() {
   // Add offline window
   const addOfflineWindow = async () => {
     if (!date || !start || !end) {
-      alert("Please select date & time");
+      toast.warning("Missing Information", "Please select date and time for offline window.");
       return;
     }
 
     if (start >= end) {
-      alert("End time must be after start time");
+      toast.warning("Invalid Time Range", "End time must be after start time.");
       return;
     }
 
@@ -487,11 +506,8 @@ export default function Slots() {
 
   // Get bookings for a specific date (fix timezone issue) - sorted by time
   const getBookingsForDate = (date) => {
-    // Create date string in local timezone to avoid timezone issues
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const dateStr = `${year}-${month}-${day}`;
+    // Convert date to IST date string
+    const dateStr = toISTDateString(date);
     
     const dayBookings = bookings.filter(booking => {
       // Ensure booking.date is in the same format
@@ -539,17 +555,14 @@ export default function Slots() {
     startDate.setDate(startDate.getDate() - firstDay.getDay());
     
     const days = [];
-    const currentDate = new Date(startDate);
-    const todayStr = getTodayDateString();
+    const todayStr = getTodayIST();
+    const currentDate = new Date(startDate); // Initialize currentDate from startDate
     
     for (let i = 0; i < 35; i++) { // Reduced from 42 to 35 for more compact view
       const dayBookings = getBookingsForDate(currentDate);
       
-      // Create date string in local timezone
-      const year = currentDate.getFullYear();
-      const month = String(currentDate.getMonth() + 1).padStart(2, '0');
-      const day = String(currentDate.getDate()).padStart(2, '0');
-      const dateStr = `${year}-${month}-${day}`;
+      // Convert date to IST date string
+      const dateStr = toISTDateString(currentDate);
       
       days.push({
         date: new Date(currentDate),
@@ -655,26 +668,18 @@ export default function Slots() {
   // Check if booking date is in the past (not today or future)
   const isBookingInPast = (booking) => {
     if (!booking.date) return false;
-    
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Reset to start of day
-    
-    const [year, month, day] = booking.date.split('-').map(Number);
-    const bookingDate = new Date(year, month - 1, day);
-    bookingDate.setHours(0, 0, 0, 0); // Reset to start of day
-    
-    return bookingDate < today;
+    return isPast(booking.date);
   };
 
   // Check if booking can be assigned (only for today and future dates)
   const canAssignWorker = (booking) => {
-    // Don't allow assignment if already assigned, completed, or cancelled
-    if (booking.status === 'assigned' || booking.status === 'completed' || booking.status === 'cancelled') {
+    // Don't allow assignment if completed, cancelled, or rejected
+    if (booking.status === 'completed' || booking.status === 'cancelled' || booking.status === 'rejected') {
       return false;
     }
     
-    // Don't allow assignment if worker already assigned
-    if (booking.workerId || booking.workerName) {
+    // Don't allow assignment if work has started
+    if (booking.status === 'started') {
       return false;
     }
     
@@ -683,21 +688,18 @@ export default function Slots() {
       return false;
     }
     
+    // Allow assignment for: pending, confirmed, assigned (for re-assignment)
     return true;
   };
 
-  // Get today's date in local timezone
+  // Get today's date in IST timezone
   const getTodayDateString = () => {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    return getTodayIST();
   };
 
   // Get today's bookings
   const getTodaysBookings = () => {
-    const todayStr = getTodayDateString();
+    const todayStr = getTodayIST();
     const todaysBookings = bookings.filter(booking => booking.date === todayStr);
     
     // Sort by time (earliest first)
@@ -710,9 +712,9 @@ export default function Slots() {
     return todaysBookings;
   };
 
-  // Check if a date is today
+  // Check if a date is today (IST)
   const isToday = (dateStr) => {
-    return dateStr === getTodayDateString();
+    return checkIsToday(dateStr);
   };
 
   if (loading) {
@@ -876,7 +878,7 @@ export default function Slots() {
   // Assign worker button styles
   // Helper function to get bookings count for a date
   const getBookingsCountForDate = (date) => {
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = toISTDateString(date);
     return bookings.filter(b => b.date === dateStr).length;
   };
 
@@ -890,8 +892,7 @@ export default function Slots() {
     const startingDayOfWeek = firstDay.getDay();
     
     const days = [];
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const todayStr = getTodayIST();
     
     // Add empty cells for days before month starts
     for (let i = 0; i < startingDayOfWeek; i++) {
@@ -906,9 +907,9 @@ export default function Slots() {
     // Add days of current month
     for (let day = 1; day <= daysInMonth; day++) {
       const date = new Date(year, month, day);
-      const dateStr = date.toISOString().split('T')[0];
+      const dateStr = toISTDateString(date);
       const isSelected = dateStr === selectedDate;
-      const isToday = date.toDateString() === today.toDateString();
+      const isToday = dateStr === todayStr;
       const bookingsCount = getBookingsCountForDate(date);
       
       days.push(
@@ -989,7 +990,20 @@ export default function Slots() {
           {/* Calendar Section */}
           <div className="calendar-section">
             <div className="calendar-header">
-              <h2>{currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <h2>{currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</h2>
+                <span style={{
+                  background: 'linear-gradient(135deg, hsl(262.1, 83.3%, 57.8%) 0%, hsl(262.1, 73.3%, 47.8%) 100%)',
+                  color: 'white',
+                  padding: '4px 12px',
+                  borderRadius: '12px',
+                  fontSize: '13px',
+                  fontWeight: '700',
+                  boxShadow: '0 2px 8px rgba(139, 92, 246, 0.3)'
+                }}>
+                  {bookings.length} Total Bookings
+                </span>
+              </div>
               <div className="calendar-nav">
                 <button 
                   className="calendar-nav-btn"
@@ -1018,19 +1032,92 @@ export default function Slots() {
               ))}
               {renderCalendar()}
             </div>
+
+            {/* Calendar Legend */}
+            <div style={{
+              marginTop: '16px',
+              padding: '16px',
+              background: '#f8fafc',
+              borderRadius: '12px',
+              display: 'flex',
+              gap: '20px',
+              flexWrap: 'wrap',
+              justifyContent: 'center',
+              alignItems: 'center'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
+                <div style={{
+                  width: '24px',
+                  height: '24px',
+                  borderRadius: '6px',
+                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  border: '2px solid #10b981'
+                }}></div>
+                <span style={{ fontWeight: '600', color: '#065f46' }}>Today</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
+                <div style={{
+                  width: '24px',
+                  height: '24px',
+                  borderRadius: '6px',
+                  background: 'linear-gradient(135deg, hsl(262.1, 83.3%, 57.8%) 0%, hsl(262.1, 73.3%, 47.8%) 100%)',
+                  border: '2px solid hsl(262.1, 83.3%, 57.8%)'
+                }}></div>
+                <span style={{ fontWeight: '600', color: '#5b21b6' }}>Selected</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
+                <div style={{
+                  width: '24px',
+                  height: '24px',
+                  borderRadius: '6px',
+                  background: 'white',
+                  border: '2px solid #e2e8f0',
+                  position: 'relative'
+                }}>
+                  <div style={{
+                    position: 'absolute',
+                    top: '-4px',
+                    right: '-4px',
+                    width: '14px',
+                    height: '14px',
+                    borderRadius: '7px',
+                    background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                    color: 'white',
+                    fontSize: '9px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: '700'
+                  }}>3</div>
+                </div>
+                <span style={{ fontWeight: '600', color: '#475569' }}>Has Bookings</span>
+              </div>
+            </div>
           </div>
 
           {/* Today's Schedule Section */}
           <div className="schedule-section">
-            <div className="schedule-header">
-              <h3>Today's Schedule</h3>
+            <div className={`schedule-header ${isToday(selectedDate) ? 'today' : ''}`}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <h3>{isToday(selectedDate) ? "Today's Schedule" : "Schedule"}</h3>
+                <span style={{
+                  background: isToday(selectedDate) 
+                    ? 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)' 
+                    : 'linear-gradient(135deg, hsl(262.1, 83.3%, 57.8%) 0%, hsl(262.1, 73.3%, 47.8%) 100%)',
+                  color: isToday(selectedDate) ? '#78350f' : 'white',
+                  padding: '4px 12px',
+                  borderRadius: '12px',
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  boxShadow: isToday(selectedDate) 
+                    ? '0 2px 8px rgba(251, 191, 36, 0.4)' 
+                    : '0 2px 8px rgba(139, 92, 246, 0.3)'
+                }}>
+                  {bookings.filter(b => b.date === selectedDate).length} Bookings
+                </span>
+              </div>
               <p className="schedule-date">
-                {new Date(selectedDate).toLocaleDateString('en-US', { 
-                  weekday: 'long', 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric' 
-                })}
+                {formatDateForDisplay(selectedDate)}
               </p>
             </div>
 
@@ -1046,7 +1133,7 @@ export default function Slots() {
                   .filter(b => b.date === selectedDate)
                   .sort((a, b) => (a.time || '').localeCompare(b.time || ''))
                   .map(booking => (
-                    <div key={booking.id} className="schedule-item">
+                    <div key={booking.id} className={`schedule-item status-${booking.status || 'pending'}`}>
                       <div className="schedule-item-header">
                         <span className="schedule-time">{booking.time || 'No time'}</span>
                         <span className={`schedule-status ${booking.status || 'pending'}`}>
@@ -1079,13 +1166,24 @@ export default function Slots() {
                         <button 
                           className="schedule-action-btn primary"
                           onClick={() => {
+                            console.log("View Details clicked for booking:", booking.id);
                             setSelectedBooking(booking);
                             setShowBookingDetails(true);
                           }}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '6px'
+                          }}
                         >
+                          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
                           View Details
                         </button>
-                        {booking.status === 'pending' && (
+                        {canAssignWorker(booking) && (
                           <button 
                             className="schedule-action-btn secondary"
                             onClick={() => {
@@ -1201,8 +1299,8 @@ export default function Slots() {
               // Get bookings for current month
               const monthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
               const monthEnd = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
-              const monthStartStr = monthStart.toISOString().split('T')[0];
-              const monthEndStr = monthEnd.toISOString().split('T')[0];
+              const monthStartStr = toISTDateString(monthStart);
+              const monthEndStr = toISTDateString(monthEnd);
               
               const monthBookings = bookings.filter(b => 
                 b.date >= monthStartStr && b.date <= monthEndStr
@@ -1276,7 +1374,7 @@ export default function Slots() {
                         {groupedBookings[date]
                           .sort((a, b) => (a.time || '').localeCompare(b.time || ''))
                           .map(booking => (
-                            <div key={booking.id} className="schedule-item">
+                            <div key={booking.id} className={`schedule-item status-${booking.status || 'pending'}`}>
                               <div className="schedule-item-header">
                                 <span className="schedule-time">{booking.time || 'No time'}</span>
                                 <span className={`schedule-status ${booking.status || 'pending'}`}>
@@ -1317,13 +1415,24 @@ export default function Slots() {
                                 <button 
                                   className="schedule-action-btn primary"
                                   onClick={() => {
+                                    console.log("View Details clicked for booking:", booking.id);
                                     setSelectedBooking(booking);
                                     setShowBookingDetails(true);
                                   }}
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '6px'
+                                  }}
                                 >
+                                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                  </svg>
                                   View Details
                                 </button>
-                                {booking.status === 'pending' && (
+                                {canAssignWorker(booking) && (
                                   <button 
                                     className="schedule-action-btn secondary"
                                     onClick={() => {
@@ -1362,6 +1471,406 @@ export default function Slots() {
             // Refresh will happen automatically via real-time listener
           }}
         />
+      )}
+
+      {/* Booking Details Modal */}
+      {showBookingDetails && selectedBooking && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.6)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+            padding: '20px',
+            animation: 'fadeIn 0.2s ease-out'
+          }}
+          onClick={() => {
+            setShowBookingDetails(false);
+            setSelectedBooking(null);
+          }}
+        >
+          <div 
+            style={{
+              backgroundColor: 'white',
+              borderRadius: '16px',
+              width: '100%',
+              maxWidth: '650px',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+              animation: 'slideUp 0.3s ease-out',
+              position: 'relative'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div style={{
+              background: 'linear-gradient(135deg, hsl(262.1, 83.3%, 57.8%) 0%, hsl(262.1, 73.3%, 47.8%) 100%)',
+              padding: '24px',
+              borderTopLeftRadius: '16px',
+              borderTopRightRadius: '16px',
+              color: 'white',
+              position: 'relative'
+            }}>
+              <button
+                onClick={() => {
+                  setShowBookingDetails(false);
+                  setSelectedBooking(null);
+                }}
+                style={{
+                  position: 'absolute',
+                  top: '16px',
+                  right: '16px',
+                  background: 'rgba(255, 255, 255, 0.2)',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '36px',
+                  height: '36px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  fontSize: '20px',
+                  color: 'white',
+                  transition: 'all 0.2s',
+                  backdropFilter: 'blur(10px)'
+                }}
+                onMouseEnter={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.3)'}
+                onMouseLeave={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.2)'}
+              >
+                ✕
+              </button>
+              <h2 style={{ margin: '0 0 8px 0', fontSize: '24px', fontWeight: '700' }}>
+                Booking Details
+              </h2>
+              <p style={{ margin: 0, opacity: 0.9, fontSize: '14px' }}>
+                ID: #{selectedBooking.id.slice(-8)}
+              </p>
+            </div>
+
+            {/* Content */}
+            <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              {/* Status Badge */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{
+                  padding: '8px 16px',
+                  borderRadius: '20px',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
+                  backgroundColor: selectedBooking.status === 'completed' ? '#d1fae5' :
+                                   selectedBooking.status === 'pending' ? '#fef3c7' :
+                                   selectedBooking.status === 'assigned' ? '#dbeafe' :
+                                   selectedBooking.status === 'started' ? '#e0e7ff' :
+                                   '#fee2e2',
+                  color: selectedBooking.status === 'completed' ? '#065f46' :
+                         selectedBooking.status === 'pending' ? '#92400e' :
+                         selectedBooking.status === 'assigned' ? '#1e40af' :
+                         selectedBooking.status === 'started' ? '#4338ca' :
+                         '#991b1b'
+                }}>
+                  {selectedBooking.status === 'completed' ? '✓ Completed' :
+                   selectedBooking.status === 'pending' ? '⏳ Pending' :
+                   selectedBooking.status === 'assigned' ? '👤 Assigned' :
+                   selectedBooking.status === 'started' ? '▶ Started' :
+                   '✕ ' + selectedBooking.status}
+                </span>
+              </div>
+
+              {/* Customer Information */}
+              <div style={{
+                background: '#f8fafc',
+                borderRadius: '12px',
+                padding: '20px',
+                border: '1px solid #e2e8f0'
+              }}>
+                <h3 style={{
+                  margin: '0 0 16px 0',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  color: '#1e293b',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  Customer Information
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: '#64748b', fontSize: '14px', fontWeight: '500' }}>Name</span>
+                    <span style={{ color: '#1e293b', fontSize: '14px', fontWeight: '600' }}>
+                      {selectedBooking.customerName || 'N/A'}
+                    </span>
+                  </div>
+                  {selectedBooking.customerPhone && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ color: '#64748b', fontSize: '14px', fontWeight: '500' }}>Phone</span>
+                      <a 
+                        href={`tel:${selectedBooking.customerPhone}`}
+                        style={{ 
+                          color: 'hsl(262.1, 83.3%, 57.8%)', 
+                          fontSize: '14px', 
+                          fontWeight: '600',
+                          textDecoration: 'none'
+                        }}
+                      >
+                        {selectedBooking.customerPhone}
+                      </a>
+                    </div>
+                  )}
+                  {selectedBooking.email && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ color: '#64748b', fontSize: '14px', fontWeight: '500' }}>Email</span>
+                      <a 
+                        href={`mailto:${selectedBooking.email}`}
+                        style={{ 
+                          color: 'hsl(262.1, 83.3%, 57.8%)', 
+                          fontSize: '14px', 
+                          fontWeight: '600',
+                          textDecoration: 'none'
+                        }}
+                      >
+                        {selectedBooking.email}
+                      </a>
+                    </div>
+                  )}
+                  {selectedBooking.customerAddress && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
+                      <span style={{ color: '#64748b', fontSize: '14px', fontWeight: '500' }}>Address</span>
+                      <span style={{ 
+                        color: '#1e293b', 
+                        fontSize: '14px', 
+                        fontWeight: '500',
+                        textAlign: 'right',
+                        maxWidth: '60%'
+                      }}>
+                        {selectedBooking.customerAddress}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Service Information */}
+              <div style={{
+                background: '#f8fafc',
+                borderRadius: '12px',
+                padding: '20px',
+                border: '1px solid #e2e8f0'
+              }}>
+                <h3 style={{
+                  margin: '0 0 16px 0',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  color: '#1e293b',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  Service Details
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: '#64748b', fontSize: '14px', fontWeight: '500' }}>Service</span>
+                    <span style={{ color: '#1e293b', fontSize: '14px', fontWeight: '600' }}>
+                      {selectedBooking.workName || selectedBooking.serviceName || 'N/A'}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: '#64748b', fontSize: '14px', fontWeight: '500' }}>Date</span>
+                    <span style={{ color: '#1e293b', fontSize: '14px', fontWeight: '600' }}>
+                      {selectedBooking.date ? formatDateForDisplay(selectedBooking.date) : 'N/A'}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: '#64748b', fontSize: '14px', fontWeight: '500' }}>Time</span>
+                    <span style={{ color: '#1e293b', fontSize: '14px', fontWeight: '600' }}>
+                      {selectedBooking.time ? formatTime(selectedBooking.time) : 'N/A'}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: '#64748b', fontSize: '14px', fontWeight: '500' }}>Amount</span>
+                    <span style={{ 
+                      color: '#10b981', 
+                      fontSize: '18px', 
+                      fontWeight: '700'
+                    }}>
+                      ₹{(selectedBooking.totalPrice || selectedBooking.price || selectedBooking.amount || 0).toLocaleString()}
+                    </span>
+                  </div>
+                  {selectedBooking.createdAt && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ color: '#64748b', fontSize: '14px', fontWeight: '500' }}>Booked On</span>
+                      <span style={{ color: '#64748b', fontSize: '13px', fontWeight: '500' }}>
+                        {selectedBooking.createdAt?.toDate ? 
+                          selectedBooking.createdAt.toDate().toLocaleString('en-IN', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: true
+                          }) : 
+                          new Date(selectedBooking.createdAt).toLocaleString('en-IN', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: true
+                          })
+                        }
+                      </span>
+                    </div>
+                  )}
+                  {selectedBooking.notes && (
+                    <div style={{ 
+                      marginTop: '8px',
+                      padding: '12px',
+                      background: 'white',
+                      borderRadius: '8px',
+                      border: '1px solid #e2e8f0'
+                    }}>
+                      <span style={{ color: '#64748b', fontSize: '13px', fontWeight: '500', display: 'block', marginBottom: '4px' }}>
+                        Notes
+                      </span>
+                      <span style={{ color: '#1e293b', fontSize: '14px' }}>
+                        {selectedBooking.notes}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Worker Information (if assigned) */}
+              {selectedBooking.workerName && (
+                <div style={{
+                  background: '#f0fdf4',
+                  borderRadius: '12px',
+                  padding: '20px',
+                  border: '1px solid #bbf7d0'
+                }}>
+                  <h3 style={{
+                    margin: '0 0 16px 0',
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    color: '#166534',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                    Assigned Worker
+                  </h3>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: '#166534', fontSize: '14px', fontWeight: '500' }}>Worker Name</span>
+                    <span style={{ color: '#166534', fontSize: '14px', fontWeight: '600' }}>
+                      {selectedBooking.workerName}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer Actions */}
+            <div style={{
+              padding: '20px 24px',
+              borderTop: '1px solid #e2e8f0',
+              background: '#f8fafc',
+              borderBottomLeftRadius: '16px',
+              borderBottomRightRadius: '16px',
+              display: 'flex',
+              gap: '12px',
+              justifyContent: 'flex-end'
+            }}>
+              {canAssignWorker(selectedBooking) && (
+                <button
+                  onClick={() => {
+                    setShowBookingDetails(false);
+                    setBookingToAssign(selectedBooking);
+                    setShowAssignWorker(true);
+                  }}
+                  style={{
+                    background: 'hsl(262.1, 83.3%, 57.8%)',
+                    color: 'white',
+                    border: 'none',
+                    padding: '10px 20px',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                  onMouseEnter={(e) => e.target.style.transform = 'translateY(-1px)'}
+                  onMouseLeave={(e) => e.target.style.transform = 'translateY(0)'}
+                >
+                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                  </svg>
+                  Assign Worker
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  setShowBookingDetails(false);
+                  setSelectedBooking(null);
+                }}
+                style={{
+                  background: '#e2e8f0',
+                  color: '#475569',
+                  border: 'none',
+                  padding: '10px 20px',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => e.target.style.background = '#cbd5e1'}
+                onMouseLeave={(e) => e.target.style.background = '#e2e8f0'}
+              >
+                Close
+              </button>
+            </div>
+
+            {/* Add CSS animations */}
+            <style>{`
+              @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+              }
+              @keyframes slideUp {
+                from { 
+                  opacity: 0;
+                  transform: translateY(20px);
+                }
+                to { 
+                  opacity: 1;
+                  transform: translateY(0);
+                }
+              }
+            `}</style>
+          </div>
+        </div>
       )}
     </div>
   );

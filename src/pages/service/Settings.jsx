@@ -15,8 +15,10 @@ import {
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import "../../style/ServiceDashboard.css";
 import { useNotifications } from "../../context/NotificationContext";
+import { useToast } from "../../components/ToastContainer";
 
 export default function Settings() {
+  const toast = useToast();
   const [activeTab, setActiveTab] = useState("business");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -116,7 +118,7 @@ export default function Settings() {
         }
       } catch (error) {
         console.error("Error loading settings:", error);
-        alert("Failed to load settings data");
+        toast.error("Failed to load settings data");
       } finally {
         setLoading(false);
       }
@@ -139,13 +141,13 @@ export default function Settings() {
     if (file) {
       // Validate file type
       if (!file.type.startsWith('image/')) {
-        alert('Please select an image file');
+        toast.warning('Please select an image file');
         return;
       }
       
       // Validate file size (max 2MB)
       if (file.size > 2 * 1024 * 1024) {
-        alert('Image size should be less than 2MB');
+        toast.warning('Image size should be less than 2MB');
         return;
       }
       
@@ -194,7 +196,7 @@ export default function Settings() {
       
       const user = auth.currentUser;
       if (!user) {
-        alert("Please login first");
+        toast.error("Please login first");
         return;
       }
 
@@ -243,7 +245,7 @@ export default function Settings() {
       });
     } catch (error) {
       console.error("Error saving settings:", error);
-      alert("Failed to save settings. Please try again.");
+      toast.error("Failed to save settings. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -260,17 +262,17 @@ export default function Settings() {
   // Handle password change
   const handlePasswordChange = async () => {
     if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
-      alert("Please fill in all password fields");
+      toast.warning("Please fill in all password fields");
       return;
     }
 
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      alert("New passwords don't match");
+      toast.error("New passwords don't match");
       return;
     }
 
     if (passwordData.newPassword.length < 6) {
-      alert("Password must be at least 6 characters long");
+      toast.warning("Password must be at least 6 characters long");
       return;
     }
 
@@ -279,7 +281,7 @@ export default function Settings() {
       
       const user = auth.currentUser;
       if (!user || !user.email) {
-        alert("User not authenticated properly");
+        toast.error("User not authenticated properly");
         return;
       }
 
@@ -315,26 +317,26 @@ export default function Settings() {
         timestamp: new Date()
       });
 
-      alert("Password changed successfully!");
+      toast.success("Password changed successfully!");
 
     } catch (error) {
       console.error("Password change error:", error);
       
       // Handle specific Firebase errors
       if (error.code === 'auth/wrong-password') {
-        alert("Current password is incorrect");
+        toast.error("Current password is incorrect");
       } else if (error.code === 'auth/weak-password') {
-        alert("New password is too weak. Please choose a stronger password.");
+        toast.warning("New password is too weak. Please choose a stronger password.");
       } else if (error.code === 'auth/requires-recent-login') {
-        alert("Please log out and log back in, then try changing your password again");
+        toast.warning("Please log out and log back in, then try changing your password again");
       } else if (error.code === 'auth/user-mismatch') {
-        alert("Authentication error. Please try logging in again.");
+        toast.error("Authentication error. Please try logging in again.");
       } else if (error.code === 'auth/user-not-found') {
-        alert("User account not found. Please contact support.");
+        toast.error("User account not found. Please contact support.");
       } else if (error.code === 'auth/invalid-credential') {
-        alert("Current password is incorrect");
+        toast.error("Current password is incorrect");
       } else {
-        alert(`Failed to change password: ${error.message}`);
+        toast.error(`Failed to change password: ${error.message}`);
       }
       
       // Clear only current password on error
@@ -427,17 +429,29 @@ export default function Settings() {
                     <div className="logo-upload-container">
                       <div className="logo-preview">
                         {logoPreview ? (
-                          <img src={logoPreview} alt="Company Logo" className="logo-preview-img" />
-                        ) : (
-                          <div className="logo-placeholder">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                              <circle cx="8.5" cy="8.5" r="1.5"/>
-                              <polyline points="21 15 16 10 5 21"/>
-                            </svg>
-                            <span>No logo uploaded</span>
-                          </div>
-                        )}
+                          <img 
+                            src={logoPreview} 
+                            alt="Company Logo" 
+                            className="logo-preview-img"
+                            onError={(e) => {
+                              console.error(`Failed to load company logo: ${logoPreview}`);
+                              e.target.style.display = 'none';
+                              // Show placeholder instead
+                              const placeholder = e.target.parentElement.querySelector('.logo-placeholder');
+                              if (placeholder) {
+                                placeholder.style.display = 'block';
+                              }
+                            }}
+                          />
+                        ) : null}
+                        <div className="logo-placeholder" style={{ display: logoPreview ? 'none' : 'block' }}>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                            <circle cx="8.5" cy="8.5" r="1.5"/>
+                            <polyline points="21 15 16 10 5 21"/>
+                          </svg>
+                          <span>No logo uploaded</span>
+                        </div>
                       </div>
                       <div className="logo-upload-actions">
                         <input

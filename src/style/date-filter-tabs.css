@@ -1,0 +1,88 @@
+/* ========== DATE FILTER TABS ========== */
+.bookings-date-filter-tabs {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 16px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e5e7eb;
+}
+
+.bookings-filter-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #f8fafc;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.bookings-filter-tab:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #475569;
+}
+
+.bookings-filter-tab.active {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: white;
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+}
+
+.bookings-filter-tab svg {
+  flex-shrink: 0;
+}
+
+.bookings-tab-badge {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-left: 4px;
+}
+
+.bookings-filter-tab.active .bookings-tab-badge {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.bookings-info-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  color: #92400e;
+  font-size: 14px;
+}
+
+.bookings-info-banner svg {
+  flex-shrink: 0;
+  color: #f59e0b;
+}
+
+/* Responsive design for date filter tabs */
+@media (max-width: 768px) {
+  .bookings-date-filter-tabs {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .bookings-filter-tab {
+    justify-content: center;
+  }
+}
