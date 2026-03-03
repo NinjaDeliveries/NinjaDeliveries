@@ -501,12 +501,32 @@ const ServiceAdmin = () => {
               const onlineData = snapshot.val() || {};
               const onlineSet = new Set();
 
+              console.log('🔥 Firebase Realtime Database - Online Status Data:', onlineData);
+
+              // Check multiple possible data structures
               Object.keys(onlineData).forEach(companyId => {
-                if (onlineData[companyId].isOnline) {
+                const companyStatus = onlineData[companyId];
+                
+                // Log each company's status
+                console.log(`Company ${companyId}:`, companyStatus);
+                
+                // Check different possible structures
+                const isOnline = 
+                  companyStatus === true || // Simple boolean
+                  companyStatus?.isOnline === true || // Object with isOnline
+                  companyStatus?.online === true || // Object with online
+                  companyStatus?.status === 'online' || // Object with status string
+                  companyStatus?.state === 'online'; // Object with state string
+                
+                if (isOnline) {
                   onlineSet.add(companyId);
+                  console.log(`✅ Company ${companyId} is ONLINE`);
+                } else {
+                  console.log(`❌ Company ${companyId} is OFFLINE`);
                 }
               });
 
+              console.log('🟢 Total Online Companies:', onlineSet.size, Array.from(onlineSet));
               setOnlineCompanies(onlineSet);
             } catch (error) {
               console.error('Error processing online status data:', error);
@@ -2236,22 +2256,31 @@ const CompaniesTable = ({ companies, services, darkMode, totalCompanies, onlineC
                   </div>
                 </td>
                 <td style={styles.td}>
-                  <div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {/* Combined Status Badge - Active = Online, Inactive = Offline */}
                     <span style={{
-                      ...styles.statusBadge,
-                      backgroundColor: company.isActive ? '#dcfce7' : '#fef2f2',
-                      color: company.isActive ? '#166534' : '#991b1b'
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '8px 14px',
+                      borderRadius: '12px',
+                      backgroundColor: company.isActive 
+                        ? '#d1fae5' 
+                        : '#fee2e2',
+                      color: company.isActive 
+                        ? '#065f46' 
+                        : '#991b1b',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      border: `2px solid ${company.isActive 
+                        ? '#6ee7b7' 
+                        : '#fca5a5'}`
                     }}>
-                      {company.isActive ? 'Active' : 'Inactive'}
-                    </span>
-                    <div style={{ marginTop: '4px' }}>
-                      <span style={{
-                        fontSize: '12px',
-                        color: onlineCompanies && onlineCompanies.has(company.id) ? '#10b981' : '#ef4444'
-                      }}>
-                        {onlineCompanies && onlineCompanies.has(company.id) ? '🟢 Online' : '🔴 Offline'}
+                      <span style={{ fontSize: '12px' }}>
+                        {company.isActive ? '🟢' : '🔴'}
                       </span>
-                    </div>
+                      {company.isActive ? 'Online' : 'Offline'}
+                    </span>
                   </div>
                 </td>
                 <td style={styles.td}>
