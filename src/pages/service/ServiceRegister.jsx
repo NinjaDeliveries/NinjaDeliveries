@@ -72,19 +72,35 @@ const handleRegister = async (e) => {
       form.password
     );
 
-    // Create service company document with only necessary fields
-    await setDoc(doc(db, "service_company", userCred.user.uid), {
-      companyName: form.companyName,
-      deliveryZoneId: "OoS7Zjg2gxj2MJesvlC2", // Dharamshala zone ID
-      deliveryZoneName: "Dharamshala",
-      email: form.email,
-      isActive: true, // Service availability (online/offline)
-      accountEnabled: true, // Login access (enabled/disabled)
-      name: form.name,
-      phone: form.phone,
-      type: form.type,
-      createdAt: new Date(),
-    });
+    if (form.type === "restaurant") {
+      // Store restaurant data in registerRestaurant collection
+      await setDoc(doc(db, "registerRestaurant", userCred.user.uid), {
+        restaurantName: form.companyName,
+        ownerName: form.name,
+        email: form.email,
+        phone: form.phone,
+        address: form.address || "",
+        type: "restaurant",
+        isActive: true, // Restaurant availability (open/closed)
+        accountEnabled: true, // Login access (enabled/disabled)
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+    } else {
+      // Store service data in service_company collection
+      await setDoc(doc(db, "service_company", userCred.user.uid), {
+        companyName: form.companyName,
+        deliveryZoneId: "OoS7Zjg2gxj2MJesvlC2", // Dharamshala zone ID
+        deliveryZoneName: "Dharamshala",
+        email: form.email,
+        isActive: true, // Service availability (online/offline)
+        accountEnabled: true, // Login access (enabled/disabled)
+        name: form.name,
+        phone: form.phone,
+        type: form.type,
+        createdAt: new Date(),
+      });
+    }
 
     alert("Account created successfully. Please login.");
     navigate("/login");

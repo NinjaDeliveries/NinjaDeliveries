@@ -150,8 +150,10 @@ useEffect(() => {
       
 // 🔹 SERVICE USERS CHECK (NEW)
 let isServiceUser = false;
+let isRestaurantUser = false;
 
 if (!isAdmin) {
+  // Check for service users
   const serviceRef = doc(db, "service_company", user.uid);
   const serviceSnap = await getDoc(serviceRef);
 
@@ -177,6 +179,35 @@ if (!isAdmin) {
 
     setNav(false); // ❌ service dashboard has its own layout
     navigate("/service-dashboard");
+    return; // ⛔ stop admin logic here
+  }
+
+  // Check for restaurant users
+  const restaurantRef = doc(db, "registerRestaurant", user.uid);
+  const restaurantSnap = await getDoc(restaurantRef);
+
+  if (restaurantSnap.exists()) {
+    const restaurantData = restaurantSnap.data();
+
+    // Check account status (accountEnabled) for login access
+    if (restaurantData.accountEnabled === false) {
+      toast("Your restaurant account is disabled. Contact admin.", {
+        position: "top-center",
+      });
+      await auth.signOut();
+      return;
+    }
+
+    isRestaurantUser = true;
+    userSource = "registerRestaurant";
+
+    toast("Restaurant Dashboard Login Successful", {
+      type: "success",
+      position: "top-center",
+    });
+
+    setNav(false); // ❌ restaurant dashboard has its own layout
+    navigate("/restaurant-dashboard");
     return; // ⛔ stop admin logic here
   }
 }
