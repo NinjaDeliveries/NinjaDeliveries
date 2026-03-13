@@ -7,16 +7,16 @@ import { useNavigate } from "react-router-dom";
 import "../../style/login.css";
 
 
-const ServiceRegister = () => {
+const RestaurantRegister = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const [form, setForm] = useState({
-    name: "",
+    ownerName: "",
     phone: "",
     email: "",
-    companyName: "",
+    restaurantName: "",
     address: "",
     password: "",
     confirmPassword: "",
@@ -28,8 +28,8 @@ const ServiceRegister = () => {
   };
 
   const validateForm = () => {
-    if (!form.name.trim()) {
-      return "Full name is required";
+    if (!form.ownerName.trim()) {
+      return "Owner name is required";
     }
     if (!form.phone.trim()) {
       return "Phone number is required";
@@ -40,8 +40,8 @@ const ServiceRegister = () => {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
       return "Please enter a valid email address";
     }
-    if (!form.companyName.trim()) {
-      return "Company name is required";
+    if (!form.restaurantName.trim()) {
+      return "Restaurant name is required";
     }
     if (form.password.length < 6) {
       return "Password must be at least 6 characters";
@@ -71,22 +71,21 @@ const ServiceRegister = () => {
         form.password
       );
 
-      // Store service data in service_company collection
-      await setDoc(doc(db, "service_company", userCred.user.uid), {
-        companyName: form.companyName,
-        deliveryZoneId: "OoS7Zjg2gxj2MJesvlC2", // Dharamshala zone ID
-        deliveryZoneName: "Dharamshala",
+      // Store restaurant data in registerRestaurant collection
+      await setDoc(doc(db, "registerRestaurant", userCred.user.uid), {
+        restaurantName: form.restaurantName,
+        ownerName: form.ownerName,
         email: form.email,
-        isActive: true, // Service availability (online/offline)
-        accountEnabled: true, // Login access (enabled/disabled)
-        name: form.name,
         phone: form.phone,
-        type: "service",
+        address: form.address || "",
+        type: "restaurant",
+        isActive: true, // Restaurant availability (open/closed)
+        accountEnabled: true, // Login access (enabled/disabled)
         createdAt: new Date(),
-        updatedAt: new Date(), // Add updatedAt for consistency
+        updatedAt: new Date(),
       });
 
-      alert("Account created successfully. Please login.");
+      alert("Restaurant account created successfully. Please login.");
       navigate("/login");
 
     } catch (error) {
@@ -115,7 +114,7 @@ const ServiceRegister = () => {
           {/* LOGO HEADER */}
 
 <div className="login-header">
-  <h2>Service Registration</h2>
+  <h2>Restaurant Registration</h2>
 </div>
 
 {/* Error Message */}
@@ -125,12 +124,12 @@ const ServiceRegister = () => {
   </div>
 )}
 
-          {/* Full Name */}
+          {/* Owner Name */}
           <Input icon="user">
             <input
               required
-              name="name"
-              placeholder="Full Name"
+              name="ownerName"
+              placeholder="Owner Name"
               className="form-input"
               onChange={handleChange}
             />
@@ -159,12 +158,12 @@ const ServiceRegister = () => {
             />
           </Input>
 
-          {/* Company */}
+          {/* Restaurant Name */}
           <Input icon="company">
             <input
               required
-              name="companyName"
-              placeholder="Company Name / Service Name"
+              name="restaurantName"
+              placeholder="Restaurant Name"
               className="form-input"
               onChange={handleChange}
             />
@@ -174,7 +173,7 @@ const ServiceRegister = () => {
           <Input icon="location">
             <input
               name="address"
-              placeholder="Business Address (Optional)"
+              placeholder="Restaurant Address (Optional)"
               className="form-input"
               onChange={handleChange}
             />
@@ -205,7 +204,7 @@ const ServiceRegister = () => {
           </Input>
 
     <button className="register-btn" type="submit" disabled={loading}>
-      {loading ? "Creating Account..." : "Create Account"}
+      {loading ? "Creating Account..." : "Create Restaurant Account"}
     </button>
 
         </form>
@@ -213,11 +212,12 @@ const ServiceRegister = () => {
     </Page>
   );
 };
+
 const Page = styled.div`
   min-height: 100vh;
   display: grid;
   place-items: center;
-  background: linear-gradient(180deg, #f5f7fb 0%, #eef1f7 100%);
+  background: linear-gradient(180deg, #fff7ed 0%, #fed7aa 100%);
   padding: 20px;
   transition: all 0.5s ease;
 `;
@@ -228,9 +228,9 @@ const StyledWrapper = styled.div`
     padding: 32px 28px;
     background: #ffffff;
     border-radius: 20px;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(148, 163, 184, 0.1);
+    box-shadow: 0 20px 50px rgba(251, 146, 60, 0.15), 0 0 0 1px rgba(251, 146, 60, 0.1);
     font-family: 'Segoe UI', system-ui, sans-serif;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(251, 146, 60, 0.2);
     transition: all 0.5s ease;
   }
 
@@ -260,8 +260,8 @@ const StyledWrapper = styled.div`
 
   .form-input:focus {
     outline: none;
-    border-color: #4f46e5;
-    box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.15);
+    border-color: #fb923c;
+    box-shadow: 0 0 0 4px rgba(251, 146, 60, 0.15);
     background: #fff;
   }
 
@@ -305,17 +305,17 @@ const StyledWrapper = styled.div`
 /* Hover */
 .register-btn:hover {
   letter-spacing: 3px;
-  background-color: hsl(261deg 80% 48%);
+  background-color: #fb923c;
   color: #ffffff;
-  box-shadow: rgb(93 24 220) 0px 7px 29px 0px;
+  box-shadow: rgb(251 146 60) 0px 7px 29px 0px;
 }
 
 /* Active / Click */
 .register-btn:active {
   letter-spacing: 3px;
-  background-color: hsl(261deg 80% 48%);
+  background-color: #fb923c;
   color: #ffffff;
-  box-shadow: rgb(93 24 220) 0px 0px 0px 0px;
+  box-shadow: rgb(251 146 60) 0px 0px 0px 0px;
   transform: translateY(10px);
   transition: 100ms;
 }
@@ -357,7 +357,7 @@ const StyledWrapper = styled.div`
   font-weight: 700;
   color: #1f2937;
   margin: 0;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #fb923c 0%, #f97316 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -379,4 +379,4 @@ const Input = ({ icon, children }) => (
   </div>
 );
 
-export default ServiceRegister;
+export default RestaurantRegister;

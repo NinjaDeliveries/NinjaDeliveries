@@ -59,6 +59,7 @@ import ServiceAdmin from "./pages/service/admin/ServiceAdmin";
 // Restaurant Dashboard
 import RestaurantDashboard from "./pages/restaurant/RestaurantDashboard";
 import RestaurantSettings from "./pages/restaurant/RestaurantSettings";
+import RestaurantRegister from "./pages/restaurant/RestaurantRegister";
 
 // Notification System
 import { NotificationProvider } from "./context/NotificationContext";
@@ -390,6 +391,9 @@ function App() {
 
           {/* Service Register */}
           <Route path="/service-register" element={<ServiceRegister />} />
+
+          {/* Restaurant Register */}
+          <Route path="/restaurant-register" element={<RestaurantRegister />} />
 
           {/* Restaurant Dashboard Route */}
           <Route
