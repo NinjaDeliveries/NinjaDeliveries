@@ -39,6 +39,11 @@ const Technicians = () => {
   const [assignedCategories, setAssignedCategories] = useState([]); // New: multiple categories
   const [assignedServices, setAssignedServices] = useState([]);
   const [isActive, setIsActive] = useState(true);
+  
+  // View All Services states
+  const [showAllServices, setShowAllServices] = useState(false);
+  const [serviceSearchQuery, setServiceSearchQuery] = useState("");
+  const [showServiceAssignment, setShowServiceAssignment] = useState(false);
 
   // Filter technicians based on search and filters
   const filteredTechnicians = technicians.filter((tech) => {
@@ -641,14 +646,17 @@ const Technicians = () => {
   };
 
   const resetForm = () => {
-    setName("");
-    setPhone("");
-    setAadharNumber("");
-    setAssignedCategories([]);
-    setAssignedServices([]);
-    setIsActive(true);
-    setEditTechnician(null);
-  };
+        setName("");
+        setPhone("");
+        setAadharNumber("");
+        setAssignedCategories([]);
+        setAssignedServices([]);
+        setIsActive(true);
+        setEditTechnician(null);
+        setShowAllServices(false);
+        setServiceSearchQuery("");
+        setShowServiceAssignment(false);
+      };
 
   const handleCloseModal = () => {
     setShowModal(false);
@@ -1079,41 +1087,83 @@ const Technicians = () => {
       {/* Add/Edit Technician Modal */}
       {showModal && (
         <div className="sd-modal-backdrop">
-          <div className="sd-modal technicians-modal">
-            <div className="sd-modal-header">
-              <div>
-                <h2>{editTechnician ? "Edit Worker" : "Add New Worker"}</h2>
-                <p className="technicians-modal-desc">
-                  {editTechnician ? "Update worker information and assignments." : "Add a new technician to your team."}
-                </p>
-              </div>
+          <div className="sd-modal technicians-modal" style={{ maxWidth: '650px', width: '100%' }}>
+            <div className="sd-modal-header" style={{ 
+              padding: '24px 28px',
+              borderBottom: '1px solid #e5e7eb',
+              backgroundColor: '#ffffff'
+            }}>
+              <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: '#1f2937' }}>
+                {editTechnician ? "Edit Worker" : "Add New Worker"}
+              </h2>
             </div>
 
-            <div className="sd-modal-content">
+            <div className="sd-modal-content" style={{ padding: '28px', backgroundColor: '#ffffff' }}>
               <div className="technicians-modal-form">
-                <div className="sd-form-group">
-                  <label>Full Name *</label>
+                {/* Personal Information Section */}
+                <div className="sd-form-group" style={{ marginBottom: '20px' }}>
+                  <label style={{ 
+                    fontSize: '14px', 
+                    fontWeight: '500', 
+                    color: '#374151',
+                    marginBottom: '6px',
+                    display: 'block'
+                  }}>Full Name *</label>
                   <input
                     type="text"
                     placeholder="Enter full name"
                     value={name}
                     onChange={e => setName(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      outline: 'none',
+                      backgroundColor: '#ffffff'
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = '#6366f1'}
+                    onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
                   />
                 </div>
 
-                <div className="technicians-form-row">
-                  <div className="sd-form-group">
-                    <label>Phone Number *</label>
+                <div className="technicians-form-row" style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
+                  <div className="sd-form-group" style={{ flex: 1 }}>
+                    <label style={{ 
+                      fontSize: '14px', 
+                      fontWeight: '500', 
+                      color: '#374151',
+                      marginBottom: '6px',
+                      display: 'block'
+                    }}>Phone Number *</label>
                     <input
                       type="tel"
                       placeholder="Enter phone number"
                       value={phone}
                       onChange={e => setPhone(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        outline: 'none',
+                        backgroundColor: '#ffffff'
+                      }}
+                      onFocus={(e) => e.target.style.borderColor = '#6366f1'}
+                      onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
                     />
                   </div>
 
-                  <div className="sd-form-group">
-                    <label>Aadhar Number</label>
+                  <div className="sd-form-group" style={{ flex: 1 }}>
+                    <label style={{ 
+                      fontSize: '14px', 
+                      fontWeight: '500', 
+                      color: '#374151',
+                      marginBottom: '6px',
+                      display: 'block'
+                    }}>Aadhar Number</label>
                     <input
                       type="text"
                       placeholder="Enter Aadhar number"
@@ -1123,17 +1173,35 @@ const Technicians = () => {
                         setAadharNumber(value);
                       }}
                       maxLength="12"
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        outline: 'none',
+                        backgroundColor: '#ffffff'
+                      }}
+                      onFocus={(e) => e.target.style.borderColor = '#6366f1'}
+                      onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
                     />
                     {aadharNumber && aadharNumber.length !== 12 && (
-                      <small className="technicians-error-text">
+                      <small style={{ color: '#ef4444', fontSize: '13px', marginTop: '4px', display: 'block' }}>
                         Aadhar number must be exactly 12 digits
                       </small>
                     )}
                   </div>
                 </div>
 
-                <div className="sd-form-group">
-                  <label>Categories / Specializations</label>
+                {/* Categories Section */}
+                <div className="sd-form-group" style={{ marginBottom: '20px' }}>
+                  <label style={{ 
+                    fontSize: '14px', 
+                    fontWeight: '500', 
+                    color: '#374151',
+                    marginBottom: '6px',
+                    display: 'block'
+                  }}>Categories / Specializations</label>
                   <select 
                     value="" 
                     onChange={(e) => {
@@ -1141,7 +1209,17 @@ const Technicians = () => {
                         handleCategoryToggle(e.target.value);
                       }
                     }}
-                    className="sd-form-select"
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      outline: 'none',
+                      backgroundColor: '#ffffff'
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = '#6366f1'}
+                    onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
                   >
                     <option value="">Select category to add</option>
                     {categories.filter(cat => !assignedCategories.includes(cat.id)).map(category => (
@@ -1152,79 +1230,445 @@ const Technicians = () => {
                   </select>
                   
                   {assignedCategories.length > 0 && (
-                    <div className="technicians-selected-categories-list">
-                      <label>Selected Categories:</label>
-                      {assignedCategories.map(catId => (
-                        <div key={catId} className="technicians-selected-category-item">
-                          <span>{getCategoryName(catId)}</span>
-                          <button 
-                            type="button"
-                            onClick={() => handleCategoryToggle(catId)}
-                            className="technicians-remove-category-btn"
+                    <div style={{ marginTop: '16px' }}>
+                      <div style={{ 
+                        display: 'flex', 
+                        flexWrap: 'wrap', 
+                        gap: '8px',
+                        marginBottom: '16px'
+                      }}>
+                        {assignedCategories.map(catId => (
+                          <span key={catId} style={{
+                            padding: '8px 12px',
+                            backgroundColor: '#f3f4f6',
+                            color: '#374151',
+                            borderRadius: '4px',
+                            fontSize: '13px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px'
+                          }}>
+                            {getCategoryName(catId)}
+                            <button 
+                              type="button"
+                              onClick={() => handleCategoryToggle(catId)}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: '#6b7280',
+                                cursor: 'pointer',
+                                fontSize: '14px',
+                                padding: '0'
+                              }}
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setShowServiceAssignment(true)}
+                        style={{
+                          padding: '12px 20px',
+                          fontSize: '14px',
+                          fontWeight: '500',
+                          backgroundColor: '#6366f1',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '8px',
+                          cursor: 'pointer'
+                        }}
+                        onMouseOver={(e) => e.target.style.backgroundColor = '#4f46e5'}
+                        onMouseOut={(e) => e.target.style.backgroundColor = '#6366f1'}
+                      >
+                        Assign Services ({getFilteredServices().length} available)
+                      </button>
+                    </div>
+                  )}
+
+                  {assignedServices.length > 0 && (
+                    <div style={{ marginTop: '16px' }}>
+                      <div style={{ 
+                        display: 'flex', 
+                        flexWrap: 'wrap', 
+                        gap: '8px'
+                      }}>
+                        {assignedServices.map(serviceId => (
+                          <span 
+                            key={serviceId}
+                            style={{
+                              padding: '8px 12px',
+                              backgroundColor: '#eef2ff',
+                              color: '#6366f1',
+                              borderRadius: '4px',
+                              fontSize: '13px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px'
+                            }}
                           >
-                            ×
-                          </button>
-                        </div>
-                      ))}
+                            {getServiceName(serviceId)}
+                            <button
+                              type="button"
+                              onClick={() => handleServiceToggle(serviceId)}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: '#6366f1',
+                                cursor: 'pointer',
+                                fontSize: '14px',
+                                padding: '0'
+                              }}
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
 
-                <div className="technicians-status-toggle">
-                  <label>Active Status</label>
-                  <label className="technicians-switch">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '20px', borderTop: '1px solid #f3f4f6' }}>
+                  <label style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>Active Status</label>
+                  <label style={{ position: 'relative', display: 'inline-block', width: '50px', height: '26px' }}>
                     <input
                       type="checkbox"
                       checked={isActive}
                       onChange={(e) => setIsActive(e.target.checked)}
+                      style={{ opacity: 0, width: 0, height: 0 }}
                     />
-                    <span className="technicians-switch-slider"></span>
+                    <span style={{
+                      position: 'absolute',
+                      cursor: 'pointer',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      backgroundColor: isActive ? '#22c55e' : '#d1d5db',
+                      transition: '.4s',
+                      borderRadius: '24px'
+                    }}>
+                      <span style={{
+                        position: 'absolute',
+                        content: '""',
+                        height: '18px',
+                        width: '18px',
+                        left: isActive ? '26px' : '3px',
+                        bottom: '3px',
+                        backgroundColor: 'white',
+                        transition: '.4s',
+                        borderRadius: '50%'
+                      }}></span>
+                    </span>
                   </label>
-                </div>
-
-                <div className="sd-form-group">
-                  <label>Assign Services</label>
-                  <div className="sd-services-list">
-                    {services.length === 0 ? (
-                      <p className="technicians-no-services">No services available. Create services first.</p>
-                    ) : assignedCategories.length === 0 ? (
-                      <div className="technicians-services-info">
-                        <small>Please select categories first to see available services.</small>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="technicians-services-info">
-                          <small>Services for selected categories ({getFilteredServices().length} found):</small>
-                        </div>
-                        {getFilteredServices().map(service => (
-                          <label key={service.id} className="sd-service-checkbox">
-                            <input
-                              type="checkbox"
-                              checked={assignedServices.includes(service.id)}
-                              onChange={() => handleServiceToggle(service.id)}
-                            />
-                            <span>{service.name}</span>
-                            <small className="service-category-label">
-                              {getServiceCategoryName(service)}
-                            </small>
-                          </label>
-                        ))}
-                        {getFilteredServices().length === 0 && (
-                          <p className="technicians-no-services">No services found for selected categories.</p>
-                        )}
-                      </>
-                    )}
-                  </div>
                 </div>
               </div>
             </div>
 
-            <div className="sd-modal-actions">
-              <button className="sd-cancel-btn" onClick={handleCloseModal}>
+            <div className="sd-modal-actions" style={{ 
+              padding: '16px 24px',
+              borderTop: '1px solid #e5e7eb',
+              backgroundColor: '#ffffff',
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: '12px'
+            }}>
+              <button 
+                onClick={handleCloseModal}
+                style={{
+                  padding: '12px 20px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  backgroundColor: '#ffffff',
+                  color: '#6b7280',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '8px',
+                  cursor: 'pointer'
+                }}
+                onMouseOver={(e) => e.target.style.backgroundColor = '#f9fafb'}
+                onMouseOut={(e) => e.target.style.backgroundColor = '#ffffff'}
+              >
                 Cancel
               </button>
-              <button className="sd-save-btn" onClick={handleSaveTechnician}>
+              <button 
+                onClick={handleSaveTechnician}
+                style={{
+                  padding: '12px 20px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  backgroundColor: '#6366f1',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer'
+                }}
+                onMouseOver={(e) => e.target.style.backgroundColor = '#4f46e5'}
+                onMouseOut={(e) => e.target.style.backgroundColor = '#6366f1'}
+              >
                 {editTechnician ? "Save Changes" : "Add Worker"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Service Assignment Modal */}
+      {showServiceAssignment && (
+        <div className="sd-modal-backdrop">
+          <div className="sd-modal technicians-modal" style={{ maxWidth: '90vw', width: '1200px' }}>
+            <div className="sd-modal-header">
+              <div>
+                <h2>Assign Services</h2>
+                <p className="technicians-modal-desc">
+                  Select services for {assignedCategories.map(catId => getCategoryName(catId)).join(", ")}
+                </p>
+              </div>
+            </div>
+
+            <div className="sd-modal-content" style={{ maxHeight: '80vh', overflowY: 'auto' }}>
+              {/* Search Bar */}
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{ position: 'relative' }}>
+                  <svg 
+                    style={{
+                      position: 'absolute',
+                      left: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      width: '16px',
+                      height: '16px',
+                      color: '#9ca3af'
+                    }}
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    stroke="currentColor"
+                  >
+                    <circle cx="11" cy="11" r="8"/>
+                    <path d="m21 21-4.35-4.35"/>
+                  </svg>
+                  <input
+                    type="text"
+                    placeholder="Search services..."
+                    value={serviceSearchQuery}
+                    onChange={(e) => setServiceSearchQuery(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '12px 12px 12px 40px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      outline: 'none',
+                      transition: 'border-color 0.2s ease'
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = '#6366f1'}
+                    onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
+                  />
+                </div>
+              </div>
+              
+              {/* Quick Actions */}
+              <div style={{ marginBottom: '20px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const filteredServices = getFilteredServices().filter(s => 
+                      s.name.toLowerCase().includes(serviceSearchQuery.toLowerCase())
+                    );
+                    const allServiceIds = filteredServices.map(s => s.id);
+                    setAssignedServices(prev => {
+                      const newServices = [...prev];
+                      allServiceIds.forEach(id => {
+                        if (!newServices.includes(id)) {
+                          newServices.push(id);
+                        }
+                      });
+                      return newServices;
+                    });
+                  }}
+                  style={{
+                    padding: '12px 20px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    backgroundColor: '#10b981',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s ease'
+                  }}
+                  onMouseOver={(e) => e.target.style.backgroundColor = '#059669'}
+                  onMouseOut={(e) => e.target.style.backgroundColor = '#10b981'}
+                >
+                  Select All
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const filteredServices = getFilteredServices().filter(s => 
+                      s.name.toLowerCase().includes(serviceSearchQuery.toLowerCase())
+                    );
+                    const visibleServiceIds = filteredServices.map(s => s.id);
+                    setAssignedServices(prev => prev.filter(id => !visibleServiceIds.includes(id)));
+                  }}
+                  style={{
+                    padding: '12px 20px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    backgroundColor: '#ef4444',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s ease'
+                  }}
+                  onMouseOver={(e) => e.target.style.backgroundColor = '#dc2626'}
+                  onMouseOut={(e) => e.target.style.backgroundColor = '#ef4444'}
+                >
+                  Clear All
+                </button>
+                <div style={{ 
+                  marginLeft: 'auto', 
+                  fontSize: '14px', 
+                  color: '#6b7280',
+                  display: 'flex',
+                  alignItems: 'center'
+                }}>
+                  {assignedServices.length} services selected
+                </div>
+              </div>
+              
+              {/* Services Grid */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                gap: '16px',
+                padding: '4px'
+              }}>
+                {getFilteredServices()
+                  .filter(service => 
+                    service.name.toLowerCase().includes(serviceSearchQuery.toLowerCase())
+                  )
+                  .map(service => {
+                    const isSelected = assignedServices.includes(service.id);
+                    return (
+                      <div
+                        key={service.id}
+                        onClick={() => handleServiceToggle(service.id)}
+                        style={{
+                          padding: '20px',
+                          border: `2px solid ${isSelected ? '#6366f1' : '#e5e7eb'}`,
+                          borderRadius: '12px',
+                          backgroundColor: isSelected ? '#eef2ff' : '#ffffff',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          boxShadow: isSelected 
+                            ? '0 4px 6px -1px rgba(99, 102, 241, 0.1), 0 2px 4px -1px rgba(99, 102, 241, 0.06)'
+                            : '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)'
+                        }}
+                        onMouseOver={(e) => {
+                          if (!isSelected) {
+                            e.currentTarget.style.borderColor = '#9ca3af';
+                            e.currentTarget.style.transform = 'translateY(-2px)';
+                            e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)';
+                          }
+                        }}
+                        onMouseOut={(e) => {
+                          if (!isSelected) {
+                            e.currentTarget.style.borderColor = '#e5e7eb';
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.boxShadow = '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)';
+                          }
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                          <div style={{
+                            width: '24px',
+                            height: '24px',
+                            border: `2px solid ${isSelected ? '#6366f1' : '#d1d5db'}`,
+                            borderRadius: '4px',
+                            backgroundColor: isSelected ? '#6366f1' : '#ffffff',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                            marginTop: '2px'
+                          }}>
+                            {isSelected && (
+                              <svg style={{ width: '16px', height: '16px', color: '#ffffff' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                                <polyline points="20,6 9,17 4,12"/>
+                              </svg>
+                            )}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{
+                              fontSize: '16px',
+                              fontWeight: '600',
+                              color: '#111827',
+                              marginBottom: '6px',
+                              lineHeight: '1.4'
+                            }}>
+                              {service.name}
+                            </div>
+                            <div style={{
+                              fontSize: '14px',
+                              color: '#6b7280',
+                              marginBottom: '10px'
+                            }}>
+                              {getServiceCategoryName(service)}
+                            </div>
+                            {service.price && (
+                              <div style={{
+                                fontSize: '18px',
+                                fontWeight: '700',
+                                color: '#059669',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}>
+                                <span style={{ fontSize: '14px', fontWeight: '400' }}>₹</span>
+                                {service.price}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+              
+              {getFilteredServices().filter(service => 
+                service.name.toLowerCase().includes(serviceSearchQuery.toLowerCase())
+              ).length === 0 && (
+                <div style={{
+                  textAlign: 'center',
+                  padding: '60px 20px',
+                  color: '#6b7280'
+                }}>
+                  <svg style={{ width: '48px', height: '48px', margin: '0 auto 12px', opacity: '0.5' }} viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <circle cx="11" cy="11" r="8"/>
+                    <path d="m21 21-4.35-4.35"/>
+                  </svg>
+                  <p style={{ margin: 0, fontSize: '16px' }}>No services found matching "{serviceSearchQuery}"</p>
+                </div>
+              )}
+            </div>
+
+            <div className="sd-modal-actions">
+              <button className="sd-cancel-btn" onClick={() => setShowServiceAssignment(false)}>
+                Cancel
+              </button>
+              <button 
+                className="sd-save-btn" 
+                onClick={() => setShowServiceAssignment(false)}
+                style={{
+                  backgroundColor: assignedServices.length > 0 ? '#6366f1' : '#9ca3af',
+                  cursor: assignedServices.length > 0 ? 'pointer' : 'not-allowed'
+                }}
+              >
+                Done ({assignedServices.length} services)
               </button>
             </div>
           </div>
