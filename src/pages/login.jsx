@@ -201,13 +201,20 @@ if (!isAdmin) {
     isRestaurantUser = true;
     userSource = "registerRestaurant";
 
-    toast("Restaurant Dashboard Login Successful", {
+    toast("Restaurant Login Successful", {
       type: "success",
       position: "top-center",
     });
 
-    setNav(false); // ❌ restaurant dashboard has its own layout
-    navigate("/restaurant-dashboard");
+    setNav(false); // ❌ restaurant has its own layout
+    
+    // Check if restaurant has access to special page
+    if (restaurantData.access === true) {
+      navigate("/restaurant-admin");
+    } else {
+      navigate("/");
+    }
+    
     return; // ⛔ stop admin logic here
   }
 }
