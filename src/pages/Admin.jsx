@@ -453,6 +453,7 @@ const rejectBanner = async (bannerId) => {
   /* ================= REGISTER LINKS ================= */
   const registerLink = `${window.location.origin}/admin.html#/Register`;
   const serviceRegisterLink = `${window.location.origin}/admin.html#/service-register`;
+  const restaurantRegisterLink = `${window.location.origin}/admin.html#/restaurant-register`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(registerLink);
@@ -462,6 +463,11 @@ const rejectBanner = async (bannerId) => {
   const handleServiceCopy = () => {
     navigator.clipboard.writeText(serviceRegisterLink);
     toast.success("Service Management Register link copied!", { position: "top-center" });
+  };
+
+  const handleRestaurantCopy = () => {
+    navigator.clipboard.writeText(restaurantRegisterLink);
+    toast.success("Restaurant Register link copied!", { position: "top-center" });
   };
 
   /* ================= STORES ================= */
@@ -724,13 +730,25 @@ const AVAILABLE_FEATURES = [
               </div>
             </div>
             
-            <div>
+            <div style={{ marginBottom: "15px" }}>
               <label style={{ fontSize: "14px", fontWeight: "600", color: "#555", marginBottom: "5px", display: "block" }}>
                 Service Management Register Link
               </label>
               <div style={styles.inviteCompact}>
                 <input value={serviceRegisterLink} readOnly style={styles.inviteInput} />
                 <button onClick={handleServiceCopy} style={styles.inviteButton}>
+                  Copy
+                </button>
+              </div>
+            </div>
+            
+            <div>
+              <label style={{ fontSize: "14px", fontWeight: "600", color: "#555", marginBottom: "5px", display: "block" }}>
+                Restaurant Register Link
+              </label>
+              <div style={styles.inviteCompact}>
+                <input value={restaurantRegisterLink} readOnly style={styles.inviteInput} />
+                <button onClick={handleRestaurantCopy} style={styles.inviteButton}>
                   Copy
                 </button>
               </div>
