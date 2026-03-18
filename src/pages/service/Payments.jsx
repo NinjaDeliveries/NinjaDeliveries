@@ -108,8 +108,8 @@ const Payments = () => {
           // CORRECT mapping based on your Firebase structure:
           categoryName: paymentDoc.serviceName || paymentDoc.service || paymentDoc.category || 'Unknown Category',
           serviceName: paymentDoc.workName || paymentDoc.serviceDetails || paymentDoc.subService || 'Unknown Service',
-          paymentMethod: paymentDoc.paymentMethod || 'cash',
-          paymentGateway: paymentDoc.paymentGateway || 'cash',
+          paymentMethod: paymentDoc.paymentMethod || paymentDoc.paymentGateway || 'cash',
+          paymentGateway: paymentDoc.paymentGateway || paymentDoc.paymentMethod || 'cash',
           status: paymentDoc.paymentStatus || paymentDoc.status || 'pending',
           date: createdAt,
           bookingId: paymentDoc.bookingId || doc.id,
@@ -133,7 +133,8 @@ const Payments = () => {
             thisMonthRevenue += amount;
           }
 
-          if (payment.paymentMethod === 'cash' || payment.paymentGateway === 'cash') {
+          const isCash = !payment.paymentMethod || payment.paymentMethod === 'cash';
+          if (isCash) {
             cashPayments += amount;
           } else {
             onlinePayments += amount;
@@ -201,8 +202,8 @@ const Payments = () => {
             // CORRECT mapping based on your Firebase structure:
             categoryName: booking.serviceName || booking.service || booking.category || 'Unknown Category',
             serviceName: booking.workName || booking.serviceDetails || booking.subService || 'Unknown Service',
-            paymentMethod: booking.paymentMethod || 'cash',
-            paymentGateway: booking.paymentGateway || 'cash',
+            paymentMethod: booking.paymentMethod || booking.paymentGateway || '',
+            paymentGateway: booking.paymentGateway || booking.paymentMethod || '',
             status: 'completed',
             date: createdAt,
             bookingId: doc.id,
@@ -224,7 +225,8 @@ const Payments = () => {
             thisMonthRevenue += amount;
           }
 
-          if (payment.paymentMethod === 'cash' || payment.paymentGateway === 'cash') {
+          const isCash = !payment.paymentMethod || payment.paymentMethod === 'cash';
+          if (isCash) {
             cashPayments += amount;
           } else {
             onlinePayments += amount;
@@ -408,7 +410,7 @@ const Payments = () => {
         payment.categoryName || 'Unknown Category',
         payment.serviceName || 'Unknown Service',
         actualAmount,
-        (payment.paymentGateway === 'cash' || payment.paymentMethod === 'cash') ? 'Cash' : 'Online',
+        (payment.paymentGateway === 'cash' || payment.paymentMethod === 'cash' || (!payment.paymentMethod && !payment.paymentGateway)) ? 'Cash' : 'Online',
         payment.status ? payment.status.charAt(0).toUpperCase() + payment.status.slice(1) : 'Unknown',
         workerName,
         formatDate(payment.date),
@@ -701,8 +703,8 @@ const Payments = () => {
                       </span>
                     </td>
                     <td className="method-cell">
-                      <span className={`method-badge ${(payment.paymentGateway === 'cash' || payment.paymentMethod === 'cash') ? 'cash' : 'online'}`}>
-                        {(payment.paymentGateway === 'cash' || payment.paymentMethod === 'cash') ? '💵 Cash' : '💳 Online'}
+                      <span className={`method-badge ${(payment.paymentGateway === 'cash' || payment.paymentMethod === 'cash' || (!payment.paymentMethod && !payment.paymentGateway)) ? 'cash' : 'online'}`}>
+                        {(payment.paymentGateway === 'cash' || payment.paymentMethod === 'cash' || (!payment.paymentMethod && !payment.paymentGateway)) ? '💵 Cash' : '💳 Online'}
                       </span>
                     </td>
                     <td className="status-cell">

@@ -1,11 +1,415 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { auth, db } from "../../context/Firebase";
-import { doc, collection, query, where, onSnapshot, orderBy, limit } from "firebase/firestore";
+import {
+  doc, collection, query, where, onSnapshot, orderBy, limit,
+  updateDoc, getDocs, serverTimestamp
+} from "firebase/firestore";
 import "../../style/ServiceDashboard.css";
 import ServiceBannerManagement from "./ServiceBannerManagement";
 import WeeklyRevenueChart from "../../components/WeeklyRevenueChart";
+import { getTodayIST } from "../../utils/dateHelpers";
 import { useNotifications } from "../../context/NotificationContext";
+
+// Today's Booking Tracker
+function TodayBookingTracker() {
+  const [bookings, setBookings] = useState([]);
+  const [workers, setWorkers] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [assigningId, setAssigningId] = useState(null);   // booking being assigned
+  const [selectedWorker, setSelectedWorker] = useState({}); // { [bookingId]: workerId }
+  const [otpModal, setOtpModal] = useState(null);          // { booking }
+  const [otpInput, setOtpInput] = useState("");
+  const [otpError, setOtpError] = useState("");
+  const [actionLoading, setActionLoading] = useState({});
+
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const today = getTodayIST();
+
+    // Today's bookings live
+    const q = query(
+      collection(db, "service_bookings"),
+      where("companyId", "==", user.uid),
+      where("date", "==", today)
+    );
+    const unsub = onSnapshot(q, (snap) => {
+      const list = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter(b => !["rejected", "cancelled", "expired", "completed"].includes(b.status))
+        .sort((a, b) => (a.time || "").localeCompare(b.time || ""));
+      setBookings(list);
+    });
+
+    // Workers
+    const wq = query(
+      collection(db, "service_workers"),
+      where("companyId", "==", user.uid),
+      where("isActive", "==", true)
+    );
+    const unsubW = onSnapshot(wq, (snap) => {
+      setWorkers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+
+    // Categories
+    const cq = query(collection(db, "service_categories"), where("companyId", "==", user.uid));
+    const unsubC = onSnapshot(cq, (snap) => {
+      setCategories(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+
+    return () => { unsub(); unsubW(); unsubC(); };
+  }, []);
+
+  const setLoading = (id, val) => setActionLoading(p => ({ ...p, [id]: val }));
+
+  const handleAssign = async (booking) => {
+    const wid = selectedWorker[booking.id];
+    if (!wid) return;
+    const worker = workers.find(w => w.id === wid);
+    if (!worker) return;
+    setLoading(booking.id, true);
+    try {
+      await updateDoc(doc(db, "service_bookings", booking.id), {
+        workerId: worker.id,
+        workerName: worker.name,
+        status: "assigned",
+        assignedAt: serverTimestamp(),
+      });
+      setAssigningId(null);
+    } catch (e) { console.error(e); }
+    setLoading(booking.id, false);
+  };
+
+  const handleStart = async (booking) => {
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    setLoading(booking.id, true);
+    try {
+      await updateDoc(doc(db, "service_bookings", booking.id), {
+        status: "started",
+        startOtp: otp,
+        otpVerified: false,
+        startedAt: serverTimestamp(),
+      });
+    } catch (e) { console.error(e); }
+    setLoading(booking.id, false);
+  };
+
+  const handleComplete = async () => {
+    const booking = otpModal;
+    if (!booking) return;
+    if (otpInput !== booking.startOtp) {
+      setOtpError("Wrong OTP. Please try again.");
+      return;
+    }
+    setLoading(booking.id, true);
+    try {
+      await updateDoc(doc(db, "service_bookings", booking.id), {
+        status: "completed",
+        otpVerified: true,
+        completedAt: serverTimestamp(),
+      });
+      setOtpModal(null);
+      setOtpInput("");
+      setOtpError("");
+    } catch (e) { console.error(e); }
+    setLoading(booking.id, false);
+  };
+
+  // ── Step config ──────────────────────────────────────────────────────────
+  const STEPS = ["pending", "assigned", "started", "completed"];
+  const stepLabel = { pending: "Pending", assigned: "Assigned", started: "In Progress", completed: "Done" };
+  const stepIcon  = { pending: "⏳", assigned: "👷", started: "🔧", completed: "✅" };
+  const stepColor = { pending: "#f59e0b", assigned: "#6366f1", started: "#3b82f6", completed: "#10b981" };
+
+  const fmt12 = (t) => {
+    if (!t) return "";
+    const [h, m] = t.split(":").map(Number);
+    const ampm = h >= 12 ? "PM" : "AM";
+    return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${ampm}`;
+  };
+
+  if (bookings.length === 0) {
+    return (
+      <div style={{ background: "#fff", borderRadius: 16, padding: "28px 24px", boxShadow: "0 2px 12px rgba(0,0,0,.07)", marginBottom: 24 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+          <span style={{ fontSize: 22 }}>📋</span>
+          <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "#1e293b" }}>Today's Bookings</h3>
+          <span style={{ marginLeft: "auto", fontSize: 12, color: "#94a3b8", background: "#f1f5f9", padding: "3px 10px", borderRadius: 20 }}>
+            {getTodayIST()}
+          </span>
+        </div>
+        <p style={{ margin: 0, color: "#94a3b8", fontSize: 14, textAlign: "center", paddingTop: 24 }}>No bookings for today yet 🎉</p>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ background: "#fff", borderRadius: 16, padding: "24px", boxShadow: "0 2px 12px rgba(0,0,0,.07)", marginBottom: 24 }}>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+        <span style={{ fontSize: 22 }}>📋</span>
+        <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "#1e293b" }}>Today's Bookings</h3>
+        <span style={{ background: "#6366f1", color: "#fff", fontSize: 12, fontWeight: 700, padding: "2px 10px", borderRadius: 20, marginLeft: 4 }}>
+          {bookings.length}
+        </span>
+        <span style={{ marginLeft: "auto", fontSize: 12, color: "#94a3b8", background: "#f1f5f9", padding: "3px 10px", borderRadius: 20 }}>
+          {getTodayIST()}
+        </span>
+      </div>
+
+      {/* Booking Cards */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        {bookings.map((booking) => {
+          const status = booking.status || "pending";
+          const stepIdx = STEPS.indexOf(status);
+          const isCompleted = status === "completed";
+          const color = stepColor[status] || "#6b7280";
+
+          return (
+            <div key={booking.id} style={{
+              border: `1.5px solid ${isCompleted ? "#d1fae5" : "#e2e8f0"}`,
+              borderRadius: 12,
+              overflow: "hidden",
+              background: isCompleted ? "#f0fdf4" : "#fafafa",
+              transition: "box-shadow .2s"
+            }}>
+              {/* Top bar: progress steps */}
+              <div style={{ display: "flex", background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
+                {STEPS.map((step, i) => {
+                  const done = i < stepIdx;
+                  const active = i === stepIdx;
+                  const next = i === stepIdx + 1;
+                  return (
+                    <div key={step} style={{
+                      flex: 1,
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      padding: "8px 4px",
+                      background: active ? color : done ? "#ecfdf5" : next ? "#fffbeb" : "transparent",
+                      borderRight: i < 3 ? "1px solid #e2e8f0" : "none",
+                      transition: "background .3s"
+                    }}>
+                      <span style={{ fontSize: 16 }}>{stepIcon[step]}</span>
+                      <span style={{
+                        fontSize: 11,
+                        fontWeight: active ? 700 : next ? 600 : 400,
+                        color: active ? "#fff" : next ? "#92400e" : done ? "#059669" : "#94a3b8",
+                        marginTop: 2
+                      }}>
+                        {stepLabel[step]}
+                      </span>
+                      {next && (
+                        <span style={{ fontSize: 9, color: "#f59e0b", fontWeight: 700 }}>← NEXT</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Body */}
+              <div style={{ padding: "14px 16px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 8 }}>
+                  {/* Left: info */}
+                  <div style={{ flex: 1, minWidth: 200 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                      <span style={{
+                        background: color + "20",
+                        color,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        padding: "2px 8px",
+                        borderRadius: 20,
+                        border: `1px solid ${color}40`
+                      }}>
+                        {stepIcon[status]} {stepLabel[status]}
+                      </span>
+                      <span style={{ fontSize: 12, color: "#64748b" }}>🕐 {fmt12(booking.time)}</span>
+                      <span style={{ fontSize: 11, color: "#94a3b8" }}>#{booking.id.slice(-6)}</span>
+                    </div>
+                    <p style={{ margin: "0 0 4px", fontWeight: 700, fontSize: 15, color: "#1e293b" }}>
+                      {booking.workName || booking.serviceName || "Service"}
+                    </p>
+                    <p style={{ margin: "0 0 2px", fontSize: 13, color: "#475569" }}>
+                      👤 {booking.customerName}
+                      {booking.customerPhone && <span style={{ color: "#94a3b8" }}> · {booking.customerPhone}</span>}
+                    </p>
+                    {booking.workerName && (
+                      <p style={{ margin: "0", fontSize: 13, color: "#6366f1" }}>
+                        👷 {booking.workerName}
+                      </p>
+                    )}
+                    {booking.status === "started" && booking.startOtp && (
+                      <p style={{ margin: "4px 0 0", fontSize: 12, color: "#3b82f6", fontWeight: 600 }}>
+                        🔑 OTP: <span style={{ letterSpacing: 2 }}>{booking.startOtp}</span>
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Right: price + action */}
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
+                    <span style={{ fontSize: 16, fontWeight: 700, color: "#059669" }}>
+                      ₹{(booking.totalPrice || booking.price || booking.amount || 0).toLocaleString("en-IN")}
+                    </span>
+
+                    {/* ── Action Buttons ── */}
+                    {status === "pending" && (
+                      assigningId === booking.id ? (
+                        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                          <select
+                            value={selectedWorker[booking.id] || ""}
+                            onChange={e => setSelectedWorker(p => ({ ...p, [booking.id]: e.target.value }))}
+                            style={{ fontSize: 13, padding: "5px 8px", borderRadius: 8, border: "1.5px solid #6366f1", outline: "none", minWidth: 130 }}
+                          >
+                            <option value="">Select worker…</option>
+                            {workers.map(w => (
+                              <option key={w.id} value={w.id}>{w.name}</option>
+                            ))}
+                          </select>
+                          <button
+                            onClick={() => handleAssign(booking)}
+                            disabled={!selectedWorker[booking.id] || actionLoading[booking.id]}
+                            style={{
+                              background: selectedWorker[booking.id] ? "#6366f1" : "#e2e8f0",
+                              color: selectedWorker[booking.id] ? "#fff" : "#94a3b8",
+                              border: "none", borderRadius: 8, padding: "6px 14px",
+                              fontSize: 13, fontWeight: 600, cursor: selectedWorker[booking.id] ? "pointer" : "default"
+                            }}
+                          >
+                            {actionLoading[booking.id] ? "…" : "Assign"}
+                          </button>
+                          <button
+                            onClick={() => setAssigningId(null)}
+                            style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: 18, lineHeight: 1 }}
+                          >✕</button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setAssigningId(booking.id)}
+                          style={{
+                            background: "#6366f1", color: "#fff", border: "none",
+                            borderRadius: 8, padding: "7px 18px", fontSize: 13,
+                            fontWeight: 600, cursor: "pointer",
+                            boxShadow: "0 2px 8px #6366f140"
+                          }}
+                        >
+                          👷 Assign Worker
+                        </button>
+                      )
+                    )}
+
+                    {status === "assigned" && (
+                      <button
+                        onClick={() => handleStart(booking)}
+                        disabled={actionLoading[booking.id]}
+                        style={{
+                          background: "#3b82f6", color: "#fff", border: "none",
+                          borderRadius: 8, padding: "7px 18px", fontSize: 13,
+                          fontWeight: 600, cursor: "pointer",
+                          boxShadow: "0 2px 8px #3b82f640",
+                          animation: "pulse-btn 1.5s infinite"
+                        }}
+                      >
+                        {actionLoading[booking.id] ? "…" : "🚀 Start Work"}
+                      </button>
+                    )}
+
+                    {status === "started" && (
+                      <button
+                        onClick={() => { setOtpModal(booking); setOtpInput(""); setOtpError(""); }}
+                        style={{
+                          background: "#10b981", color: "#fff", border: "none",
+                          borderRadius: 8, padding: "7px 18px", fontSize: 13,
+                          fontWeight: 600, cursor: "pointer",
+                          boxShadow: "0 2px 8px #10b98140",
+                          animation: "pulse-btn 1.5s infinite"
+                        }}
+                      >
+                        ✅ Enter OTP & Complete
+                      </button>
+                    )}
+
+                    {status === "completed" && (
+                      <span style={{ fontSize: 13, color: "#10b981", fontWeight: 600 }}>✅ Completed</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* OTP Modal */}
+      {otpModal && createPortal(
+        <div style={{
+          position: "fixed", inset: 0, background: "rgba(0,0,0,.45)",
+          display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999
+        }}>
+          <div style={{
+            background: "#fff", borderRadius: 16, padding: 28, width: 340,
+            boxShadow: "0 20px 40px rgba(0,0,0,.2)"
+          }}>
+            <h3 style={{ margin: "0 0 6px", fontSize: 18, fontWeight: 700, color: "#1e293b" }}>
+              🔑 Verify OTP to Complete
+            </h3>
+            <p style={{ margin: "0 0 16px", fontSize: 13, color: "#64748b" }}>
+              Ask the customer for the OTP to mark this booking as completed.
+            </p>
+            <p style={{ margin: "0 0 12px", fontSize: 13, color: "#475569" }}>
+              <strong>Booking:</strong> {otpModal.workName || otpModal.serviceName}<br />
+              <strong>Customer:</strong> {otpModal.customerName}
+            </p>
+            <input
+              type="text"
+              maxLength={6}
+              value={otpInput}
+              onChange={e => { setOtpInput(e.target.value); setOtpError(""); }}
+              placeholder="Enter 6-digit OTP"
+              style={{
+                width: "100%", padding: "10px 14px", fontSize: 20, letterSpacing: 6,
+                textAlign: "center", border: `2px solid ${otpError ? "#ef4444" : "#e2e8f0"}`,
+                borderRadius: 10, outline: "none", boxSizing: "border-box", marginBottom: 6
+              }}
+            />
+            {otpError && <p style={{ margin: "0 0 10px", fontSize: 12, color: "#ef4444" }}>{otpError}</p>}
+            <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+              <button
+                onClick={() => { setOtpModal(null); setOtpInput(""); setOtpError(""); }}
+                style={{
+                  flex: 1, padding: "10px", background: "#f1f5f9", color: "#475569",
+                  border: "none", borderRadius: 8, fontSize: 14, cursor: "pointer"
+                }}
+              >Cancel</button>
+              <button
+                onClick={handleComplete}
+                disabled={otpInput.length < 4 || actionLoading[otpModal?.id]}
+                style={{
+                  flex: 1, padding: "10px", background: otpInput.length >= 4 ? "#10b981" : "#e2e8f0",
+                  color: otpInput.length >= 4 ? "#fff" : "#94a3b8",
+                  border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600,
+                  cursor: otpInput.length >= 4 ? "pointer" : "default"
+                }}
+              >
+                {actionLoading[otpModal?.id] ? "Completing…" : "✅ Complete"}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      <style>{`
+        @keyframes pulse-btn {
+          0%, 100% { transform: scale(1); box-shadow: 0 2px 8px rgba(99,102,241,.4); }
+          50% { transform: scale(1.03); box-shadow: 0 4px 16px rgba(99,102,241,.6); }
+        }
+      `}</style>
+    </div>
+  );
+}
 
 // Booking Details Modal Component
 function BookingDetailsModal({ booking, onClose }) {
@@ -1108,11 +1512,12 @@ const Overview = () => {
             </div>
           </div>
 
-          {/* Charts & Activity Row */}
-          <div className="modern-charts-row">
-            {/* Weekly Revenue Chart Component */}
-            <WeeklyRevenueChart weeklyData={weeklyData} />
+          {/* Today's Booking Tracker */}
+          <TodayBookingTracker />
 
+          {/* Charts & Activity Row */}
+          <div className="modern-charts-row">            {/* Weekly Revenue Chart Component */}
+            <WeeklyRevenueChart weeklyData={weeklyData} />
             {/* Activity Feed */}
             <div className="modern-activity-card" style={{ animationDelay: '0.6s' }}>
               <div className="modern-activity-header">

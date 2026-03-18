@@ -1069,8 +1069,6 @@ if (isCustomService) {
         >
           <option value="minute">Minutes</option>
           <option value="hour">Hours</option>
-          <option value="day">Days</option>
-          <option value="month">Months</option>
         </select>
       </div>
     </div>
