@@ -229,40 +229,26 @@ const Bookings = () => {
     // Build query based on dateViewMode
     let q;
     if (dateViewMode === "today") {
-      // Today's bookings only
       q = query(
         collection(db, "service_bookings"),
         where("companyId", "==", user.uid),
         where("date", "==", getTodayDateString())
       );
     } else {
-      // All bookings (no date filter)
       q = query(
         collection(db, "service_bookings"),
         where("companyId", "==", user.uid)
       );
     }
 
-    console.log("📡 Setting up bookings listener with mode:", dateViewMode);
-
-    // Set up real-time listener with better error handling
-    const unsubscribe = onSnapshot(q, 
+    // Set up real-time listener
+    const unsubscribe = onSnapshot(q,
+      { includeMetadataChanges: false }, // only fire on confirmed server writes
       (snapshot) => {
-        if (snapshot.metadata.fromCache) {
-          return;
-        }
-        snapshot.docChanges().forEach((change) => {
-  if (change.type === "added") {
-    const docSnap = change.doc;
-  }
-});
-
         try {
-          
-          // Process both cached and server data, but log the source
           const now = new Date();
-          const today = getTodayIST(); // Use IST date helper
-          const currentTime = now.getHours() * 60 + now.getMinutes(); // Current time in minutes
+          const today = getTodayIST();
+          const currentTime = now.getHours() * 60 + now.getMinutes();
 
           const list = [];
           const expiredUpdates = [];
@@ -270,87 +256,75 @@ const Bookings = () => {
           snapshot.docs.forEach((docSnap) => {
             try {
               const data = docSnap.data();
-
-              // Auto-expire logic - check if booking should be expired
               let shouldExpire = false;
-              
-              // 1. Past date bookings that are not completed/rejected/expired/cancelled
-              // This will expire pending, assigned, and started bookings from past dates
+
+              // 1. Past date bookings that are not terminal
               if (
                 data.date < today &&
                 !["completed", "rejected", "expired", "cancelled"].includes(data.status)
               ) {
                 shouldExpire = true;
-                console.log(`⏰ Expiring past booking: ${docSnap.id} - Date: ${data.date}, Status: ${data.status}`);
               }
-              
-              // 2. Same day bookings that are 1 hour past their time and still pending/assigned
+
+              // 2. Same day bookings 1 hour past their time and still pending/assigned
               if (
                 data.date === today &&
                 data.time &&
                 ["pending", "assigned"].includes(data.status)
               ) {
                 const [hours, minutes] = data.time.split(':').map(Number);
-                const bookingTime = hours * 60 + minutes; // Booking time in minutes
-                const timeDiff = currentTime - bookingTime; // Difference in minutes
-                
-                // If more than 60 minutes past the booking time, expire it
-                if (timeDiff > 60) {
+                const bookingTime = hours * 60 + minutes;
+                if (currentTime - bookingTime > 60) {
                   shouldExpire = true;
-                  console.log(`⏰ Expiring late booking: ${docSnap.id} - Time: ${data.time}, Status: ${data.status}`);
                 }
               }
 
               if (shouldExpire) {
-                // Add to expired updates batch
                 expiredUpdates.push({
                   id: docSnap.id,
                   ref: doc(db, "service_bookings", docSnap.id)
                 });
-
-                list.push({
-                  id: docSnap.id,
-                  ...data,
-                  status: "expired",
-                });
+                list.push({ id: docSnap.id, ...data, status: "expired" });
               } else {
-                list.push({
-                  id: docSnap.id,
-                  ...data,
-                });
+                list.push({ id: docSnap.id, ...data });
               }
             } catch (docError) {
+              console.error("Error processing doc:", docError);
             }
           });
 
-          // Update expired bookings in database (only if not from cache)
-          if (expiredUpdates.length > 0 && !snapshot.metadata.fromCache) {
+          // Batch expire in background
+          if (expiredUpdates.length > 0) {
             expiredUpdates.forEach(async (update) => {
               try {
-                await updateDoc(update.ref, {
-                  status: "expired",
-                  expiredAt: new Date(),
-                });
-              } catch (error) {
-              }
+                await updateDoc(update.ref, { status: "expired", expiredAt: new Date() });
+              } catch (error) {}
             });
           }
 
           setBookings(list);
+
+          // Keep selectedBooking in sync so modals reflect latest status
+          setSelectedBooking(prev => {
+            if (!prev) return prev;
+            const updated = list.find(b => b.id === prev.id);
+            return updated ? updated : prev;
+          });
+
           setLoading(false);
         } catch (snapshotError) {
-          // Fallback to manual fetch on snapshot processing error
-          fetchBookings().finally(() => setLoading(false));
+          console.error("Snapshot processing error:", snapshotError);
+          setLoading(false);
         }
-      }, 
+      },
       (error) => {
-        // Fallback to manual fetch on error
-        fetchBookings().finally(() => setLoading(false));
+        console.error("Bookings listener error:", error);
+        setLoading(false);
       }
     );
 
     return unsubscribe;
-  }, [dateViewMode, setBookings, setLoading]);
+  }, [dateViewMode]);
 
 
   const fetchCategories = async () => {
@@ -383,32 +357,19 @@ const Bookings = () => {
       try {
         const user = auth.currentUser;
         if (user && isComponentMounted) {
-          console.log("🔐 User authenticated for bookings:", user.uid);
-          
-          // Clean up any existing listener before setting up new one
+          // Clean up any existing listener
           if (bookingsUnsubscribe) {
             bookingsUnsubscribe();
             bookingsUnsubscribe = null;
           }
-          
-          // First, fetch existing data immediately
-          console.log("📥 Fetching existing bookings data...");
-          await fetchBookings();
-          
-          // Add a small delay before setting up listener to prevent race conditions
+
+          // Set up real-time listener directly — no pre-fetch needed,
+          // onSnapshot fires immediately with current data on first call
+          bookingsUnsubscribe = setupBookingsListener();
+
+          // Fetch categories in parallel
           if (isComponentMounted) {
-            setTimeout(() => {
-              if (isComponentMounted) {
-                // Then set up real-time listener for future updates
-                console.log("📡 Setting up real-time listener...");
-                bookingsUnsubscribe = setupBookingsListener();
-              }
-            }, 100);
-          }
-          
-          // Fetch categories
-          if (isComponentMounted) {
-            await fetchCategories();
+            fetchCategories();
           }
         } else if (isComponentMounted) {
           setLoading(false);
@@ -416,23 +377,15 @@ const Bookings = () => {
         }
       } catch (error) {
         if (isComponentMounted) {
-          // Ensure we at least try to fetch data
-          try {
-            await fetchBookings();
-            await fetchCategories();
-          } catch (fallbackError) {
-          }
           setLoading(false);
         }
       }
     };
 
-    // Listen for auth state changes
     authUnsubscribe = auth.onAuthStateChanged((user) => {
       if (user && isComponentMounted) {
         initializeData();
       } else if (isComponentMounted) {
-        // Clean up listener when user logs out
         if (bookingsUnsubscribe) {
           bookingsUnsubscribe();
           bookingsUnsubscribe = null;
@@ -442,15 +395,10 @@ const Bookings = () => {
       }
     });
 
-    // Cleanup function
     return () => {
       isComponentMounted = false;
-      if (authUnsubscribe) {
-        authUnsubscribe();
-      }
-      if (bookingsUnsubscribe) {
-        bookingsUnsubscribe();
-      }
+      if (authUnsubscribe) authUnsubscribe();
+      if (bookingsUnsubscribe) bookingsUnsubscribe();
     };
   }, [setupBookingsListener]);
 
@@ -1198,32 +1146,78 @@ const Bookings = () => {
                                 <div className="bookings-card-content">
                                   <div className="bookings-main-section">
                                     <div className="bookings-info">
-                                      <div className="bookings-header">
-                                        <div className="bookings-badges">
-                                          <span className="bookings-time-badge">
-                                            🕐 {formatTime(booking.time)} • {formatDateWithDay(booking.date)}
-                                          </span>
-                                          <span className="bookings-id-badge">
-                                            #{booking.id.slice(-8)}
-                                          </span>
-                                          <span className={`bookings-status-badge ${status.className}`}>
-                                            {status.icon}
-                                            <span>{status.label}</span>
-                                          </span>
-                                        </div>
-                                        <h3 className="bookings-service-name">
-                                          {booking.workName || booking.serviceName || "Service Request"}
-                                          <span style={{
-                                            fontSize: '12px',
-                                            color: '#6b7280',
-                                            marginLeft: '8px',
-                                            fontWeight: 'normal'
-                                          }}>
-                                            (Day {packageGroupBookings.findIndex(b => b.id === booking.id) + 1} of {groupInfo.totalBookings})
-                                          </span>
-                                        </h3>
+
+                                      {/* Badges row */}
+                                      <div className="bookings-badges" style={{ marginBottom: '8px' }}>
+                                        <span className="bookings-time-badge">
+                                          🕐 {formatTime(booking.time)} • {formatDateWithDay(booking.date)}
+                                        </span>
+                                        <span className="bookings-id-badge">
+                                          #{booking.id.slice(-8)}
+                                        </span>
+                                        <span className={`bookings-status-badge ${status.className}`}>
+                                          {status.icon}
+                                          <span>{status.label}</span>
+                                        </span>
                                       </div>
-                                      
+
+                                      {/* Service name + day counter */}
+                                      <h3 className="bookings-service-name" style={{ marginBottom: booking.addOns?.length > 0 ? '8px' : '10px' }}>
+                                        {booking.workName || booking.serviceName || "Service Request"}
+                                        <span style={{
+                                          fontSize: '12px',
+                                          color: '#6b7280',
+                                          marginLeft: '8px',
+                                          fontWeight: 'normal'
+                                        }}>
+                                          (Day {packageGroupBookings.findIndex(b => b.id === booking.id) + 1} of {groupInfo.totalBookings})
+                                        </span>
+                                      </h3>
+
+                                      {/* Add-ons row */}
+                                      {booking.addOns && booking.addOns.length > 0 && (
+                                        <div style={{
+                                          display: 'flex',
+                                          flexWrap: 'wrap',
+                                          alignItems: 'center',
+                                          gap: '6px',
+                                          marginBottom: '10px'
+                                        }}>
+                                          <span style={{
+                                            fontSize: '11px',
+                                            fontWeight: '700',
+                                            color: '#7c3aed',
+                                            textTransform: 'uppercase',
+                                            letterSpacing: '0.04em',
+                                            marginRight: '2px'
+                                          }}>Add-ons:</span>
+                                          {booking.addOns.map((addon, i) => (
+                                            <span key={i} style={{
+                                              display: 'inline-flex',
+                                              alignItems: 'center',
+                                              gap: '4px',
+                                              fontSize: '12px',
+                                              color: '#5b21b6',
+                                              background: '#f5f3ff',
+                                              border: '1px solid #ddd6fe',
+                                              padding: '3px 9px',
+                                              borderRadius: '20px',
+                                              fontWeight: '500',
+                                              whiteSpace: 'nowrap'
+                                            }}>
+                                              <span style={{ color: '#8b5cf6' }}>+</span>
+                                              {addon.name}
+                                              {addon.price > 0 && (
+                                                <span style={{ color: '#7c3aed', fontWeight: '700', marginLeft: '2px' }}>
+                                                  ₹{addon.price.toLocaleString()}
+                                                </span>
+                                              )}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      )}
+
+                                      {/* Customer info */}
                                       <div className="bookings-details">
                                         <div className="bookings-detail-item">
                                           <svg className="bookings-detail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -1241,6 +1235,7 @@ const Bookings = () => {
                                           </div>
                                         )}
                                       </div>
+
                                     </div>
                                   </div>
                                   
@@ -1379,24 +1374,74 @@ const Bookings = () => {
                               <div className="bookings-card-content">
                                 <div className="bookings-main-section">
                                   <div className="bookings-info">
-                                    <div className="bookings-header">
-                                      <div className="bookings-badges">
-                                        <span className="bookings-time-badge">
-                                          🕐 {formatTime(booking.time)}
-                                        </span>
-                                        <span className="bookings-id-badge">
-                                          #{booking.id.slice(-8)}
-                                        </span>
-                                        <span className={`bookings-status-badge ${status.className}`}>
-                                          {status.icon}
-                                          <span>{status.label}</span>
-                                        </span>
-                                      </div>
-                                      <h3 className="bookings-service-name">
-                                        {booking.workName || booking.serviceName || "Service Request"}
-                                      </h3>
+
+                                    {/* Top row: badges */}
+                                    <div className="bookings-badges" style={{ marginBottom: '8px' }}>
+                                      <span className="bookings-time-badge">
+                                        🕐 {formatTime(booking.time)}
+                                      </span>
+                                      <span className="bookings-id-badge">
+                                        #{booking.id.slice(-8)}
+                                      </span>
+                                      <span className={`bookings-status-badge ${status.className}`}>
+                                        {status.icon}
+                                        <span>{status.label}</span>
+                                      </span>
                                     </div>
-                                    
+
+                                    {/* Service name */}
+                                    <h3 className="bookings-service-name" style={{ marginBottom: booking.addOns?.length > 0 ? '8px' : '10px' }}>
+                                      {booking.workName || booking.serviceName || "Service Request"}
+                                    </h3>
+
+                                    {/* Add-ons row — only if present */}
+                                    {booking.addOns && booking.addOns.length > 0 && (
+                                      <div style={{
+                                        display: 'flex',
+                                        flexWrap: 'wrap',
+                                        alignItems: 'center',
+                                        gap: '6px',
+                                        marginBottom: '10px'
+                                      }}>
+                                        <span style={{
+                                          fontSize: '11px',
+                                          fontWeight: '700',
+                                          color: '#7c3aed',
+                                          textTransform: 'uppercase',
+                                          letterSpacing: '0.04em',
+                                          marginRight: '2px'
+                                        }}>Add-ons:</span>
+                                        {booking.addOns.map((addon, i) => (
+                                          <span key={i} style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '4px',
+                                            fontSize: '12px',
+                                            color: '#5b21b6',
+                                            background: '#f5f3ff',
+                                            border: '1px solid #ddd6fe',
+                                            padding: '3px 9px',
+                                            borderRadius: '20px',
+                                            fontWeight: '500',
+                                            whiteSpace: 'nowrap'
+                                          }}>
+                                            <span style={{ color: '#8b5cf6' }}>+</span>
+                                            {addon.name}
+                                            {addon.price > 0 && (
+                                              <span style={{
+                                                color: '#7c3aed',
+                                                fontWeight: '700',
+                                                marginLeft: '2px'
+                                              }}>
+                                                ₹{addon.price.toLocaleString()}
+                                              </span>
+                                            )}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    )}
+
+                                    {/* Customer info */}
                                     <div className="bookings-details">
                                       <div className="bookings-detail-item">
                                         <svg className="bookings-detail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -1414,6 +1459,7 @@ const Bookings = () => {
                                         </div>
                                       )}
                                     </div>
+
                                   </div>
                                 </div>
                                 
@@ -1436,7 +1482,17 @@ const Bookings = () => {
                                           <>
                                             <span className="rupee-symbol">₹</span>
                                             <span className="price-amount">
-                                              {getBookingPrice(booking).toLocaleString()}
+                                              {(() => {
+                                                const base = getBookingPrice(booking) || 0;
+                                                const addOnsTotal = booking.addOns
+                                                  ? booking.addOns.reduce((s, a) => s + (a.price || 0), 0)
+                                                  : 0;
+                                                // if totalPrice already includes addOns, use it directly
+                                                if (booking.totalPrice && addOnsTotal > 0) {
+                                                  return booking.totalPrice.toLocaleString();
+                                                }
+                                                return (base + addOnsTotal).toLocaleString();
+                                              })()}
                                             </span>
                                           </>
                                         )}
@@ -1890,29 +1946,115 @@ const Bookings = () => {
 
                 {/* Add-on Services */}
                 {selectedBooking.addOns && selectedBooking.addOns.length > 0 && (
-                  <div className="addon-services-section">
-                    <h5 style={{margin: '16px 0 8px 0', color: '#374151'}}>Add-on Services:</h5>
-                    {selectedBooking.addOns.map((addon, index) => (
-                      <div key={index} className="service-detail-item addon-item">
-                        <div className="service-info">
-                          <p className="service-name">{addon.name}</p>
-                          <p className="service-price">₹{(addon.price || 0).toLocaleString()}</p>
+                  <div style={{ marginTop: '12px' }}>
+                    {/* Section header */}
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      marginBottom: '10px'
+                    }}>
+                      <span style={{
+                        fontSize: '13px',
+                        fontWeight: '700',
+                        color: '#6d28d9',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em'
+                      }}>
+                        ＋ Add-on Services
+                      </span>
+                      <span style={{
+                        fontSize: '11px',
+                        fontWeight: '600',
+                        color: '#7c3aed',
+                        background: '#ede9fe',
+                        padding: '2px 8px',
+                        borderRadius: '10px'
+                      }}>
+                        {selectedBooking.addOns.length} item{selectedBooking.addOns.length > 1 ? 's' : ''}
+                      </span>
+                    </div>
+
+                    {/* Add-on list */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {selectedBooking.addOns.map((addon, index) => (
+                        <div key={index} style={{
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          justifyContent: 'space-between',
+                          padding: '10px 14px',
+                          background: '#faf5ff',
+                          border: '1px solid #ddd6fe',
+                          borderLeft: '3px solid #7c3aed',
+                          borderRadius: '8px',
+                          gap: '12px'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', flex: 1 }}>
+                            <span style={{
+                              width: '20px',
+                              height: '20px',
+                              borderRadius: '50%',
+                              background: '#ede9fe',
+                              color: '#7c3aed',
+                              fontSize: '11px',
+                              fontWeight: '700',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0,
+                              marginTop: '1px'
+                            }}>
+                              {index + 1}
+                            </span>
+                            <div>
+                              <p style={{ margin: 0, fontWeight: '600', color: '#1e293b', fontSize: '14px' }}>
+                                {addon.name}
+                              </p>
+                              {addon.notes && (
+                                <p style={{ margin: '3px 0 0 0', fontSize: '12px', color: '#64748b' }}>
+                                  {addon.notes}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <span style={{
+                            fontWeight: '700',
+                            color: '#059669',
+                            fontSize: '14px',
+                            whiteSpace: 'nowrap',
+                            flexShrink: 0
+                          }}>
+                            ₹{(addon.price || 0).toLocaleString()}
+                          </span>
                         </div>
-                        {addon.notes && (
-                          <p className="service-notes">{addon.notes}</p>
-                        )}
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 )}
 
                 {/* Total Summary */}
                 {selectedBooking.addOns && selectedBooking.addOns.length > 0 && (
-                  <div className="total-services-summary">
-                    <strong>
-                      Total: {selectedBooking.addOns.length + 1} services - ₹
-                      {(getBookingPrice(selectedBooking) || 0).toLocaleString()}
-                    </strong>
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginTop: '12px',
+                    padding: '10px 14px',
+                    background: '#f0fdf4',
+                    border: '1px solid #bbf7d0',
+                    borderRadius: '8px'
+                  }}>
+                    <span style={{ fontSize: '13px', color: '#374151', fontWeight: '500' }}>
+                      {selectedBooking.addOns.length + 1} services total
+                    </span>
+                    <span style={{ fontSize: '16px', fontWeight: '700', color: '#059669' }}>
+                      ₹{(() => {
+                        if (selectedBooking.totalPrice) return selectedBooking.totalPrice.toLocaleString();
+                        const base = getBookingPrice(selectedBooking) || 0;
+                        const addOnsTotal = selectedBooking.addOns.reduce((s, a) => s + (a.price || 0), 0);
+                        return (base + addOnsTotal).toLocaleString();
+                      })()}
+                    </span>
                   </div>
                 )}
               </div>

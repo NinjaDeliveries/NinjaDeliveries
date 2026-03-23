@@ -249,8 +249,8 @@ const AssignWorkerModal = ({ booking, categories = [], onClose, onAssigned }) =>
         assignedAt: serverTimestamp(),
       });
 
-      onAssigned(); // refresh bookings
-      onClose();
+      onClose(); // close modal — real-time listener in Bookings.jsx will update the list automatically
+      onAssigned();
     } catch (err) {
       console.error("Assign worker error:", err);
       alert("Failed to assign worker");
