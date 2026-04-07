@@ -1,0 +1,342 @@
+NINJA DELIVERIES — SERVICE MANAGEMENT SYSTEM
+=============================================
+TABLE OF CONTENTS
+─────────────────
+1. Introduction
+2. Technology Stack
+3. System Architecture
+4. Database Design
+5. Module-wise Documentation
+6. User Roles and Permissions
+7. Key Workflows / Use Cases
+8. Real-time Features
+9. Security & Data Integrity
+10. Future Enhancements
+11. Conclusion
+12. References
+
+──────────────────────────────────────────────
+
+1. INTRODUCTION
+───────────────
+
+1.1 Project Overview
+────────────────────
+Ninja Deliveries — Service Management System is a full-stack web application designed to streamline and digitize operations for service-based businesses such as electricians, plumbers, cleaners, and technicians.
+ It replaces manual processes with a centralized platform for managing bookings, workforce, and customer interactions.
+ 
+The system enables real-time booking, efficient technician assignment, payment tracking, and instant notifications, improving operational efficiency and service quality.
+ It is developed as a modular sub-system within the Ninja Deliveries ecosystem, with its own authentication, database structure, and dedicated dashboard, ensuring scalability, data isolation, and ease of maintenance.
+
+1.2 Purpose and Objectives
+──────────────────────────
+The primary purpose of the system is to provide a centralized and efficient platform for managing service operations digitally. It aims to improve operational transparency, reduce manual effort, and enhance overall service delivery.
+
+Objective                    | Description
+-----------------------------|------------------------------------------------
+Digital Booking Management   | Replace manual booking methods with a structured, real-time booking system
+Worker Assignment            | Assign technicians based on skills, availability, and service requirements
+Live Notifications           | Provide instant alerts for new bookings and status updates
+Package Subscriptions        | Support flexible service plans such as daily, weekly, and monthly packages
+Admin Oversight              | Enable centralized monitoring and control for administrators
+Payment Tracking             | Record, manage, and generate reports for all service-related transactions
+Feedback Collection          | Collect and analyze customer ratings and reviews for service improvement
+
+1.3 Key Features
+────────────────
+Real-time Booking Alerts
+Instant notifications for new bookings using audio signals and browser push notifications
+OTP-Based Verification
+Secure booking completion through One-Time Password (OTP) validation
+Intelligent Worker Assignment
+Assignment of technicians based on service category, skills, and availability
+Flexible Package Booking
+Support for recurring service packages such as daily, weekly, and monthly plans
+Calendar and Slot Management
+Visual scheduling system with support for defining offline or unavailable time windows
+Cascading Status Logic
+Automatic deactivation of related services when a worker is deactivated, ensuring data consistency
+Master-Slave Architecture
+Centralized control of categories and services with company-level customization
+Role-Based Access Control
+Multiple user roles including Super Admin, Company Owner, and Technician with defined permissions
+Advanced Data Export
+CSV export functionality with customizable field selection for reporting
+Timezone-Aware Processing
+Accurate date and time handling based on Indian Standard Time (IST)
+Multi-Module Support
+Integration of a parallel Restaurant Management module within the same ecosystem
+
+──────────────────────────────────────────────
+
+2. TECHNOLOGY STACK
+───────────────────
+
+2.1 Frontend
+────────────
+Technology           | Version   | Purpose
+---------------------|-----------|--------------------------------
+React                | 18.3.1    | Core library for building modular and component-based user interfaces
+React Router DOM     | 6.27.0    | CHandles client-side routing and navigation between application views
+Context API          | Built-in  | Manages global state and shared data across components
+Framer Motion        | 12.1.0    | Enables smooth animations and interactive UI transitions
+Material UI (MUI)    | 6.4.12    | Provides pre-built, customizable UI components for faster development
+Styled Components    | 6.3.8     | Provides pre-built, customizable UI components for faster development
+Tailwind CSS         | 3.4.19    | Utility-first CSS framework for rapid and consistent UI design
+
+2.2 Backend & Database
+──────────────────────
+   Technology                    | Purpose
+   ------------------------------|------------------------------------------------
+   Firebase Authentication       | Handles user authentication, login, and secure session management
+   Cloud Firestore               | Primary NoSQL database for storing and managing real-time application data
+   Firebase Realtime Database    | Tracks user presence (online/offline status) in real time
+   Firebase Storage              | Stores and serves media assets such as images and category icons
+   Firebase Cloud Functions      | Executes server-side logic, including notifications and automated triggers
+
+2.3 Data & Visualization Libraries
+──────────────────────────────────
+Library                        | Version      | Purpose
+-------------------------------|--------------|------------------------------------
+Chart.js + react-chartjs-2     | 4.4.7 / 5.2.0| Generates interactive charts for revenue and performance visualization
+Recharts                       | 2.15.4       | Provides structured and customizable components for weekly analytics charts
+Leaflet + React Leaflet        | 1.9.4 / 4.2.1| Displays map-based views for service areas and location radius visualization
+
+2.4 Utility Libraries
+─────────────────────
+Library                    | Version   | Purpose
+---------------------------|-----------|----------------------------------------
+date-fns                   | 4.1.0     | Provides utilities for efficient date parsing, formatting, and manipulation
+xlsx                       | 0.18.5    | Enables export of data into Excel and CSV formats
+jsPDF + jspdf-autotable    | 3.0.4 / 5.0.7 |Generates PDF documents with structured tables and reports
+react-hook-form            | 7.53.1    | Manages form state, validation, and submission efficiently
+react-toastify             | 10.0.6    | Displays non-intrusive toast notifications for user feedback
+qrcode.react               | 4.2.0     | Generates QR codes for identification and quick data access
+lucide-react               | 0.511.0   | Provides a modern and consistent set of UI icons
+
+──────────────────────────────────────────────
+
+3. SYSTEM ARCHITECTURE
+
+──────────────────────
+
+3.1 High-Level Architecture
+
+────────────────────────────
+
+The system follows a client-server architecture using Firebase as a serverless backend platform.
+The frontend is developed with React, leveraging the Context API for global state management and React Router for seamless client-side navigation.
+
+This architecture enables real-time data synchronization, reduces backend maintenance overhead, and supports scalable application growth.
+
+3.2 Master-Slave Architecture
+
+──────────────────────────────
+
+The system implements a Master-Slave architecture for managing service categories and services.
+This approach ensures centralized control while allowing company-level customization.
+
+Master Layer (Admin Controlled):
+
+service_categories_master
+service_services_master
+
+Slave Layer (Company-Specific):
+
+service_categories (linked via masterCategoryId)
+service_services (linked via masterServiceId)
+
+Key Benefits:
+
+Centralized updates propagate automatically across all companies
+Consistent synchronization of images and service status
+Cascading logic maintains data integrity across related entities
+3.3 Real-Time Data Flow
+
+──────────────────────────
+
+The system operates on an event-driven, real-time data flow model powered by Firebase.
+
+Flow Sequence:
+Customer creates booking → Firestore listener (onSnapshot) triggers → Notification system processes audio, push, and toast alerts → Dashboard updates instantly
+
+This ensures that all users receive immediate updates, enabling faster response times and synchronized system behavior across all active sessions.
+──────────────────────────────────────────────
+
+4. DATABASE DESIGN
+──────────────────
+
+Core Collections:
+
+• service_company          → Company profile (Document ID = Auth UID)
+• service_bookings         → All customer bookings with full lifecycle
+• service_workers          → Technician profiles and assignments
+• service_categories       → Company-specific categories
+• service_services         → Company-specific services
+• service_categories_master→ Global category templates
+• service_services_master  → Global service templates
+• service_payments         → Payment records
+• service_feedback         → Customer reviews and ratings
+• service_availability     → Offline windows scheduling
+• service_activity_logs    → Audit trail for admin actions
+
+Collection Relationships:
+service_company (1) → service_bookings (N), service_workers (N), service_categories (N), etc.
+
+──────────────────────────────────────────────
+
+5. MODULE-WISE DOCUMENTATION (Refined & Professional)
+
+────────────────────────────
+
+This section outlines the core modules of the system, each designed to handle specific functional responsibilities within the service management workflow.
+
+5.1 Service Dashboard Shell
+
+Provides the primary layout structure of the application, including sidebar navigation, company branding (logo), real-time booking indicators, and a fully responsive interface for different screen sizes.
+
+5.2 Overview Module
+
+Displays key operational insights such as today’s booking summary, weekly revenue visualization, and quick action shortcuts for common administrative tasks.
+
+5.3 Bookings Module
+
+Manages the complete booking lifecycle, including creation, assignment, status updates, OTP-based completion verification, auto-expiry handling, and rejection workflows. Supports both single and package-based bookings.
+
+5.4 Slots / Calendar Module
+
+Offers a visual calendar interface to manage booking schedules, track daily booking volumes, define offline availability windows, and toggle service availability.
+
+5.5 Technicians Module
+
+Handles technician (worker) management, including assignment, availability, and status control. Implements cascading deactivation logic to ensure service consistency when a worker is disabled.
+
+5.6 Services & Categories Modules
+
+Enables management of service categories and individual services with support for master data synchronization and flexible pricing models, including package configurations.
+
+5.7 Payments Module
+
+Tracks all service-related transactions, provides revenue insights, and supports export of financial data in CSV format for reporting and analysis.
+
+5.8 Feedback Module
+
+Collects customer ratings and reviews, and calculates average feedback metrics to monitor service quality and performance.
+
+5.9 Service Admin Panel
+
+Provides a centralized dashboard for super administrators to manage companies, monitor system-wide activities, and access detailed activity logs.
+
+5.10 Restaurant Module
+
+A parallel subsystem that allows restaurant owners to manage menu categories and related data within the same platform architecture.
+──────────────────────────────────────────────
+
+6. USER ROLES AND PERMISSIONS
+──────────────────────────────
+
+Role                    | Access Level
+------------------------|--------------------------------------
+Super Admin             | Full system access
+Limited Admin           | Permission-based access
+Service Company Owner   | Own company dashboard only
+Restaurant Owner        | Own restaurant panel only
+
+──────────────────────────────────────────────
+
+7. KEY WORKFLOWS / USE CASES (Refined & Professional)
+
+────────────────────────────
+
+This section outlines the core operational workflows that define how the system functions in real-time scenarios.
+
+7.1 End-to-End Booking Flow
+
+Describes the complete lifecycle of a service booking from initiation to completion.
+
+Flow:
+Customer places booking → System generates real-time notification → Admin assigns technician → Technician performs service → OTP verification → Booking marked as completed
+
+7.2 Package Booking Flow
+
+Handles recurring service bookings grouped under a single package.
+
+Flow:
+Customer selects package → System creates grouped bookings → Bookings are processed on scheduled dates → Status managed individually for each entry
+
+7.3 Worker Cascading Deactivation Logic
+
+Ensures system consistency when a technician is deactivated.
+
+Logic:
+If a worker is deactivated → All associated services linked to that worker are automatically disabled → Prevents invalid or unserviceable bookings
+
+7.4 Real-Time Notification Pipeline
+
+Defines how the system delivers instant updates to users.
+
+Flow:
+Booking event triggered → Firestore listener activates → Notification system processes event → Audio alert + push notification + UI update
+──────────────────────────────────────────────
+
+8. REAL-TIME FEATURES
+─────────────────────
+
+• Firebase onSnapshot listeners for live updates
+• Audio + Browser Push + Toast notifications on new bookings
+• Online presence tracking via Firebase Realtime Database
+• Instant synchronization across all connected clients
+
+──────────────────────────────────────────────
+
+9. SECURITY & DATA INTEGRITY
+────────────────────────────
+
+• Firebase Authentication with local persistence
+• Strict data isolation using companyId filters
+• Cascading logic to prevent invalid service availability
+• OTP verification for service completion
+• IST timezone-aware operations
+• Comprehensive activity logging for audit trail
+
+──────────────────────────────────────────────
+
+10. FUTURE ENHANCEMENTS
+───────────────────────
+
+Priority | Enhancement
+---------|--------------------------------------------
+High     | Technician mobile app
+High     | Razorpay/Stripe payment integration
+Medium   | AI-based intelligent worker assignment
+Medium   | Route optimization using maps
+Medium   | Multi-language support (Hindi + regional)
+Low      | Advanced analytics and forecasting
+
+──────────────────────────────────────────────
+
+11. CONCLUSION
+──────────────
+
+The Ninja Deliveries Service Management System is a production-ready, real-time web application designed to streamline and digitize operations for service-based businesses.
+By combining real-time data handling, a scalable master-slave architecture, cascading logic, and secure OTP-based verification, the system delivers a reliable and efficient solution for managing end-to-end service workflows.
+
+Its modular design and serverless backend ensure scalability, maintainability, and adaptability, making it well-suited for future enhancements and integration within the broader Ninja Deliveries ecosystem.
+──────────────────────────────────────────────
+
+12. REFERENCES
+──────────────
+
+• React Documentation
+• Firebase Documentation
+• React Router v6
+• Material UI
+• Chart.js & Recharts
+• date-fns
+
+──────────────────────────────────────────────
+
+Document Generated: March 2026
+Project Version:    1.0.0 — Ninja Deliveries Service Management System
+
+End of Document
