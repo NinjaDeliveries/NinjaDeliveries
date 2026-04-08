@@ -1121,39 +1121,91 @@ const ServiceAdmin = () => {
       </div>
 
       <div style={styles.content}>
-        {/* Tab Navigation */}
-        <div style={{
-          ...styles.tabContainer,
-          backgroundColor: darkMode ? '#1e293b' : '#ffffff'
-        }}>
-          {[
-            { key: 'overview', label: 'Overview', icon: '📊' },
-            { key: 'companies', label: 'Companies', icon: '🏢' },
-            { key: 'services', label: 'Services', icon: '⚙️' },
-            { key: 'bookings', label: 'Bookings', icon: '📅' },
-            { key: 'activity', label: 'Activity', icon: '📈' }
-          ].map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => {
-                setActiveTab(tab.key);
+        {/* Tab Navigation - Glassmorphism Slider */}
+        <div className={`bk-tabs-container ${darkMode ? 'dark-mode' : ''}`}>
+          <div className="bk-tabs-wrapper">
+            <input 
+              type="radio" 
+              name="tab" 
+              id="tab-overview" 
+              checked={activeTab === 'overview'}
+              onChange={() => {
+                setActiveTab('overview');
                 setCurrentPage(1);
                 setSearchTerm('');
               }}
-              style={{
-                ...styles.tabButton,
-                backgroundColor: activeTab === tab.key 
-                  ? (darkMode ? '#3b82f6' : '#3b82f6')
-                  : 'transparent',
-                color: activeTab === tab.key 
-                  ? '#ffffff'
-                  : (darkMode ? '#94a3b8' : '#64748b')
+            />
+            <label htmlFor="tab-overview" className="bk-tab">
+              <span className="bk-tab-icon">📊</span>
+              <span className="bk-tab-label">Overview</span>
+            </label>
+
+            <input 
+              type="radio" 
+              name="tab" 
+              id="tab-companies" 
+              checked={activeTab === 'companies'}
+              onChange={() => {
+                setActiveTab('companies');
+                setCurrentPage(1);
+                setSearchTerm('');
               }}
-            >
-              <span style={{ marginRight: '8px' }}>{tab.icon}</span>
-              {tab.label}
-            </button>
-          ))}
+            />
+            <label htmlFor="tab-companies" className="bk-tab">
+              <span className="bk-tab-icon">🏢</span>
+              <span className="bk-tab-label">Companies</span>
+            </label>
+
+            <input 
+              type="radio" 
+              name="tab" 
+              id="tab-services" 
+              checked={activeTab === 'services'}
+              onChange={() => {
+                setActiveTab('services');
+                setCurrentPage(1);
+                setSearchTerm('');
+              }}
+            />
+            <label htmlFor="tab-services" className="bk-tab">
+              <span className="bk-tab-icon">⚙️</span>
+              <span className="bk-tab-label">Services</span>
+            </label>
+
+            <input 
+              type="radio" 
+              name="tab" 
+              id="tab-bookings" 
+              checked={activeTab === 'bookings'}
+              onChange={() => {
+                setActiveTab('bookings');
+                setCurrentPage(1);
+                setSearchTerm('');
+              }}
+            />
+            <label htmlFor="tab-bookings" className="bk-tab">
+              <span className="bk-tab-icon">📅</span>
+              <span className="bk-tab-label">Bookings</span>
+            </label>
+
+            <input 
+              type="radio" 
+              name="tab" 
+              id="tab-activity" 
+              checked={activeTab === 'activity'}
+              onChange={() => {
+                setActiveTab('activity');
+                setCurrentPage(1);
+                setSearchTerm('');
+              }}
+            />
+            <label htmlFor="tab-activity" className="bk-tab">
+              <span className="bk-tab-icon">📈</span>
+              <span className="bk-tab-label">Activity</span>
+            </label>
+
+            <div className="bk-tabs-glider"></div>
+          </div>
         </div>
 
         {/* Overview Tab */}
@@ -1472,72 +1524,78 @@ const ServiceAdmin = () => {
         {/* Bookings Tab */}
         {activeTab === 'bookings' && (
           <div>
-            {/* Search and Filters */}
-            <div style={{
-              ...styles.filtersContainer,
-              backgroundColor: darkMode ? '#1e293b' : '#ffffff'
-            }}>
-              <div style={styles.filtersGrid}>
-                <div>
-                  <label style={{
-                    ...styles.label,
-                    color: darkMode ? '#e2e8f0' : '#374151'
-                  }}>
-                    Search Bookings
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Search by company, customer, service, or booking ID..."
-                    value={bookingSearchTerm}
-                    onChange={(e) => setBookingSearchTerm(e.target.value)}
-                    style={{
-                      ...styles.input,
-                      backgroundColor: darkMode ? '#334155' : '#ffffff',
-                      borderColor: darkMode ? '#475569' : '#d1d5db',
-                      color: darkMode ? '#ffffff' : '#111827'
-                    }}
-                  />
+            {/* Search and Filters - Modern Design */}
+            <div className={`bk-filters-container ${darkMode ? 'dark-mode' : ''}`}>
+              <div className="bk-filters-header">
+                <div className="bk-filters-title">
+                  <span className="bk-filters-icon">🔍</span>
+                  <h4>Search & Filter Bookings</h4>
                 </div>
-                <div>
-                  <label style={{
-                    ...styles.label,
-                    color: darkMode ? '#e2e8f0' : '#374151'
-                  }}>
-                    Status Filter
+                <button
+                  className="bk-export-btn"
+                  onClick={() => openExportModal(filteredBookings, 'service_bookings')}
+                >
+                  <span>📊</span>
+                  Export CSV
+                </button>
+              </div>
+
+              <div className="bk-filters-grid">
+                {/* Search Input */}
+                <div className="bk-filter-item bk-filter-search">
+                  <label className="bk-filter-label">
+                    <span className="bk-filter-label-icon">🔎</span>
+                    Search
+                  </label>
+                  <div className="bk-search-wrapper">
+                    <input
+                      type="text"
+                      className="bk-filter-input"
+                      placeholder="Company, customer, service, or ID..."
+                      value={bookingSearchTerm}
+                      onChange={(e) => setBookingSearchTerm(e.target.value)}
+                    />
+                    {bookingSearchTerm && (
+                      <button 
+                        className="bk-search-clear"
+                        onClick={() => setBookingSearchTerm('')}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Status Filter */}
+                <div className="bk-filter-item">
+                  <label className="bk-filter-label">
+                    <span className="bk-filter-label-icon">📊</span>
+                    Status
                   </label>
                   <select
+                    className="bk-filter-select"
                     value={bookingStatusFilter}
                     onChange={(e) => setBookingStatusFilter(e.target.value)}
-                    style={{
-                      ...styles.input,
-                      backgroundColor: darkMode ? '#334155' : '#ffffff',
-                      borderColor: darkMode ? '#475569' : '#d1d5db',
-                      color: darkMode ? '#ffffff' : '#111827'
-                    }}
                   >
                     <option value="all">All Status</option>
-                    <option value="pending">Pending</option>
-                    <option value="confirmed">Confirmed</option>
-                    <option value="completed">Completed</option>
-                    <option value="cancelled">Cancelled</option>
+                    <option value="pending">⏱ Pending</option>
+                    <option value="assigned">→ Assigned</option>
+                    <option value="confirmed">✓ Confirmed</option>
+                    <option value="completed">✓ Completed</option>
+                    <option value="cancelled">✕ Cancelled</option>
                   </select>
                 </div>
-                <div>
-                  <label style={{
-                    ...styles.label,
-                    color: darkMode ? '#e2e8f0' : '#374151'
-                  }}>
-                    Date Filter
+
+                {/* Date Filter */}
+                <div className="bk-filter-item">
+                  <label className="bk-filter-label">
+                    <span className="bk-filter-label-icon">📅</span>
+                    Date Range
                   </label>
                   <select
+                    className="bk-filter-select"
                     value={bookingDateFilter}
                     onChange={(e) => setBookingDateFilter(e.target.value)}
-                    style={{
-                      ...styles.input,
-                      backgroundColor: darkMode ? '#334155' : '#ffffff',
-                      borderColor: darkMode ? '#475569' : '#d1d5db',
-                      color: darkMode ? '#ffffff' : '#111827'
-                    }}
                   >
                     <option value="all">All Dates</option>
                     <option value="today">Today</option>
@@ -1546,25 +1604,35 @@ const ServiceAdmin = () => {
                   </select>
                 </div>
               </div>
-              <div style={styles.resultsInfo}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ color: darkMode ? '#94a3b8' : '#64748b' }}>
-                    Showing {getPaginatedData(filteredBookings, currentPage).length} of {filteredBookings.length} bookings
-                    {bookingsLoading && ' (Loading...)'}
+
+              {/* Results Info */}
+              <div className="bk-filters-footer">
+                <div className="bk-results-info">
+                  <span className="bk-results-count">
+                    {filteredBookings.length}
                   </span>
+                  <span className="bk-results-text">
+                    {filteredBookings.length === 1 ? 'booking found' : 'bookings found'}
+                  </span>
+                  {bookingsLoading && (
+                    <span className="bk-results-loading">
+                      <span className="bk-loading-dot"></span>
+                      Loading...
+                    </span>
+                  )}
+                </div>
+                {(bookingSearchTerm || bookingStatusFilter !== 'all' || bookingDateFilter !== 'all') && (
                   <button
-                    onClick={() => openExportModal(filteredBookings, 'service_bookings')}
-                    style={{
-                      ...styles.button,
-                      backgroundColor: '#10b981',
-                      color: '#ffffff',
-                      fontSize: '14px',
-                      padding: '8px 16px'
+                    className="bk-clear-filters"
+                    onClick={() => {
+                      setBookingSearchTerm('');
+                      setBookingStatusFilter('all');
+                      setBookingDateFilter('all');
                     }}
                   >
-                    📊 Export CSV
+                    ✕ Clear Filters
                   </button>
-                </div>
+                )}
               </div>
             </div>
 
@@ -1672,202 +1740,154 @@ const ServiceAdmin = () => {
         />
       )}
 
-      {/* Booking Details Modal */}
+      {/* Booking Details Modal - Premium Redesign */}
       {showBookingModal && selectedBooking && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            backgroundColor: darkMode ? '#1e293b' : 'white',
-            borderRadius: '12px',
-            padding: '24px',
-            maxWidth: '600px',
-            width: '90%',
-            maxHeight: '80vh',
-            overflowY: 'auto',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
-          }}>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '20px',
-              borderBottom: `1px solid ${darkMode ? '#334155' : '#e2e8f0'}`,
-              paddingBottom: '16px'
-            }}>
-              <h3 style={{ margin: 0, color: darkMode ? 'white' : '#1e293b' }}>Booking Details</h3>
-              <button
-                onClick={() => {
-                  setShowBookingModal(false);
-                  setSelectedBooking(null);
-                }}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '24px',
-                  cursor: 'pointer',
-                  color: darkMode ? '#94a3b8' : '#64748b',
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '24px',
-                  cursor: 'pointer'
-                }}
-              >
-                ×
+        <div className="bk-modal-overlay" onClick={() => { setShowBookingModal(false); setSelectedBooking(null); }}>
+          <div className={`bk-modal ${darkMode ? 'dark-mode' : ''}`} onClick={(e) => e.stopPropagation()}>
+            {/* Modal Header */}
+            <div className="bk-modal-header">
+              <div className="bk-modal-header-left">
+                <div className="bk-modal-icon">📋</div>
+                <div>
+                  <h3 className="bk-modal-title">Booking Details</h3>
+                  <p className="bk-modal-subtitle">ID: {(selectedBooking.bookingId || selectedBooking.id || '').substring(0, 12)}...</p>
+                </div>
+              </div>
+              <button className="bk-modal-close" onClick={() => { setShowBookingModal(false); setSelectedBooking(null); }}>
+                ✕
               </button>
             </div>
-            
-            <div style={{ marginBottom: '20px' }}>
-              <h4 style={{ marginBottom: '12px', color: darkMode ? '#e2e8f0' : '#1e293b' }}>Booking Information</h4>
-              <div style={{ 
-                backgroundColor: darkMode ? '#1e293b' : '#f8fafc', 
-                padding: '16px', 
-                borderRadius: '8px',
-                border: `1px solid ${darkMode ? '#334155' : '#e2e8f0'}`
-              }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <div>
-                    <p style={{ margin: '4px 0', fontSize: '14px', color: darkMode ? '#94a3b8' : '#64748b' }}>Booking ID</p>
-                    <p style={{ margin: '4px 0', fontWeight: '500', color: darkMode ? 'white' : '#1e293b' }}>
-                      {selectedBooking.bookingId || selectedBooking.id}
-                    </p>
+
+            {/* Modal Body */}
+            <div className="bk-modal-body">
+              {/* Status Banner */}
+              <div className={`bk-modal-status-banner status-${(selectedBooking.status || 'pending').toLowerCase()}`}>
+                <div className="bk-modal-status-icon">
+                  {(selectedBooking.status || '').toLowerCase() === 'completed' ? '✓' :
+                   (selectedBooking.status || '').toLowerCase() === 'confirmed' ? '✓' :
+                   (selectedBooking.status || '').toLowerCase() === 'cancelled' ? '✕' :
+                   (selectedBooking.status || '').toLowerCase() === 'assigned' ? '→' : '⏱'}
+                </div>
+                <div>
+                  <div className="bk-modal-status-label">Booking Status</div>
+                  <div className="bk-modal-status-value">{(selectedBooking.status || 'PENDING').toUpperCase()}</div>
+                </div>
+              </div>
+
+              {/* Company Info Card */}
+              <div className="bk-modal-card">
+                <div className="bk-modal-card-header">
+                  <span className="bk-modal-card-icon">🏢</span>
+                  <h4 className="bk-modal-card-title">Company Information</h4>
+                </div>
+                <div className="bk-modal-card-body">
+                  <div className="bk-modal-info-row">
+                    <span className="bk-modal-info-label">Company Name</span>
+                    <span className="bk-modal-info-value">{selectedBooking.companyName || 'N/A'}</span>
                   </div>
-                  <div>
-                    <p style={{ margin: '4px 0', fontSize: '14px', color: darkMode ? '#94a3b8' : '#64748b' }}>Status</p>
-                    <span style={{
-                      padding: '4px 12px',
-                      borderRadius: '12px',
-                      fontSize: '12px',
-                      fontWeight: '600',
-                      backgroundColor: selectedBooking.status === 'confirmed' ? '#dcfce7' : 
-                                    selectedBooking.status === 'cancelled' ? '#fee2e2' : 
-                                    selectedBooking.status === 'completed' ? '#dbeafe' : '#fef3c7',
-                      color: selectedBooking.status === 'confirmed' ? '#166534' : 
-                            selectedBooking.status === 'cancelled' ? '#991b1b' : 
-                            selectedBooking.status === 'completed' ? '#1e40af' : '#92400e'
-                    }}>
-                      {selectedBooking.status?.toUpperCase() || 'PENDING'}
+                  <div className="bk-modal-info-row">
+                    <span className="bk-modal-info-label">Company ID</span>
+                    <span className="bk-modal-info-value">{(selectedBooking.companyId || 'N/A').substring(0, 16)}...</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Customer Info Card */}
+              <div className="bk-modal-card">
+                <div className="bk-modal-card-header">
+                  <span className="bk-modal-card-icon">👤</span>
+                  <h4 className="bk-modal-card-title">Customer Information</h4>
+                </div>
+                <div className="bk-modal-card-body">
+                  <div className="bk-modal-info-row">
+                    <span className="bk-modal-info-label">Name</span>
+                    <span className="bk-modal-info-value">{selectedBooking.customerName || 'N/A'}</span>
+                  </div>
+                  <div className="bk-modal-info-row">
+                    <span className="bk-modal-info-label">Phone</span>
+                    <span className="bk-modal-info-value">
+                      {selectedBooking.customerPhone || selectedBooking.phone || 'Not provided'}
                     </span>
+                  </div>
+                  <div className="bk-modal-info-row">
+                    <span className="bk-modal-info-label">Email</span>
+                    <span className="bk-modal-info-value">{selectedBooking.customerEmail || 'Not provided'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Service Info Card */}
+              <div className="bk-modal-card">
+                <div className="bk-modal-card-header">
+                  <span className="bk-modal-card-icon">🛠️</span>
+                  <h4 className="bk-modal-card-title">Service Information</h4>
+                </div>
+                <div className="bk-modal-card-body">
+                  <div className="bk-modal-info-row">
+                    <span className="bk-modal-info-label">Service</span>
+                    <span className="bk-modal-info-value">{selectedBooking.serviceName || selectedBooking.workName || 'N/A'}</span>
+                  </div>
+                  <div className="bk-modal-info-row">
+                    <span className="bk-modal-info-label">Category</span>
+                    <span className="bk-modal-info-value">{selectedBooking.serviceCategory || selectedBooking.category || 'General'}</span>
+                  </div>
+                  <div className="bk-modal-info-row">
+                    <span className="bk-modal-info-label">Date</span>
+                    <span className="bk-modal-info-value">
+                      {selectedBooking.bookingDate ? new Date(selectedBooking.bookingDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Not specified'}
+                    </span>
+                  </div>
+                  <div className="bk-modal-info-row">
+                    <span className="bk-modal-info-label">Time</span>
+                    <span className="bk-modal-info-value">{selectedBooking.bookingTime || selectedBooking.time || 'Not specified'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment Info Card */}
+              <div className="bk-modal-card bk-modal-card-highlight">
+                <div className="bk-modal-card-header">
+                  <span className="bk-modal-card-icon">💰</span>
+                  <h4 className="bk-modal-card-title">Payment Information</h4>
+                </div>
+                <div className="bk-modal-card-body">
+                  <div className="bk-modal-info-row">
+                    <span className="bk-modal-info-label">Total Amount</span>
+                    <span className="bk-modal-info-value bk-modal-price">₹{(selectedBooking.totalPrice || selectedBooking.price || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="bk-modal-info-row">
+                    <span className="bk-modal-info-label">Payment Status</span>
+                    <span className="bk-modal-info-value">{selectedBooking.paymentStatus || 'Pending'}</span>
+                  </div>
+                  <div className="bk-modal-info-row">
+                    <span className="bk-modal-info-label">Payment Method</span>
+                    <span className="bk-modal-info-value">{selectedBooking.paymentMethod || 'Not specified'}</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div style={{ marginBottom: '20px' }}>
-              <h4 style={{ marginBottom: '12px', color: darkMode ? '#e2e8f0' : '#1e293b' }}>Customer Details</h4>
-              <div style={{ 
-                backgroundColor: darkMode ? '#1e293b' : '#f8fafc', 
-                padding: '16px', 
-                borderRadius: '8px',
-                border: `1px solid ${darkMode ? '#334155' : '#e2e8f0'}`
-              }}>
-                <p style={{ margin: '4px 0', color: darkMode ? '#e2e8f0' : '#1e293b' }}>
-                  <strong>Name:</strong> {selectedBooking.customerName || 'N/A'}
-                </p>
-                <p style={{ margin: '4px 0', color: darkMode ? '#cbd5e1' : '#475569' }}>
-                  <strong>Phone:</strong> {selectedBooking.customerPhone || 'Not provided'}
-                </p>
-                <p style={{ margin: '4px 0', color: darkMode ? '#cbd5e1' : '#475569' }}>
-                  <strong>Email:</strong> {selectedBooking.customerEmail || 'Not provided'}
-                </p>
-              </div>
-            </div>
-
-            <div style={{ marginBottom: '20px' }}>
-              <h4 style={{ marginBottom: '12px', color: darkMode ? '#e2e8f0' : '#1e293b' }}>Service Details</h4>
-              <div style={{ 
-                backgroundColor: darkMode ? '#1e293b' : '#f8fafc', 
-                padding: '16px', 
-                borderRadius: '8px',
-                border: `1px solid ${darkMode ? '#334155' : '#e2e8f0'}`
-              }}>
-                <p style={{ margin: '4px 0', color: darkMode ? '#e2e8f0' : '#1e293b' }}>
-                  <strong>Service:</strong> {selectedBooking.serviceName || 'N/A'}
-                </p>
-                <p style={{ margin: '4px 0', color: darkMode ? '#cbd5e1' : '#475569' }}>
-                  <strong>Category:</strong> {selectedBooking.serviceCategory || selectedBooking.serviceCategory || 'General'}
-                </p>
-                <p style={{ margin: '4px 0', color: darkMode ? '#cbd5e1' : '#475569' }}>
-                  <strong>Company:</strong> {selectedBooking.companyName || 'N/A'}
-                </p>
-                <p style={{ margin: '4px 0', color: darkMode ? '#cbd5e1' : '#475569' }}>
-                  <strong>Date & Time:</strong> {selectedBooking.bookingDate ? new Date(selectedBooking.bookingDate).toLocaleString() : 'Not specified'}
-                </p>
-                <p style={{ margin: '4px 0', color: darkMode ? '#cbd5e1' : '#475569' }}>
-                  <strong>Time:</strong> {selectedBooking.bookingTime || 'Not specified'}
-                </p>
-              </div>
-            </div>
-
-            <div style={{ marginBottom: '20px' }}>
-              <h4 style={{ marginBottom: '12px', color: darkMode ? '#e2e8f0' : '#1e293b' }}>Payment Details</h4>
-              <div style={{ 
-                backgroundColor: darkMode ? '#1e293b' : '#f8fafc', 
-                padding: '16px', 
-                borderRadius: '8px',
-                border: `1px solid ${darkMode ? '#334155' : '#e2e8f0'}`
-              }}>
-                <p style={{ margin: '4px 0', color: darkMode ? '#e2e8f0' : '#1e293b' }}>
-                  <strong>Total Price:</strong> ₹{selectedBooking.totalPrice || selectedBooking.price || 0}
-                </p>
-                <p style={{ margin: '4px 0', color: darkMode ? '#cbd5e1' : '#475569' }}>
-                  <strong>Payment Status:</strong> {selectedBooking.paymentStatus || 'Pending'}
-                </p>
-                <p style={{ margin: '4px 0', color: darkMode ? '#cbd5e1' : '#475569' }}>
-                  <strong>Payment Method:</strong> {selectedBooking.paymentMethod || 'Not specified'}
-                </p>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-              <button
-                onClick={() => {
-                  setShowBookingModal(false);
-                  setSelectedBooking(null);
-                }}
-                style={{
-                  padding: '8px 16px',
-                  backgroundColor: darkMode ? '#334155' : '#e2e8f0',
-                  color: darkMode ? '#e2e8f0' : '#1e293b',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '14px'
-                }}
-              >
+            {/* Modal Footer */}
+            <div className="bk-modal-footer">
+              <button className="bk-modal-btn bk-modal-btn-secondary" onClick={() => { setShowBookingModal(false); setSelectedBooking(null); }}>
                 Close
               </button>
-              <button
-                onClick={() => {
-                  // Add call to company functionality
-                  toast.info(`Calling company about booking: ${selectedBooking.bookingId || selectedBooking.id}`);
-                  logActivity('call_company_booking', 'admin', {
-                    bookingId: selectedBooking.id,
-                    action: 'Called company about booking'
-                  });
-                }}
-                style={{
-                  padding: '8px 16px',
-                  backgroundColor: '#10b981',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: '500'
-                }}
-              >
-                📞 Call Company
-              </button>
+              {(selectedBooking.customerPhone || selectedBooking.phone) && (
+                <a 
+                  className="bk-modal-btn bk-modal-btn-primary"
+                  href={`tel:${selectedBooking.customerPhone || selectedBooking.phone}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toast.info(`Calling ${selectedBooking.customerName}...`);
+                    logActivity('call_customer_modal', 'admin', {
+                      bookingId: selectedBooking.id,
+                      customerName: selectedBooking.customerName
+                    });
+                  }}
+                >
+                  📞 Call Customer
+                </a>
+              )}
             </div>
           </div>
         </div>
@@ -2718,14 +2738,12 @@ const ActivityTable = ({ logs, darkMode }) => {
   );
 };
 
-// Bookings Table Component - Enhanced Professional Version (v2.0 - 8 Columns)
-// Updated: Removed Booking ID column, optimized layout
+// Bookings Table Component - Premium 2025 Redesign
 const BookingsTable = ({ bookings, darkMode, loading, onViewDetails, logActivity, toast }) => {
-  // State for date filter
   const [selectedDate, setSelectedDate] = React.useState('all');
   const [availableDates, setAvailableDates] = React.useState([]);
 
-  // Get unique dates from bookings and sort them
+  // Get unique dates from bookings
   React.useEffect(() => {
     if (bookings.length > 0) {
       const dates = new Set();
@@ -2733,7 +2751,7 @@ const BookingsTable = ({ bookings, darkMode, loading, onViewDetails, logActivity
         if (booking.bookingDate) {
           const date = new Date(booking.bookingDate);
           if (!isNaN(date.getTime())) {
-            dates.add(date.toISOString().split('T')[0]); // YYYY-MM-DD format
+            dates.add(date.toISOString().split('T')[0]);
           }
         }
       });
@@ -2742,7 +2760,7 @@ const BookingsTable = ({ bookings, darkMode, loading, onViewDetails, logActivity
     }
   }, [bookings]);
 
-  // Filter bookings by selected date
+  // Filter bookings by date
   const dateFilteredBookings = selectedDate === 'all' 
     ? bookings 
     : bookings.filter(booking => {
@@ -2751,15 +2769,10 @@ const BookingsTable = ({ bookings, darkMode, loading, onViewDetails, logActivity
         return bookingDateStr === selectedDate;
       });
 
-  // Get today's date for comparison
-  const getTodayDate = () => {
-    return new Date().toISOString().split('T')[0];
-  };
-
   // Format date for display
   const formatDateForDisplay = (dateStr) => {
     const date = new Date(dateStr);
-    const today = getTodayDate();
+    const today = new Date().toISOString().split('T')[0];
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayStr = yesterday.toISOString().split('T')[0];
@@ -2771,214 +2784,247 @@ const BookingsTable = ({ bookings, darkMode, loading, onViewDetails, logActivity
     return date.toLocaleDateString('en-GB', options);
   };
 
-  if (loading) {
-    return (
-      <div className={`service-admin-table-container ${darkMode ? 'dark-mode' : ''}`}>
-        <div className="service-admin-empty-state">
-          <div className="service-admin-spinner"></div>
-          <h3 className="service-admin-empty-title">
-            Loading Bookings...
-          </h3>
-          <p className="service-admin-empty-text">
-            Fetching real-time booking data from Firebase
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (bookings.length === 0) {
-    return (
-      <div className={`service-admin-table-container ${darkMode ? 'dark-mode' : ''}`}>
-        <div className="service-admin-empty-state">
-          <div className="service-admin-empty-icon">📅</div>
-          <h3 className="service-admin-empty-title">
-            No Bookings Found
-          </h3>
-          <p className="service-admin-empty-text">
-            No bookings match your current search criteria. Bookings will appear here in real-time when customers make bookings.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // Function to get status badge class - matches Firebase service_bookings status field
-  const getStatusBadgeClass = (status) => {
+  // Get status class
+  const getStatusClass = (status) => {
     if (!status) return 'pending';
-    const statusUpper = status.toUpperCase();
-    
-    // Match exact Firebase status values
-    if (statusUpper === 'CONFIRMED' || statusUpper === 'APPROVED') return 'confirmed';
-    if (statusUpper === 'COMPLETED' || statusUpper === 'DELIVERED') return 'completed';
-    if (statusUpper === 'CANCELLED' || statusUpper === 'REJECTED' || statusUpper === 'DECLINED') return 'cancelled';
-    if (statusUpper === 'ASSIGNED' || statusUpper === 'ACCEPTED') return 'assigned';
-    if (statusUpper === 'PENDING' || statusUpper === 'WAITING') return 'pending';
-    
-    // Fallback for partial matches
-    const statusLower = status.toLowerCase();
-    if (statusLower.includes('confirm')) return 'confirmed';
-    if (statusLower.includes('complet')) return 'completed';
-    if (statusLower.includes('cancel') || statusLower.includes('reject')) return 'cancelled';
-    if (statusLower.includes('assign') || statusLower.includes('accept')) return 'assigned';
-    if (statusLower.includes('pend')) return 'pending';
-    
+    const s = status.toUpperCase();
+    if (s === 'CONFIRMED' || s === 'APPROVED') return 'confirmed';
+    if (s === 'COMPLETED' || s === 'DELIVERED') return 'completed';
+    if (s === 'CANCELLED' || s === 'REJECTED' || s === 'DECLINED') return 'cancelled';
+    if (s === 'ASSIGNED' || s === 'ACCEPTED') return 'assigned';
     return 'pending';
   };
 
-  // Function to check if booking is pending (for highlighting)
-  const isPendingBooking = (status) => {
-    const statusLower = (status || '').toLowerCase();
-    return statusLower.includes('pending') || statusLower.includes('waiting');
+  // Count by status
+  const countByStatus = (status) => {
+    return dateFilteredBookings.filter(b => getStatusClass(b.status) === status).length;
   };
 
-  // Function to check if booking is completed (for highlighting)
-  const isCompletedBooking = (status) => {
-    const statusLower = (status || '').toLowerCase();
-    return statusLower.includes('completed') || statusLower.includes('delivered');
-  };
-
-  return (
-    <div className="bookings-monitor-container">
-      <div className="bookings-monitor-header">
-        <h3 className="monitor-title">
-          Live Bookings Monitor ({dateFilteredBookings.length})
-        </h3>
-        <div className="monitor-controls">
-          <select 
-            className="date-filter-dropdown"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-          >
-            <option value="all">📅 All Dates ({bookings.length})</option>
-            {availableDates.map(date => (
-              <option key={date} value={date}>
-                {formatDateForDisplay(date)} ({bookings.filter(b => {
-                  if (!b.bookingDate) return false;
-                  return new Date(b.bookingDate).toISOString().split('T')[0] === date;
-                }).length})
-              </option>
-            ))}
-          </select>
-          <div className="monitor-live-badge">
-            <div className="live-pulse-dot"></div>
-            <span>Real-time Updates</span>
+  // Loading state
+  if (loading) {
+    return (
+      <div className={`bk-wrapper ${darkMode ? 'dark-mode' : ''}`}>
+        <div className="bk-monitor">
+          <div className="bk-empty">
+            <div className="bk-spinner"></div>
+            <h3 className="bk-empty-title">Loading Bookings...</h3>
+            <p className="bk-empty-text">Fetching real-time booking data from Firebase</p>
           </div>
         </div>
       </div>
-      
-      <div className="bookings-table-wrapper">
-        <table className="bookings-table">
-          <thead className="table-header-dark">
-            <tr>
-              <th className="col-company">COMPANY</th>
-              <th className="col-customer">CUSTOMER</th>
-              <th className="col-service">SERVICE</th>
-              <th className="col-datetime">DATE & TIME</th>
-              <th className="col-price">PRICE</th>
-              <th className="col-status">STATUS</th>
-              <th className="col-actions">ACTIONS</th>
-            </tr>
-          </thead>
-          <tbody>
-            {dateFilteredBookings.map((booking, index) => {
-              const statusClass = getStatusBadgeClass(booking.status);
-              const isPending = isPendingBooking(booking.status);
-              const isCompleted = isCompletedBooking(booking.status);
-              const isEvenRow = index % 2 === 0;
-              
-              let rowClass = 'table-row';
-              if (isEvenRow) rowClass += ' row-even';
-              else rowClass += ' row-odd';
-              
-              const bookingDate = booking.bookingDate ? new Date(booking.bookingDate).toLocaleDateString() : 
-                                 booking.date ? new Date(booking.date + 'T00:00:00').toLocaleDateString() : 'Not set';
-              const bookingTime = booking.bookingTime || booking.time || 'Not specified';
-              
-              return (
-                <tr 
-                  key={booking.id} 
-                  className={rowClass}
-                  onClick={() => onViewDetails && onViewDetails(booking)}
-                >
-                  <td className="col-company">
-                    <div className="cell-content">
-                      <div className="cell-primary">{booking.companyName || 'Unknown Company'}</div>
-                      <div className="cell-secondary">ID: {(booking.companyId || booking.id).substring(0, 8)}...</div>
-                    </div>
-                  </td>
-                  <td className="col-customer">
-                    <div className="cell-content">
-                      <div className="cell-primary">{booking.customerName || 'Unknown'}</div>
-                      <div className="cell-secondary">{booking.customerPhone || booking.phone || 'No phone'}</div>
-                    </div>
-                  </td>
-                  <td className="col-service">
-                    <div className="cell-content">
-                      <div className="cell-primary">{booking.serviceName || booking.workName || 'Unknown Service'}</div>
-                      <div className="cell-secondary">{booking.serviceCategory || booking.category || ''}</div>
-                    </div>
-                  </td>
-                  <td className="col-datetime">
-                    <div className="cell-content">
-                      <div className="cell-primary">{bookingDate}</div>
-                      <div className="cell-secondary">{bookingTime}</div>
-                    </div>
-                  </td>
-                  <td className="col-price">
-                    <div className="price-value">₹{(booking.totalPrice || booking.price || 0).toLocaleString()}</div>
-                  </td>
-                  <td className="col-status">
-                    <span className={`status-badge status-${statusClass}`}>
-                      {(booking.status || 'PENDING').toUpperCase()}
-                    </span>
-                  </td>
-                  <td className="col-actions">
-                    <div className="action-buttons">
-                      <button
-                        className="btn-view"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onViewDetails && onViewDetails(booking);
-                        }}
-                      >
-                        👁️ View
-                      </button>
-                      {(booking.customerPhone || booking.phone) && (
-                        <a 
-                          className="btn-call"
-                          href={`tel:${booking.customerPhone || booking.phone}`}
+    );
+  }
+
+  // Empty state
+  if (bookings.length === 0) {
+    return (
+      <div className={`bk-wrapper ${darkMode ? 'dark-mode' : ''}`}>
+        <div className="bk-monitor">
+          <div className="bk-empty">
+            <div className="bk-empty-icon">📅</div>
+            <h3 className="bk-empty-title">No Bookings Found</h3>
+            <p className="bk-empty-text">
+              No bookings match your current search criteria. Bookings will appear here in real-time when customers make bookings.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`bk-wrapper ${darkMode ? 'dark-mode' : ''}`}>
+      <div className="bk-monitor">
+        {/* Header */}
+        <div className="bk-header">
+          <div className="bk-header-left">
+            <span className="bk-header-icon">📊</span>
+            <h3 className="bk-header-title">
+              Live Bookings
+              <span className="bk-header-count">{dateFilteredBookings.length}</span>
+            </h3>
+          </div>
+          <div className="bk-header-right">
+            <select 
+              className="bk-date-select"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+            >
+              <option value="all">All Dates ({bookings.length})</option>
+              {availableDates.map(date => (
+                <option key={date} value={date}>
+                  {formatDateForDisplay(date)} ({bookings.filter(b => {
+                    if (!b.bookingDate) return false;
+                    return new Date(b.bookingDate).toISOString().split('T')[0] === date;
+                  }).length})
+                </option>
+              ))}
+            </select>
+            <div className="bk-live-badge">
+              <div className="bk-live-dot"></div>
+              <span>Live</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Stats Strip */}
+        <div className="bk-stats-strip">
+          <div className="bk-stat-pill all">
+            <div className="bk-stat-num">{dateFilteredBookings.length}</div>
+            <div className="bk-stat-label">Total</div>
+          </div>
+          <div className="bk-stat-pill pending">
+            <div className="bk-stat-num">{countByStatus('pending')}</div>
+            <div className="bk-stat-label">Pending</div>
+          </div>
+          <div className="bk-stat-pill assigned">
+            <div className="bk-stat-num">{countByStatus('assigned')}</div>
+            <div className="bk-stat-label">Assigned</div>
+          </div>
+          <div className="bk-stat-pill confirmed">
+            <div className="bk-stat-num">{countByStatus('confirmed')}</div>
+            <div className="bk-stat-label">Confirmed</div>
+          </div>
+          <div className="bk-stat-pill completed">
+            <div className="bk-stat-num">{countByStatus('completed')}</div>
+            <div className="bk-stat-label">Completed</div>
+          </div>
+          <div className="bk-stat-pill cancelled">
+            <div className="bk-stat-num">{countByStatus('cancelled')}</div>
+            <div className="bk-stat-label">Cancelled</div>
+          </div>
+        </div>
+
+        {/* Table */}
+        <div className="bk-table-scroll">
+          <table className="bk-table">
+            <thead>
+              <tr>
+                <th>Company</th>
+                <th>Customer</th>
+                <th>Service</th>
+                <th>Date & Time</th>
+                <th>Price</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {dateFilteredBookings.map((booking, index) => {
+                const statusClass = getStatusClass(booking.status);
+                const isEven = index % 2 === 0;
+                const bookingDate = booking.bookingDate 
+                  ? new Date(booking.bookingDate).toLocaleDateString() 
+                  : booking.date 
+                    ? new Date(booking.date + 'T00:00:00').toLocaleDateString() 
+                    : 'Not set';
+                const bookingTime = booking.bookingTime || booking.time || 'Not specified';
+                const companyInitial = (booking.companyName || 'U')[0].toUpperCase();
+                const companyLogo = booking.companyLogo || booking.logoUrl || booking.logo || null;
+                
+                return (
+                  <tr 
+                    key={booking.id} 
+                    className={`${isEven ? 'bk-row-even' : 'bk-row-odd'} bk-row-${statusClass}`}
+                    onClick={() => onViewDetails && onViewDetails(booking)}
+                  >
+                    {/* Company */}
+                    <td>
+                      <div className="bk-company-cell">
+                        {companyLogo ? (
+                          <img src={companyLogo} alt={booking.companyName} className="bk-avatar-img" />
+                        ) : (
+                          <div className="bk-avatar">{companyInitial}</div>
+                        )}
+                        <div>
+                          <div className="bk-cell-primary">{booking.companyName || 'Unknown'}</div>
+                          <div className="bk-cell-secondary">ID: {(booking.companyId || booking.id).substring(0, 8)}...</div>
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Customer */}
+                    <td>
+                      <div className="bk-cell-primary">{booking.customerName || 'Unknown'}</div>
+                      <div className="bk-cell-secondary">{booking.customerPhone || booking.phone || 'No phone'}</div>
+                    </td>
+
+                    {/* Service */}
+                    <td>
+                      <div className="bk-cell-primary">{booking.serviceName || booking.workName || 'Unknown Service'}</div>
+                      <div className="bk-cell-secondary">{booking.serviceCategory || booking.category || ''}</div>
+                    </td>
+
+                    {/* Date & Time */}
+                    <td>
+                      <div className="bk-cell-primary">{bookingDate}</div>
+                      <div className="bk-cell-secondary">{bookingTime}</div>
+                    </td>
+
+                    {/* Price */}
+                    <td>
+                      <div className="bk-price">₹{(booking.totalPrice || booking.price || 0).toLocaleString()}</div>
+                    </td>
+
+                    {/* Status */}
+                    <td>
+                      <span className={`bk-badge ${statusClass}`}>
+                        <span className="bk-badge-dot"></span>
+                        {(booking.status || 'PENDING').toUpperCase()}
+                      </span>
+                    </td>
+
+                    {/* Actions */}
+                    <td>
+                      <div className="bk-actions">
+                        <button
+                          className="bk-btn bk-btn-view"
                           onClick={(e) => {
                             e.stopPropagation();
-                            toast && toast.info(`Calling ${booking.customerName}...`);
-                            logActivity && logActivity('call_customer', 'admin', {
-                              bookingId: booking.id,
-                              customerName: booking.customerName,
-                              customerPhone: booking.customerPhone || booking.phone
-                            });
+                            onViewDetails && onViewDetails(booking);
                           }}
                         >
-                          📞 Call
-                        </a>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-      
-      <div className="bookings-table-footer">
-        <div className="footer-info">
-          Showing {dateFilteredBookings.length} bookings {selectedDate !== 'all' ? `for ${formatDateForDisplay(selectedDate)}` : 'from all dates'} • Updated just now
+                          👁️ View
+                        </button>
+                        {(booking.customerPhone || booking.phone) && (
+                          <a 
+                            className="bk-btn bk-btn-call"
+                            href={`tel:${booking.customerPhone || booking.phone}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toast && toast.info(`Calling ${booking.customerName}...`);
+                              logActivity && logActivity('call_customer', 'admin', {
+                                bookingId: booking.id,
+                                customerName: booking.customerName,
+                                customerPhone: booking.customerPhone || booking.phone
+                              });
+                            }}
+                          >
+                            📞 Call
+                          </a>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Footer */}
+        <div className="bk-footer">
+          <div>
+            <span className="bk-footer-dot"></span>
+            Showing {dateFilteredBookings.length} bookings 
+            {selectedDate !== 'all' ? ` for ${formatDateForDisplay(selectedDate)}` : ' from all dates'}
+          </div>
+          <div>Updated just now</div>
         </div>
       </div>
     </div>
   );
 };
-
 // Pagination Component
 const Pagination = ({ currentPage, totalPages, onPageChange, darkMode }) => {
   if (totalPages <= 1) return null;
