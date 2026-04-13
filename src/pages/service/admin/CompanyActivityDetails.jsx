@@ -14,63 +14,85 @@ const CompanyActivityDetails = ({ companyId, companyName, onClose, darkMode = fa
   const [filter, setFilter] = useState('all'); // all, success, failed
   const [dateRange, setDateRange] = useState('all'); // all, today, week, month
 
-  // Fetch company activities from Firebase
+  // FIXED: Fetch actual bookings data instead of activity logs (matching Company Dashboard)
   useEffect(() => {
     if (!companyId) return;
 
     setLoading(true);
 
     try {
-      // Real-time listener for company activities
-      // Using only where clause, will sort in JavaScript
-      const activitiesQuery = query(
-        collection(db, 'service_activity_logs'),
-        where('companyId', '==', companyId)
+      // FIXED: Use service_bookings collection (same as Service Admin) for real-time updates
+      // This connects to the same booking system that updates in real-time
+      const bookingsQuery = query(
+        collection(db, 'service_bookings'),
+        where('companyId', '==', companyId),
+        orderBy('createdAt', 'desc')
       );
 
       const unsubscribe = onSnapshot(
-        activitiesQuery,
+        bookingsQuery,
         (snapshot) => {
           try {
-            const activityList = snapshot.docs.map(doc => {
+            // FIXED: Process service_bookings data (same as Service Admin)
+            const bookingList = snapshot.docs.map(doc => {
               const data = doc.data();
+              
+              // Format dates properly - handle Firestore Timestamp (same as Service Admin)
+              let createdAt = null;
+              try {
+                if (data.createdAt) {
+                  if (data.createdAt.toDate && typeof data.createdAt.toDate === 'function') {
+                    createdAt = data.createdAt.toDate();
+                  } else if (data.createdAt.seconds) {
+                    createdAt = new Date(data.createdAt.seconds * 1000);
+                  } else if (typeof data.createdAt === 'string' || typeof data.createdAt === 'number') {
+                    createdAt = new Date(data.createdAt);
+                  }
+                }
+              } catch (err) {
+                console.error('Error formatting date:', err);
+                createdAt = new Date();
+              }
+              
               return {
                 id: doc.id,
                 ...data,
-                timestamp: data.timestamp?.toDate ? data.timestamp.toDate() : new Date(data.timestamp),
+                timestamp: createdAt,
                 companyName: data.companyName || companyName
               };
             });
 
             // Sort by timestamp in JavaScript (descending - newest first)
-            activityList.sort((a, b) => {
+            bookingList.sort((a, b) => {
               const timeA = a.timestamp?.getTime ? a.timestamp.getTime() : 0;
               const timeB = b.timestamp?.getTime ? b.timestamp.getTime() : 0;
               return timeB - timeA;
             });
 
-            setActivities(activityList);
+            // FIXED: Store bookings instead of activities for proper revenue calculation
+            setActivities(bookingList);
             setLoading(false);
             
-            if (activityList.length === 0) {
-              console.log('ℹ️ No activities found for company:', companyName);
-              toast.info('No activities found for this company yet.');
+            if (bookingList.length === 0) {
+              console.log('ℹ️ No bookings found for company:', companyName);
+              toast.info('No bookings found for this company yet.');
             } else {
-              console.log(`✅ Loaded ${activityList.length} activities for company:`, companyName);
+              console.log(`✅ Loaded ${bookingList.length} service_bookings for company:`, companyName);
+            console.log('🔄 Real-time connection established with Service Admin booking system');
             }
           } catch (err) {
-            console.error('Error processing activities:', err);
+            console.error('Error processing bookings:', err);
             setActivities([]);
             setLoading(false);
           }
         },
         (error) => {
-          console.error('Error fetching company activities:', error);
+          console.error('Error fetching company bookings:', error);
           console.error('Error code:', error.code);
           console.error('Error message:', error.message);
           
           // Provide specific error messages
-          let errorMessage = 'Failed to load company activities';
+          let errorMessage = 'Failed to load company bookings';
           if (error.code === 'permission-denied') {
             errorMessage = 'Permission denied. Check Firestore security rules.';
           } else if (error.code === 'unavailable') {
@@ -499,14 +521,55 @@ const CompanyActivityDetails = ({ companyId, companyName, onClose, darkMode = fa
       a.action?.toLowerCase().includes('booking') || 
       a.details?.action?.toLowerCase().includes('booking')
     ).length,
-    totalRevenue: activities.filter(a => {
-      const isPayment = a.action?.toLowerCase().includes('payment') || 
-                       a.details?.action?.toLowerCase().includes('payment');
-      return isPayment && a.success;
-    }).reduce((sum, payment) => {
-      const amount = payment.metadata?.amount || payment.details?.amount || payment.amount || 0;
-      return sum + parseFloat(amount || 0);
-    }, 0)
+    totalRevenue: (() => {
+      // FIXED: Now using actual bookings data (not activity logs) - exact match with Company Dashboard
+      let totalRevenue = 0;
+      
+      console.log('🔍 All bookings for revenue calculation:', activities);
+      
+      // Filter completed bookings only (exact same logic as Company Dashboard)
+      const completedBookings = activities.filter(booking => {
+        // Exclude rejected and cancelled bookings (same as Company Dashboard)
+        const status = booking.status;
+        return status !== 'rejected' && status !== 'cancelled';
+      });
+      
+      console.log('🔍 Valid bookings (not rejected/cancelled):', completedBookings.length);
+      
+      // Calculate revenue using EXACT same logic as Company Dashboard (Overview.jsx)
+      const packageRevenue = completedBookings.reduce((sum, booking) => {
+        if (booking.status === 'completed') {
+          // Handle package bookings
+          if (booking.packageType || booking.isPackageBooking) {
+            return sum + (booking.packagePrice || 0);
+          }
+        }
+        return sum;
+      }, 0);
+      
+      const regularRevenue = completedBookings.reduce((sum, booking) => {
+        if (booking.status === 'completed' && !booking.packageType && !booking.isPackageBooking) {
+          // FIXED: Use correct field names from service_bookings (same as Service Admin)
+          return sum + (booking.totalPrice || booking.price || booking.amount || 0);
+        }
+        return sum;
+      }, 0);
+      
+      totalRevenue = packageRevenue + regularRevenue;
+      
+      // Debug logging - now connected to real-time service_bookings
+      console.log('💰 Revenue calculation details:', {
+        totalBookings: activities.length,
+        completedBookings: completedBookings.filter(b => b.status === 'completed').length,
+        packageRevenue,
+        regularRevenue,
+        totalRevenue,
+        dataSource: 'service_bookings collection (real-time updates)',
+        connectedToServiceAdmin: 'YES - same data source'
+      });
+      
+      return totalRevenue;
+    })() // fixed revenue calculation to exactly match Company Dashboard
   };
 
   // Calculate weekly revenue from payment activities (last 4 weeks)
@@ -525,44 +588,53 @@ const CompanyActivityDetails = ({ companyId, companyName, onClose, darkMode = fa
         weekEnd.setDate(weekStart.getDate() + 6); // End of week (Saturday)
         weekEnd.setHours(23, 59, 59, 999);
         
-        // Filter payment activities for this week
-        const weekPayments = activities.filter(activity => {
+        // FIXED: Filter completed bookings for this week (same logic as Company Dashboard)
+        const weekBookings = activities.filter(booking => {
           try {
-            const activityDate = activity.timestamp;
-            if (!activityDate) return false;
+            const bookingDate = booking.timestamp;
+            if (!bookingDate) return false;
             
-            const isPayment = activity.action?.toLowerCase().includes('payment') || 
-                             activity.details?.action?.toLowerCase().includes('payment');
-            const isInWeek = activityDate >= weekStart && activityDate <= weekEnd;
-            return isPayment && isInWeek && activity.success;
+            // Exclude rejected and cancelled bookings (same as Company Dashboard)
+            const status = booking.status;
+            const isValid = status !== 'rejected' && status !== 'cancelled';
+            
+            const isInWeek = bookingDate >= weekStart && bookingDate <= weekEnd;
+            
+            return isValid && isInWeek;
           } catch (err) {
-            console.error('Error filtering payment:', err);
+            console.error('Error filtering booking:', err);
             return false;
           }
-        });
+        }); // fixed weekly revenue filtering to match Company Dashboard
         
-        // Calculate total revenue for this week
-        const totalRevenue = weekPayments.reduce((sum, payment) => {
-          try {
-            // Try to get amount from metadata or details
-            const amount = payment.metadata?.amount || 
-                          payment.details?.amount || 
-                          payment.amount || 
-                          0;
-            return sum + parseFloat(amount || 0);
-          } catch (err) {
-            console.error('Error calculating amount:', err);
-            return sum;
+        // FIXED: Calculate weekly revenue using exact same logic as Company Dashboard
+        const weekPackageRevenue = weekBookings.reduce((sum, booking) => {
+          if (booking.status === 'completed') {
+            // Handle package bookings
+            if (booking.packageType || booking.isPackageBooking) {
+              return sum + (booking.packagePrice || 0);
+            }
           }
+          return sum;
         }, 0);
+        
+        const weekRegularRevenue = weekBookings.reduce((sum, booking) => {
+          if (booking.status === 'completed' && !booking.packageType && !booking.isPackageBooking) {
+            // FIXED: Use correct field names from service_bookings (same as Service Admin)
+            return sum + (booking.totalPrice || booking.price || booking.amount || 0);
+          }
+          return sum;
+        }, 0);
+        
+        const totalRevenue = weekPackageRevenue + weekRegularRevenue; // fixed weekly revenue calculation to match Company Dashboard
         
         weeks.push({
           weekNumber: i === 0 ? 'This Week' : i === 1 ? 'Last Week' : `${i} Weeks Ago`,
           startDate: weekStart,
           endDate: weekEnd,
-          paymentCount: weekPayments.length,
+          paymentCount: weekBookings.length,
           totalRevenue: totalRevenue || 0,
-          payments: weekPayments
+          payments: weekBookings
         });
       }
       
@@ -575,9 +647,89 @@ const CompanyActivityDetails = ({ companyId, companyName, onClose, darkMode = fa
 
   const weeklyRevenue = calculateWeeklyRevenue();
 
+  // Generate storytelling insights based on stats
+  const getStorytellingInsights = () => {
+    const insights = [];
+    
+    // Revenue insight
+    if (stats.totalRevenue === 0) {
+      insights.push({
+        icon: '💰',
+        message: 'No revenue generated yet',
+        color: '#f59e0b',
+        type: 'warning'
+      });
+    } else if (stats.totalRevenue < 1000) {
+      insights.push({
+        icon: '📈',
+        message: 'Revenue is starting to grow',
+        color: '#10b981',
+        type: 'positive'
+      });
+    } else {
+      insights.push({
+        icon: '🚀',
+        message: 'Strong revenue performance',
+        color: '#10b981',
+        type: 'positive'
+      });
+    }
+    
+    // Bookings insight
+    if (stats.totalBookings === 0) {
+      insights.push({
+        icon: '📅',
+        message: 'No bookings recorded yet',
+        color: '#ef4444',
+        type: 'critical'
+      });
+    } else if (stats.totalBookings < 5) {
+      insights.push({
+        icon: '📊',
+        message: 'Bookings are low today',
+        color: '#f59e0b',
+        type: 'warning'
+      });
+    } else {
+      insights.push({
+        icon: '✅',
+        message: 'Healthy booking activity',
+        color: '#10b981',
+        type: 'positive'
+      });
+    }
+    
+    // Activity insight
+    if (activities.length === 0) {
+      insights.push({
+        icon: '🔍',
+        message: 'No activity recorded',
+        color: '#ef4444',
+        type: 'critical'
+      });
+    } else if (activities.length < 10) {
+      insights.push({
+        icon: '📋',
+        message: 'Limited activity detected',
+        color: '#f59e0b',
+        type: 'warning'
+      });
+    }
+    
+    return insights.slice(0, 3); // Show max 3 insights
+  };
+
   return (
-    <div style={styles.overlay} onClick={onClose}>
-      <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+    <div style={{
+      ...styles.overlay,
+      animation: 'fadeIn 0.2s ease'
+    }} onClick={onClose}>
+      <div style={{
+      ...styles.modal,
+      animation: 'slideInScale 0.3s ease',
+      transform: 'scale(0.95)',
+      animationFillMode: 'forwards'
+    }} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div style={styles.header}>
           <div>
@@ -634,10 +786,98 @@ const CompanyActivityDetails = ({ companyId, companyName, onClose, darkMode = fa
             </div>
           ) : (
             <>
-              {/* Stats */}
+              {/* Storytelling Insights Section */}
+              <div style={{
+                background: darkMode ? 'linear-gradient(135deg, #1e293b, #334155)' : 'linear-gradient(135deg, #ffffff, #f8fafc)',
+                borderRadius: '16px',
+                padding: '24px',
+                marginBottom: '24px',
+                border: `1px solid ${darkMode ? '#475569' : '#e2e8f0'}`,
+                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)'
+              }}>
+                <h3 style={{
+                  margin: '0 0 16px 0',
+                  fontSize: '18px',
+                  fontWeight: '600',
+                  color: darkMode ? '#ffffff' : '#1e293b',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  💡 Performance Insights
+                </h3>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+                  gap: '16px'
+                }}>
+                  {getStorytellingInsights().map((insight, index) => (
+                    <div key={index} style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      padding: '16px',
+                      backgroundColor: insight.type === 'critical' ? 'rgba(239, 68, 68, 0.1)' : 
+                                       insight.type === 'warning' ? 'rgba(245, 158, 11, 0.1)' : 
+                                       'rgba(16, 185, 129, 0.1)',
+                      border: `1px solid ${insight.type === 'critical' ? 'rgba(239, 68, 68, 0.2)' : 
+                                      insight.type === 'warning' ? 'rgba(245, 158, 11, 0.2)' : 
+                                      'rgba(16, 185, 129, 0.2)'}`,
+                      borderRadius: '12px',
+                      transition: 'all 0.3s ease',
+                      cursor: 'pointer'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }}>
+                      <div style={{
+                        width: '8px',
+                        height: '8px',
+                        backgroundColor: insight.color,
+                        borderRadius: '50%',
+                        animation: 'pulse 2s infinite'
+                      }}></div>
+                      <div>
+                        <div style={{
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          color: insight.color,
+                          marginBottom: '4px'
+                        }}>
+                          {insight.icon} {insight.message}
+                        </div>
+                        <div style={{
+                          fontSize: '12px',
+                          color: insight.type === 'critical' ? '#7f1d1d' : 
+                                 insight.type === 'warning' ? '#78350f' : '#064e3b'
+                        }}>
+                          {insight.type === 'critical' ? 'Needs attention' : 
+                           insight.type === 'warning' ? 'Monitor closely' : 'Great progress'}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Enhanced Stats with Visual Hierarchy */}
               <div style={styles.stats}>
                 <div style={styles.statCard}>
-                  <div style={styles.statLabel}>Total Activities</div>
+                  <div style={styles.statLabel}>📊 Performance Analysis</div>
+                  <div style={{
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    color: darkMode ? '#e2e8f0' : '#1e293b',
+                    marginBottom: '6px',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
+                  }}>{companyName}</div>
                   <div style={styles.statValue}>{stats.total}</div>
                 </div>
                 <div style={styles.statCard}>
@@ -656,22 +896,94 @@ const CompanyActivityDetails = ({ companyId, companyName, onClose, darkMode = fa
                   <div style={styles.statLabel}>Total Services</div>
                   <div style={{ ...styles.statValue, color: '#3b82f6' }}>{stats.totalServices}</div>
                 </div>
-                <div style={styles.statCard}>
-                  <div style={styles.statLabel}>Total Bookings</div>
-                  <div style={{ ...styles.statValue, color: '#8b5cf6' }}>{stats.totalBookings}</div>
+                <div style={{
+                  ...styles.statCard,
+                  background: darkMode ? 'linear-gradient(135deg, #4c1d95, #6b21a8)' : 'linear-gradient(135deg, #ede9fe, #ddd6fe)',
+                  borderColor: darkMode ? '#6b21a8' : '#a78bfa',
+                  transform: 'scale(1)',
+                  transition: 'all 0.3s ease',
+                  cursor: 'pointer'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'scale(1.05) translateY(-4px)';
+                  e.currentTarget.style.boxShadow = '0 12px 40px rgba(139, 92, 246, 0.3)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'scale(1) translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.08)';
+                }}>
+                  <div style={{
+                    ...styles.statLabel,
+                    color: darkMode ? '#ffffff' : '#4c1d95',
+                    fontSize: '14px',
+                    fontWeight: '600'
+                  }}>📅 Total Bookings</div>
+                  <div style={{ 
+                    ...styles.statValue, 
+                    color: '#8b5cf6', 
+                    fontSize: '28px',
+                    fontWeight: '700'
+                  }}>{stats.totalBookings}</div>
                 </div>
                 <div style={{
                   ...styles.statCard,
                   gridColumn: 'span 2',
-                  backgroundColor: darkMode ? '#064e3b' : '#d1fae5',
-                  borderColor: darkMode ? '#065f46' : '#6ee7b7'
+                  background: darkMode ? 'linear-gradient(135deg, #064e3b, #065f46)' : 'linear-gradient(135deg, #d1fae5, #6ee7b7)',
+                  borderColor: darkMode ? '#065f46' : '#6ee7b7',
+                  transform: 'scale(1)',
+                  transition: 'all 0.3s ease',
+                  cursor: 'pointer',
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'scale(1.05) translateY(-4px)';
+                  e.currentTarget.style.boxShadow = '0 12px 40px rgba(16, 185, 129, 0.3)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'scale(1) translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.08)';
                 }}>
-                  <div style={styles.statLabel}>Total Revenue (All Time)</div>
-                  <div style={{ ...styles.statValue, color: '#10b981', fontSize: '32px' }}>
-                    ₹{stats.totalRevenue.toLocaleString('en-IN', {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2
-                    })}
+                  {/* Gradient overlay for emphasis */}
+                  <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: '4px',
+                    background: 'linear-gradient(90deg, #10b981, #059669)'
+                  }}></div>
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}>
+                    <div>
+                      <div style={{
+                        ...styles.statLabel,
+                        fontSize: '16px',
+                        fontWeight: '600',
+                        color: darkMode ? '#ffffff' : '#065f46',
+                        marginBottom: '8px'
+                      }}>💰 Total Revenue (All Time)</div>
+                      <div style={{ 
+                        ...styles.statValue, 
+                        color: '#10b981', 
+                        fontSize: '36px',
+                        fontWeight: '800',
+                        textShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
+                      }}>
+                        ₹{stats.totalRevenue.toLocaleString('en-IN', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2
+                        })}
+                      </div>
+                    </div>
+                    <div style={{
+                      fontSize: '48px',
+                      opacity: 0.3,
+                      transform: 'rotate(-15deg)'
+                    }}>💰</div>
                   </div>
                 </div>
               </div>
@@ -731,77 +1043,20 @@ const CompanyActivityDetails = ({ companyId, companyName, onClose, darkMode = fa
                     })}
                   </div>
                 ) : (
-                  <div style={styles.noRevenueText}>
-                    📊 No payment activities recorded yet. Payment data will appear here once payments are received.
-                  </div>
+                  <>
+                    <div style={styles.noRevenueText}>
+                      📊 No payment activities recorded yet. Payment data will appear here once payments are received.
+                    </div>
+                    <div style={{
+                      fontSize: '48px',
+                      opacity: 0.3,
+                      transform: 'rotate(-15deg)',
+                      textAlign: 'center',
+                      marginTop: '20px'
+                    }}>💰</div>
+                  </>
                 )}
               </div>
-
-              {/* Activities Table */}
-              {filteredActivities.length === 0 ? (
-                <div style={styles.emptyState}>
-                  <div style={styles.emptyIcon}>📋</div>
-                  <h3 style={styles.emptyTitle}>No Activities Found</h3>
-                  <p style={styles.emptyText}>
-                    No activities match your current filters.
-                  </p>
-                </div>
-              ) : (
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={styles.table}>
-                    <thead>
-                      <tr>
-                        <th style={styles.th}>Date & Time</th>
-                        <th style={styles.th}>Action</th>
-                        <th style={styles.th}>Device</th>
-                        <th style={styles.th}>Browser</th>
-                        <th style={styles.th}>OS</th>
-                        <th style={styles.th}>IP Address</th>
-                        <th style={styles.th}>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredActivities.map(activity => (
-                        <tr key={activity.id}>
-                          <td style={styles.td}>
-                            <div>
-                              <div style={{ fontWeight: '500' }}>
-                                {activity.timestamp.toLocaleDateString()}
-                              </div>
-                              <div style={{ fontSize: '12px', color: darkMode ? '#94a3b8' : '#64748b' }}>
-                                {activity.timestamp.toLocaleTimeString()}
-                              </div>
-                            </div>
-                          </td>
-                          <td style={styles.td}>
-                            {activity.details?.action || activity.action}
-                          </td>
-                          <td style={styles.td}>
-                            {activity.deviceInfo?.device || 'Unknown'}
-                          </td>
-                          <td style={styles.td}>
-                            {activity.deviceInfo?.browser || 'Unknown'}
-                          </td>
-                          <td style={styles.td}>
-                            {activity.deviceInfo?.os || 'Unknown'}
-                          </td>
-                          <td style={styles.td}>
-                            {activity.deviceInfo?.ip || 'N/A'}
-                          </td>
-                          <td style={styles.td}>
-                            <span style={{
-                              ...styles.badge,
-                              ...(activity.success ? styles.successBadge : styles.failedBadge)
-                            }}>
-                              {activity.success ? '✓ Success' : '✗ Failed'}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
             </>
           )}
         </div>
