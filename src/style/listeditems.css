@@ -486,6 +486,53 @@
   font-size: 18px;
 }
 
+.export-product-button {
+  padding: 0.7rem 1.2rem;
+  border: none;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.export-csv-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  box-shadow: 0 3px 10px rgba(102, 126, 234, 0.35);
+}
+.export-csv-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 16px rgba(102, 126, 234, 0.5);
+}
+
+.export-excel-btn {
+  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+  box-shadow: 0 3px 10px rgba(17, 153, 142, 0.35);
+}
+.export-excel-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 16px rgba(17, 153, 142, 0.5);
+}
+
+.export-barcode-btn {
+  background: linear-gradient(135deg, #f7971e 0%, #ffd200 100%);
+  box-shadow: 0 3px 10px rgba(247, 151, 30, 0.35);
+  color: #1a1a1a;
+}
+.export-barcode-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 16px rgba(247, 151, 30, 0.5);
+}
+
+.export-product-button span {
+  font-size: 15px;
+}
+
 .control-bar {
   background: white;
   border-radius: 20px;
