@@ -2,96 +2,42 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
     <title>Ninja Deliveries - Fast & Reliable Delivery App</title>
-    <head>
-      <meta charset="utf-8" />
-      <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1, shrink-to-fit=no"
-      />
 
-      <!-- SEO Meta Tags -->
-      <meta
-        name="description"
-        content="Tivo is a HTML landing page template built with Bootstrap to help you crate engaging presentations for SaaS apps and convert visitors into users."
-      />
-      <meta name="author" content="Inovatik" />
+    <!-- SEO -->
+    <meta name="description" content="Ninja Deliveries - Fast & reliable delivery app for groceries, services and food." />
+    <meta name="author" content="Ninja Deliveries" />
 
-      <!-- OG Meta Tags to improve the way the post looks when you share the page on LinkedIn, Facebook, Google+ -->
-      <meta property="og:site_name" content="" />
-      <!-- website name -->
-      <meta property="og:site" content="" />
-      <!-- website link -->
-      <meta property="og:title" content="" />
-      <!-- title shown in the actual shared post -->
-      <meta property="og:description" content="" />
-      <!-- description shown in the actual shared post -->
-      <meta property="og:image" content="" />
-      <!-- image link, make sure it's jpg -->
-      <meta property="og:url" content="" />
-      <!-- where do you want your post to link to -->
-      <meta property="og:type" content="article" />
+    <!-- Fonts & Styles -->
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700&display=swap&subset=latin-ext" rel="stylesheet" />
+    <link href="css/bootstrap.css" rel="stylesheet" />
+    <link href="css/fontawesome-all.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous" />
+    <link rel="icon" href="images/favicon.ico" />
 
-      <!-- Website Title -->
-      <title>Ninja Deliveries - Delivery application</title>
-
-      <!-- Styles -->
-      <link
-        href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700&display=swap&subset=latin-ext"
-        rel="stylesheet"
-      />
-      <link href="css/bootstrap.css" rel="stylesheet" />
-      <link href="css/fontawesome-all.css" rel="stylesheet" />
-      <link href="css/swiper.css" rel="stylesheet" />
-      <link href="css/magnific-popup.css" rel="stylesheet" />
-      <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
-      <link
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-        rel="stylesheet"
-        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
-        crossorigin="anonymous"
-      />
-      <link
-        rel="stylesheet"
-        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-      />
-
-      <!-- Favicon  -->
-      <link rel="icon" href="images/favicon.ico" />
-    </head>
     <style>
-      /* ===== Global Styles ===== */
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
 
       body {
-        font-family: "Poppins", sans-serif;
+        font-family: "Poppins", "Open Sans", sans-serif;
         color: #1a1a1a;
         background-color: #f5f7fa;
         line-height: 1.6;
         scroll-behavior: smooth;
       }
 
-      a {
-        text-decoration: none;
-        color: inherit;
-        transition: color 0.3s ease;
-      }
+      a { text-decoration: none; color: inherit; transition: color 0.3s ease; }
 
       /* ===== Navbar ===== */
       .navbar {
         background: linear-gradient(90deg, #1a1a2e, #16213e);
         padding: 1rem 0;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
         position: sticky;
         top: 0;
         z-index: 1000;
       }
-
       .navbar-brand {
         font-weight: 700;
         letter-spacing: 1px;
@@ -99,25 +45,15 @@
         display: flex;
         align-items: center;
       }
-
-      .navbar-brand img {
-        border-radius: 8px;
-        height: 40px;
-        transition: transform 0.3s ease;
-      }
-
-      .navbar-brand:hover img {
-        transform: scale(1.1);
-      }
-
+      .navbar-brand img { border-radius: 8px; height: 40px; transition: transform 0.3s ease; }
+      .navbar-brand:hover img { transform: scale(1.1); }
       .navbar-nav .nav-link {
         color: #e0e0e0 !important;
         font-weight: 500;
-        padding: 10px 20px;
+        padding: 10px 16px;
         position: relative;
         transition: all 0.3s ease;
       }
-
       .navbar-nav .nav-link::after {
         content: "";
         position: absolute;
@@ -129,50 +65,26 @@
         transition: all 0.3s ease;
         transform: translateX(-50%);
       }
+      .navbar-nav .nav-link.hovered::after { width: 50%; }
 
-      /* Remove default active underline */
-      .navbar-nav .nav-link.active::after {
-        width: 0;
-      }
-
-      /* ===== Header / Hero Section ===== */
+      /* ===== Hero Section ===== */
       .header-section {
         background: linear-gradient(135deg, #2a2a72, #3a2f6d);
         color: #fff;
-        padding: 120px 0 80px;
+        padding: 60px 0 40px;
         min-height: 100vh;
         position: relative;
         overflow: hidden;
       }
-
       .header-section::before {
         content: "";
         position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: radial-gradient(
-          circle at 20% 50%,
-          rgba(255, 255, 255, 0.15) 0%,
-          transparent 60%
-        );
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: radial-gradient(circle at 20% 50%, rgba(255,255,255,0.15) 0%, transparent 60%);
         pointer-events: none;
       }
-
-      .header-section h1 {
-        font-size: 3rem;
-        font-weight: 700;
-        margin-bottom: 20px;
-        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-      }
-
-      .header-section p {
-        font-size: 1.1rem;
-        color: #e0e0e0;
-        margin-bottom: 30px;
-      }
-
+      .header-section h1 { font-size: 3rem; font-weight: 700; margin-bottom: 20px; text-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+      .header-section p { font-size: 1.1rem; color: #e0e0e0; margin-bottom: 30px; }
       .header-section .btn {
         background: linear-gradient(90deg, #ffd700, #ffca28);
         color: #1a1a2e;
@@ -180,132 +92,167 @@
         padding: 12px 30px;
         font-weight: 600;
         transition: all 0.3s ease;
-        box-shadow: 0 6px 20px rgba(255, 215, 0, 0.3);
+        box-shadow: 0 6px 20px rgba(255,215,0,0.3);
       }
-
       .header-section .btn:hover {
         background: linear-gradient(90deg, #ffca28, #ffd700);
         transform: translateY(-3px);
-        box-shadow: 0 8px 25px rgba(255, 215, 0, 0.4);
+        box-shadow: 0 8px 25px rgba(255,215,0,0.4);
       }
 
-      .header-section img {
-        animation: float 4s ease-in-out infinite;
-        max-width: 100%;
-        border-radius: 15px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      /* ===== App Mockup Panel ===== */
+      .app-mockup-panel {
+        background: #ffffff;
+        border-radius: 20px;
+        box-shadow: 0 15px 50px rgba(0,0,0,0.3);
+        padding: 20px;
+        max-width: 380px;
+        margin: 0 auto;
+        min-height: 580px;
       }
+      .mock-deliver-bar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 14px;
+        background: #f8f9fa;
+        border-radius: 12px;
+        margin-bottom: 12px;
+        border: 1px solid #e9ecef;
+      }
+      .mock-pin { font-size: 1.3rem; }
+      .mock-deliver-label { font-size: 0.7rem; color: #888; font-weight: 500; }
+      .mock-deliver-loc { font-size: 0.95rem; font-weight: 700; color: #1a1a2e; }
+      .mock-chevron { color: #00b894; font-size: 0.8rem; }
+      .mock-search-bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 10px 14px;
+        margin-bottom: 14px;
+        border: 1px solid #e9ecef;
+      }
+      .mock-search-bar input {
+        border: none;
+        background: transparent;
+        outline: none;
+        font-size: 0.88rem;
+        color: #aaa;
+        width: 100%;
+      }
+      .mock-tabs {
+        display: flex;
+        gap: 6px;
+        margin-bottom: 16px;
+        background: #f0f0f0;
+        border-radius: 12px;
+        padding: 4px;
+      }
+      .mock-tab {
+        flex: 1;
+        border: none;
+        background: transparent;
+        border-radius: 10px;
+        padding: 8px 4px;
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: #666;
+        cursor: pointer;
+        transition: all 0.25s ease;
+      }
+      .mock-tab.active-tab {
+        background: #ffffff;
+        color: #1a1a2e;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+      }
+      .mock-tab:hover:not(.active-tab) { background: rgba(255,255,255,0.6); }
+      .mock-cat-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+      }
+      .mock-cat-item {
+        background: #f8f9fa;
+        border-radius: 12px;
+        overflow: hidden;
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      .mock-cat-item:hover { transform: translateY(-3px); box-shadow: 0 6px 16px rgba(0,0,0,0.12); }
+      .mock-cat-item img { width: 100%; height: 75px; object-fit: cover; }
+      .mock-cat-item span {
+        display: block;
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: #1a1a2e;
+        padding: 6px 4px;
+        line-height: 1.2;
+      }
+
+      .mock-cat-btn {
+        display: block;
+        width: calc(100% - 12px);
+        margin: auto 6px 8px;
+        padding: 5px 4px;
+        font-size: 0.68rem;
+        font-weight: 700;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-align: center;
+        align-self: stretch;
+      }
+      .btn-cart   { background: #ffd700; color: #1a1a2e; }
+      .btn-book   { background: #3a2f6d; color: #fff; }
+      .btn-order  { background: #e74c3c; color: #fff; }
+      .mock-cat-btn:hover { opacity: 0.85; transform: scale(1.03); }
 
       /* ===== Process Section ===== */
-      #process {
-        padding: 80px 0;
-        background: #fff;
-      }
-
-      #process h2 {
-        font-weight: 700;
-        color: #1a1a2e;
-        margin-bottom: 15px;
-        font-size: 2.2rem;
-      }
-
-      #process p {
-        color: #6c757d;
-        margin-bottom: 40px;
-        font-size: 1rem;
-      }
-
+      #process { padding: 80px 0; background: #fff; }
+      #process h2 { font-weight: 700; color: #1a1a2e; margin-bottom: 15px; font-size: 2.2rem; }
+      #process p { color: #6c757d; margin-bottom: 40px; font-size: 1rem; }
       .card {
         border: none;
         border-radius: 15px;
         overflow: hidden;
-        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
         transition: all 0.4s ease;
         background: #fff;
       }
+      .card:hover { transform: translateY(-10px); box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+      .card:hover img { transform: scale(1.05); }
+      .card-body { padding: 20px; text-align: center; }
+      .card-title { font-size: 1.2rem; color: #1a1a2e; font-weight: 600; }
 
-      .card:hover {
-        transform: translateY(-10px);
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-      }
-
-      .card:hover img {
-        transform: scale(1.05);
-      }
-
-      .card-body {
-        padding: 20px;
-        text-align: center;
-      }
-
-      .card-title {
-        font-size: 1.2rem;
-        color: #1a1a2e;
-        font-weight: 600;
-      }
-
-      /* ===== About Us Section ===== */
+      /* ===== About Us ===== */
       #aboutus {
         background: linear-gradient(135deg, #2a2a72, #3a2f6d);
         color: #fff;
         padding: 80px 0;
         position: relative;
       }
-
       #aboutus::before {
         content: "";
         position: absolute;
-        top: 0;
-        right: 0;
-        width: 50%;
-        height: 100%;
-        background: radial-gradient(
-          circle at 80% 50%,
-          rgba(255, 255, 255, 0.1) 0%,
-          transparent 70%
-        );
+        top: 0; right: 0;
+        width: 50%; height: 100%;
+        background: radial-gradient(circle at 80% 50%, rgba(255,255,255,0.1) 0%, transparent 70%);
         pointer-events: none;
       }
-
-      #aboutus h2 {
-        font-weight: 700;
-        margin-bottom: 15px;
-        font-size: 2.2rem;
-      }
-
-      #aboutus p {
-        color: #e0e0e0;
-        font-size: 1rem;
-      }
-
-      #aboutus ul li {
-        font-size: 1rem;
-        margin-bottom: 12px;
-        color: #fff;
-        transition: transform 0.3s ease;
-      }
-
-      #aboutus ul li:hover {
-        transform: translateX(10px);
-      }
-
-      #aboutus ul li i {
-        color: #ffd700;
-        margin-right: 8px;
-      }
-
-      #aboutus img {
-        border-radius: 15px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-        transition: transform 0.4s ease;
-        object-fit: contain;
-        /* Changed from cover to contain */
-      }
-
-      #aboutus img:hover {
-        transform: scale(1.02);
-      }
-
+      #aboutus h2 { font-weight: 700; margin-bottom: 15px; font-size: 2.2rem; }
+      #aboutus p { color: #e0e0e0; font-size: 1rem; }
+      #aboutus ul li { font-size: 1rem; margin-bottom: 12px; color: #fff; transition: transform 0.3s ease; }
+      #aboutus ul li:hover { transform: translateX(10px); }
+      #aboutus ul li i { color: #ffd700; margin-right: 8px; }
+      #aboutus img { border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); transition: transform 0.4s ease; object-fit: contain; }
+      #aboutus img:hover { transform: scale(1.02); }
       #aboutus .btn {
         background: linear-gradient(90deg, #ffd700, #ffca28);
         color: #1a1a2e;
@@ -313,106 +260,36 @@
         padding: 10px 25px;
         font-weight: 600;
         transition: all 0.3s ease;
-        box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
+        box-shadow: 0 4px 15px rgba(255,215,0,0.3);
       }
-
-      #aboutus .btn:hover {
-        background: linear-gradient(90deg, #ffca28, #ffd700);
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(255, 215, 0, 0.4);
-      }
+      #aboutus .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255,215,0,0.4); }
 
       /* ===== Footer ===== */
-      .footer-section {
-        background: linear-gradient(135deg, #2a2a72, #3a2f6d);
-        padding: 50px 0 20px;
-        color: #e0e0e0;
-      }
+      .footer-section { background: linear-gradient(135deg, #2a2a72, #3a2f6d); padding: 70px 0 30px; color: #e0e0e0; }
+      .footer-section h4 { color: #fff; margin-bottom: 15px; font-weight: 600; }
+      .footer-section p, .footer-section a { font-size: 0.9rem; color: #e0e0e0; transition: all 0.3s ease; }
+      .footer-section a:hover { color: #b9b287; }
+      .footer-section hr { border-top: 1px solid rgba(255,255,255,0.1); }
 
-      .footer-section h4 {
-        color: #fff;
-        margin-bottom: 15px;
-        font-weight: 600;
-      }
-
-      .footer-section p,
-      .footer-section a {
-        font-size: 0.9rem;
-        color: #e0e0e0;
-        transition: all 0.3s ease;
-      }
-
-      .footer-section a:hover {
-        color: #b9b287;
-        transform: translateX(5px);
-      }
-
-      .footer-section hr {
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
-      }
-
-      .footer-section .text-center {
-        color: #e0e0e0;
-        font-size: 0.85rem;
-        margin-top: 20px;
-      }
-
-      /* ===== Responsive Design ===== */
+      /* ===== Responsive ===== */
       @media (max-width: 992px) {
-        .header-section h1 {
-          font-size: 2.5rem;
-        }
-
-        .header-section img {
-          margin-top: 30px;
-        }
-
-        .card img {
-          height: 180px;
-        }
-
-        .navbar-nav .nav-link {
-          padding: 8px 10px;
-        }
+        .header-section h1 { font-size: 2.5rem; }
+        .card img { height: 180px; }
+        .navbar-nav .nav-link { padding: 8px 10px; }
       }
-
       @media (max-width: 768px) {
-        .header-section {
-          text-align: center;
-          padding: 80px 0 50px;
-        }
-
-        .header-section h1 {
-          font-size: 2rem;
-        }
-
-        .header-section .col-md-6 {
-          margin-bottom: 20px;
-        }
-
-        #aboutus {
-          text-align: center;
-        }
-
-        #process h2,
-        #aboutus h2 {
-          font-size: 1.8rem;
-        }
-
-        .card img {
-          height: 150px;
-        }
+        .header-section { text-align: center; padding: 80px 0 50px; }
+        .header-section h1 { font-size: 2rem; }
+        .header-section .col-md-6 { margin-bottom: 20px; }
+        #aboutus { text-align: center; }
+        #process h2, #aboutus h2 { font-size: 1.8rem; }
+        .card img { height: 150px; }
+        .app-mockup-panel { margin-top: 30px; }
       }
 
       @keyframes float {
-        0%,
-        100% {
-          transform: translateY(0);
-        }
-
-        50% {
-          transform: translateY(-20px);
-        }
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-20px); }
       }
     </style>
   </head>
@@ -425,65 +302,167 @@
           <img src="images/ninjalogo.jpg" alt="Logo" height="40" class="me-2" />
           Ninja Deliveries
         </a>
-        <button
-          class="navbar-toggler"
-          type="button"
-          data-bs-toggle="collapse"
-          data-bs-target="#navMenu"
-        >
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
           <span class="navbar-toggler-icon"></span>
         </button>
-
         <div class="collapse navbar-collapse justify-content-end" id="navMenu">
           <ul class="navbar-nav mb-2 mb-lg-0">
-            <li class="nav-item">
-              <a class="nav-link" href="#header">Home</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="#process">Process</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="#aboutus">About Us</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="admin.html?#/">Admin Login</a>
-            </li>
+            <li class="nav-item"><a class="nav-link" href="#header">Home</a></li>
+            <li class="nav-item"><a class="nav-link" href="#process">Process</a></li>
+            <li class="nav-item"><a class="nav-link" href="#aboutus">About Us</a></li>
+            <li class="nav-item"><a class="nav-link" href="admin.html?#/">Admin Login</a></li>
           </ul>
-          <a
-            href="https://play.google.com/store/apps/details?id=com.ninjadeliveries.customer"
-            class="btn btn-warning ms-lg-3 fw-semibold"
-            >Download Now</a
-          >
+          <a href="https://play.google.com/store/apps/details?id=com.ninjadeliveries.customer" class="btn btn-warning ms-lg-3 fw-semibold">Download Now</a>
         </div>
       </div>
     </nav>
 
-    <!-- Header -->
-    <header
-      id="header"
-      class="header-section text-white d-flex align-items-center"
-    >
-      <div class="container py-5 mt-5">
+    <!-- Hero / Header -->
+    <header id="header" class="header-section text-white d-flex align-items-start">
+      <div class="container py-2 mt-2">
         <div class="row align-items-center">
-          <div class="col-md-6">
+          <!-- Left: Text -->
+          <div class="col-md-6 mb-4 mb-md-0">
             <h1 class="fw-bold mb-3">Ninja Deliveries</h1>
-            <p class="lead mb-4">
-              Fast & reliable — we deliver your goods instantly to your doorstep
-              anytime, anywhere!
-            </p>
-            <a
-              href="https://play.google.com/store/apps/details?id=com.ninjadeliveries.customer"
-              class="btn btn-warning btn-lg"
-              >Download Now</a
-            >
+            <p class="lead mb-4">Fast & reliable — we deliver your goods instantly to your doorstep anytime, anywhere!</p>
+            <a href="https://play.google.com/store/apps/details?id=com.ninjadeliveries.customer" class="btn btn-warning btn-lg">Download Now</a>
           </div>
-          <div class="col-md-6 text-center">
-            <img
-              src="images/header-software-app.webp"
-              class="img-fluid rounded-4 shadow-lg"
-              alt="App Preview"
-              style="object-fit: contain"
-            />
+
+          <!-- Right: App Mockup Panel -->
+          <div class="col-md-6">
+            <div class="app-mockup-panel">
+
+              <!-- Delivering To -->
+              <div class="mock-deliver-bar">
+                <span class="mock-pin">📍</span>
+                <div>
+                  <div class="mock-deliver-label">Delivering To</div>
+                  <div class="mock-deliver-loc">200, Dharamshala <span class="mock-chevron">▾</span></div>
+                </div>
+              </div>
+
+              <!-- Search -->
+              <div class="mock-search-bar">
+                <span>🔍</span>
+                <input type="text" placeholder="Search categories..." readonly />
+              </div>
+
+              <!-- Tabs: Grocery / Service / Food -->
+              <div class="mock-tabs">
+                <button class="mock-tab" onclick="switchTab('grocery', this)">🛒 Grocery</button>
+                <button class="mock-tab active-tab" onclick="switchTab('service', this)">🔧 Service</button>
+                <button class="mock-tab" onclick="switchTab('food', this)">🍔 Food</button>
+              </div>
+
+              <!-- Grocery Tab -->
+              <div id="tab-grocery" class="mock-tab-content" style="display:none;">
+                <div class="mock-cat-grid">
+                  <div class="mock-cat-item">
+                    <img src="https://images.unsplash.com/photo-1527960471264-932f39eb5846?w=200&q=80" alt="Beverages" />
+                    <span>Beverages</span>
+                    <button class="mock-cat-btn btn-cart">🛒 Add to Cart</button>
+                  </div>
+                  <div class="mock-cat-item">
+                    <img src="https://images.unsplash.com/photo-1563453392212-326f5e854473?w=200&q=80" alt="Cleaning" />
+                    <span>Cleaning Essentials</span>
+                    <button class="mock-cat-btn btn-cart">🛒 Add to Cart</button>
+                  </div>
+                  <div class="mock-cat-item">
+                    <img src="https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=200&q=80" alt="Cooking Oil" />
+                    <span>Cooking Oil & Spices</span>
+                    <button class="mock-cat-btn btn-cart">🛒 Add to Cart</button>
+                  </div>
+                  <div class="mock-cat-item">
+                    <img src="https://images.unsplash.com/photo-1509440159596-0249088772ff?w=200&q=80" alt="Dairy" />
+                    <span>Dairy, Bread & Eggs</span>
+                    <button class="mock-cat-btn btn-cart">🛒 Add to Cart</button>
+                  </div>
+                  <div class="mock-cat-item">
+                    <img src="https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=200&q=80" alt="Flour" />
+                    <span>Flour, Grains & Rice</span>
+                    <button class="mock-cat-btn btn-cart">🛒 Add to Cart</button>
+                  </div>
+                  <div class="mock-cat-item">
+                    <img src="https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=200&q=80" alt="Sauces" />
+                    <span>Sauces & Condiments</span>
+                    <button class="mock-cat-btn btn-cart">🛒 Add to Cart</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Service Tab -->
+              <div id="tab-service" class="mock-tab-content">
+                <div class="mock-cat-grid">
+                  <div class="mock-cat-item">
+                    <img src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=200&q=80" alt="Car Wash" />
+                    <span>Automobile Washing</span>
+                    <button class="mock-cat-btn btn-book">📅 Book Service</button>
+                  </div>
+                  <div class="mock-cat-item">
+                    <img src="https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=200&q=80" alt="Home Cleaning" />
+                    <span>Home Cleaning</span>
+                    <button class="mock-cat-btn btn-book">📅 Book Service</button>
+                  </div>
+                  <div class="mock-cat-item">
+                    <img src="https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=200&q=80" alt="Electrician" />
+                    <span>Electrician</span>
+                    <button class="mock-cat-btn btn-book">📅 Book Service</button>
+                  </div>
+                  <div class="mock-cat-item">
+                    <img src="https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=200&q=80" alt="Plumber" />
+                    <span>Plumber</span>
+                    <button class="mock-cat-btn btn-book">📅 Book Service</button>
+                  </div>
+                  <div class="mock-cat-item">
+                    <img src="https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=200&q=80" alt="Salon" />
+                    <span>Salon & Beauty</span>
+                    <button class="mock-cat-btn btn-book">📅 Book Service</button>
+                  </div>
+                  <div class="mock-cat-item">
+                    <img src="https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=200&q=80" alt="Academic" />
+                    <span>Academic Help</span>
+                    <button class="mock-cat-btn btn-book">📅 Book Service</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Food Tab -->
+              <div id="tab-food" class="mock-tab-content" style="display:none;">
+                <div class="mock-cat-grid">
+                  <div class="mock-cat-item">
+                    <img src="https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=200&q=80" alt="Pizza" />
+                    <span>Pizza</span>
+                    <button class="mock-cat-btn btn-order">🍽️ Order Food</button>
+                  </div>
+                  <div class="mock-cat-item">
+                    <img src="https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=200&q=80" alt="Biryani" />
+                    <span>Biryani</span>
+                    <button class="mock-cat-btn btn-order">🍽️ Order Food</button>
+                  </div>
+                  <div class="mock-cat-item">
+                    <img src="https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=200&q=80" alt="Cakes" />
+                    <span>Cakes & Desserts</span>
+                    <button class="mock-cat-btn btn-order">🍽️ Order Food</button>
+                  </div>
+                  <div class="mock-cat-item">
+                    <img src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200&q=80" alt="Burgers" />
+                    <span>Burgers</span>
+                    <button class="mock-cat-btn btn-order">🍽️ Order Food</button>
+                  </div>
+                  <div class="mock-cat-item">
+                    <img src="https://images.unsplash.com/photo-1567337710282-00832b415979?w=200&q=80" alt="South Indian" />
+                    <span>South Indian</span>
+                    <button class="mock-cat-btn btn-order">🍽️ Order Food</button>
+                  </div>
+                  <div class="mock-cat-item">
+                    <img src="https://images.unsplash.com/photo-1547592180-85f173990554?w=200&q=80" alt="Momos" />
+                    <span>Momos & Snacks</span>
+                    <button class="mock-cat-btn btn-order">🍽️ Order Food</button>
+                  </div>
+                </div>
+              </div>
+
+            </div>
           </div>
         </div>
       </div>
@@ -493,9 +472,7 @@
     <section id="process" class="py-5 bg-light text-center">
       <div class="container">
         <h2 class="fw-bold mb-3">How It Works</h2>
-        <p class="text-muted mb-5">
-          Follow these simple steps to place your first order
-        </p>
+        <p class="text-muted mb-5">Follow these simple steps to place your first order</p>
         <div class="row g-4">
           <div class="col-md-4">
             <div class="card h-100 shadow-sm">
@@ -530,112 +507,70 @@
       <div class="container">
         <div class="row align-items-center">
           <div class="col-md-6 mb-4 mb-md-0">
-            <img
-              src="images/header-software-app.webp"
-              class="img-fluid rounded-4 shadow-sm"
-              alt="About Us"
-            />
+            <img src="images/header-software-app.webp" class="img-fluid rounded-4 shadow-sm" alt="About Us" />
           </div>
           <div class="col-md-6">
             <h2 class="fw-bold mb-3">About Us</h2>
-            <p>
-              Ninja Deliveries is your trusted partner for lightning-fast,
-              hassle-free goods delivery. We ensure convenience and reliability
-              with every delivery.
-            </p>
+            <p>Ninja Deliveries is your trusted partner for lightning-fast, hassle-free goods delivery. We ensure convenience and reliability with every delivery.</p>
             <ul class="list-unstyled mt-3">
-              <li class="mb-2">
-                <i class="fa-solid fa-bolt me-2"></i> Lightning-Fast Deliveries
-              </li>
-              <li>
-                <i class="fa-solid fa-shield-check me-2"></i> Reliable &
-                Convenient Service
-              </li>
+              <li class="mb-2"><i class="fa-solid fa-bolt me-2"></i> Lightning-Fast Deliveries</li>
+              <li><i class="fa-solid fa-shield-check me-2"></i> Reliable & Convenient Service</li>
             </ul>
-            <a
-              href="https://play.google.com/store/apps/details?id=com.ninjadeliveries.customer"
-              class="btn btn-warning mt-3"
-              >Download Now</a
-            >
+            <a href="https://play.google.com/store/apps/details?id=com.ninjadeliveries.customer" class="btn btn-warning mt-3">Download Now</a>
           </div>
         </div>
       </div>
     </section>
 
     <!-- Footer -->
-    <footer class="footer-section text-white pt-5">
+    <footer class="footer-section text-white pt-5" style="margin-top: 60px;">
       <div class="container">
         <div class="row">
           <div class="col-md-4 mb-4">
             <h4 class="fw-bold">Ninja Deliveries</h4>
-            <p class="small">
-              We are your trusted partner for lightning-fast, hassle-free goods
-              delivery.
-            </p>
+            <p class="small">We are your trusted partner for lightning-fast, hassle-free goods delivery.</p>
           </div>
           <div class="col-md-4 mb-4">
             <h4 class="fw-bold">Important Links</h4>
             <p class="small">
-              <a
-                href="terms-conditions.html"
-                class="text-white text-decoration-underline"
-                >Terms & Conditions</a
-              ><br />
-              <a
-                href="privacy-policy.html"
-                class="text-white text-decoration-underline"
-                >Privacy Policy</a
-              >
+              <a href="terms-conditions.html" class="text-white text-decoration-underline">Terms & Conditions</a><br />
+              <a href="privacy-policy.html" class="text-white text-decoration-underline">Privacy Policy</a>
             </p>
           </div>
           <div class="col-md-4 mb-4">
             <h4 class="fw-bold">Contact</h4>
-            <p class="small mb-1">
-              <i class="fa-solid fa-envelope me-2"></i
-              ><a href="mailto:admin@ninjadeliveries.com" class="text-white"
-                >admin@ninjadeliveries.com</a
-              >
-            </p>
-            <p class="small">
-              <i class="fa-solid fa-phone me-2"></i
-              ><a href="tel:918219105753" class="text-white"
-                >(+91) 82191-05753</a
-              >
-            </p>
+            <p class="small mb-1"><i class="fa-solid fa-envelope me-2"></i><a href="mailto:admin@ninjadeliveries.com" class="text-white">admin@ninjadeliveries.com</a></p>
+            <p class="small"><i class="fa-solid fa-phone me-2"></i><a href="tel:918219105753" class="text-white">(+91) 82191-05753</a></p>
           </div>
         </div>
         <hr class="border-light" />
-        <div class="text-center pb-3 small">
-          © 2025 Ninja Deliveries. All Rights Reserved.
-        </div>
+        <div class="text-center pb-3 small">© 2025 Ninja Deliveries. All Rights Reserved.</div>
       </div>
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-      // JavaScript for dynamic underline on hover
+      // Navbar hover underline
       document.addEventListener("DOMContentLoaded", function () {
         const navLinks = document.querySelectorAll(".navbar-nav .nav-link");
-
         navLinks.forEach((link) => {
           link.addEventListener("mouseover", function () {
-            navLinks.forEach((otherLink) =>
-              otherLink.classList.remove("hovered")
-            );
+            navLinks.forEach((l) => l.classList.remove("hovered"));
             this.classList.add("hovered");
           });
-
           link.addEventListener("mouseout", function () {
             this.classList.remove("hovered");
           });
         });
       });
-    </script>
-    <style>
-      /* Additional CSS for hover effect */
-      .navbar-nav .nav-link.hovered::after {
-        width: 50%;
+
+      // App mockup tab switcher
+      function switchTab(tab, btn) {
+        document.querySelectorAll(".mock-tab-content").forEach(el => el.style.display = "none");
+        document.querySelectorAll(".mock-tab").forEach(el => el.classList.remove("active-tab"));
+        document.getElementById("tab-" + tab).style.display = "block";
+        btn.classList.add("active-tab");
       }
-    </style>
+    </script>
   </body>
 </html>
