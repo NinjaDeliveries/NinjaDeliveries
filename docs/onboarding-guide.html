@@ -1,0 +1,1584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Ninja Services – Company Onboarding Guide</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+*{font-family:'Inter',sans-serif;box-sizing:border-box;margin:0;padding:0;}
+body{background:#f1f5f9;line-height:1.6;}
+@media print{
+  .no-print{display:none!important;}
+  body{print-color-adjust:exact;-webkit-print-color-adjust:exact;margin:0;padding:0;}
+  .pgbrk{page-break-before:always;}
+  .pair{page-break-inside:avoid;break-inside:avoid;}
+  .sec-hdr{page-break-after:avoid;break-after:avoid;}
+  .ds{page-break-inside:avoid;break-inside:avoid;}
+  .phone{page-break-inside:avoid;break-inside:avoid;}
+  .checklist{page-break-inside:avoid;break-inside:avoid;}
+  .flow{page-break-inside:avoid;break-inside:avoid;}
+  @page{size:A4;margin:1.5cm;}
+}
+
+/* ── Layout ── */
+.wrap{max-width:1200px;margin:0 auto;padding:0 20px 48px;}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:0;background:#fff;border-radius:18px;border:1px solid #e2e8f0;overflow:hidden;margin-bottom:32px;box-shadow:0 2px 12px rgba(0,0,0,.06);page-break-inside:avoid;}
+.pair-left{padding:32px;border-right:1px solid #f1f5f9;}
+.pair-right{padding:28px;background:#f8fafc;display:flex;flex-direction:column;align-items:center;gap:12px;}
+@media(max-width:760px){.pair{grid-template-columns:1fr;}.pair-left{border-right:none;border-bottom:1px solid #f1f5f9;}}
+@media print{.pair{margin-bottom:20px;box-shadow:none;}}
+
+/* ── Real Dashboard Shell ── */
+.ds{background:#f4f6fb;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;width:100%;box-shadow:0 4px 16px rgba(0,0,0,.08);}
+.ds-chrome{background:#1e293b;padding:6px 12px;display:flex;align-items:center;gap:5px;}
+.ds-chrome .d{width:7px;height:7px;border-radius:50%;}
+.ds-chrome .url{font-size:9px;color:#64748b;margin-left:6px;background:#0f172a;padding:2px 8px;border-radius:4px;}
+.ds-body{display:flex;min-height:220px;}
+.ds-sb{background:#1e293b;width:130px;flex-shrink:0;padding:0;display:flex;flex-direction:column;}
+.ds-sb-hdr{padding:10px 10px 8px;border-bottom:1px solid rgba(255,255,255,.08);}
+.ds-sb-logo{width:28px;height:28px;background:linear-gradient(135deg,#4f46e5,#7c3aed);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;margin-bottom:5px;}
+.ds-sb-name{font-size:9px;font-weight:700;color:#fff;line-height:1.2;}
+.ds-sb-email{font-size:7px;color:#64748b;margin-top:1px;}
+.ds-nav{padding:6px 6px;flex:1;}
+.ds-nav-item{padding:5px 8px;border-radius:7px;font-size:9px;font-weight:500;color:#94a3b8;margin-bottom:2px;display:flex;align-items:center;justify-content:space-between;}
+.ds-nav-item.on{background:rgba(79,70,229,.2);color:#818cf8;font-weight:700;}
+.ds-nav-item .badge{background:#ef4444;color:#fff;font-size:7px;font-weight:700;padding:1px 5px;border-radius:10px;}
+.ds-nav-item .new{background:#10b981;color:#fff;font-size:6px;font-weight:700;padding:1px 4px;border-radius:4px;}
+.ds-main{flex:1;padding:12px;overflow:hidden;background:#f4f6fb;}
+.ds-page-hdr{margin-bottom:10px;}
+.ds-page-title{font-size:14px;font-weight:800;color:#0f172a;}
+.ds-page-sub{font-size:9px;color:#64748b;margin-top:1px;}
+
+/* ── Real stat cards ── */
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px;}
+.stat-card{background:#fff;border-radius:8px;padding:8px 10px;border:1px solid #e2e8f0;box-shadow:0 1px 4px rgba(0,0,0,.04);}
+.stat-val{font-size:16px;font-weight:900;color:#0f172a;}
+.stat-lbl{font-size:8px;color:#64748b;margin-top:1px;}
+
+/* ── Real booking card ── */
+.bk-card{background:#fff;border-radius:10px;border:1px solid #e2e8f0;overflow:hidden;margin-bottom:6px;box-shadow:0 1px 4px rgba(0,0,0,.04);}
+.bk-accent{height:3px;}
+.bk-body{padding:8px 10px;}
+.bk-row{display:flex;align-items:center;gap:6px;margin-bottom:4px;}
+.bk-name{font-size:10px;font-weight:700;color:#0f172a;}
+.bk-sub{font-size:8px;color:#64748b;}
+.bk-price{font-size:11px;font-weight:800;color:#059669;margin-left:auto;}
+
+/* ── Status pills ── */
+.sp{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:20px;font-size:8px;font-weight:700;}
+.sp-pending{background:#fef3c7;color:#92400e;}
+.sp-assigned{background:#ede9fe;color:#5b21b6;}
+.sp-started{background:#dbeafe;color:#1e40af;}
+.sp-completed{background:#d1fae5;color:#065f46;}
+.sp-rejected{background:#fee2e2;color:#991b1b;}
+.sp-expired{background:#f1f5f9;color:#475569;}
+
+/* ── Real filter tabs ── */
+.filter-tabs{display:flex;gap:4px;margin-bottom:8px;flex-wrap:wrap;}
+.ftab{padding:4px 8px;border-radius:7px;font-size:8px;font-weight:600;color:#64748b;background:#f1f5f9;border:1px solid #e2e8f0;}
+.ftab.on{background:#4f46e5;color:#fff;border-color:#4f46e5;}
+
+/* ── Real form elements ── */
+.form-row{margin-bottom:7px;}
+.form-lbl{font-size:8px;font-weight:700;color:#374151;margin-bottom:2px;}
+.form-inp{background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:5px 8px;font-size:9px;color:#0f172a;width:100%;}
+.btn-primary{background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;font-size:9px;font-weight:700;padding:6px 12px;border-radius:7px;border:none;cursor:default;display:inline-block;}
+.btn-danger{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;font-size:9px;font-weight:700;padding:6px 12px;border-radius:7px;border:none;cursor:default;display:inline-block;}
+.btn-success{background:linear-gradient(135deg,#10b981,#059669);color:#fff;font-size:9px;font-weight:700;padding:6px 12px;border-radius:7px;border:none;cursor:default;display:inline-block;}
+.btn-outline{background:#fff;color:#4f46e5;font-size:9px;font-weight:700;padding:5px 11px;border-radius:7px;border:1.5px solid #4f46e5;cursor:default;display:inline-block;}
+
+/* ── Phone shell ── */
+.phone{width:190px;background:#fff;border-radius:26px;border:5px solid #1e293b;box-shadow:0 16px 40px rgba(0,0,0,.22),inset 0 0 0 1.5px #334155;overflow:hidden;flex-shrink:0;}
+.pbar{background:#f8fafc;padding:5px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e2e8f0;}
+.pbar span{font-size:8px;font-weight:700;color:#64748b;}
+.ptop{background:#fff;padding:7px 10px;display:flex;align-items:center;border-bottom:1px solid #f1f5f9;}
+.ptitle{font-size:11px;font-weight:700;color:#0f172a;text-align:center;flex:1;}
+.pnav{background:#f8fafc;border-top:1px solid #e2e8f0;padding:5px 8px;display:flex;justify-content:space-around;}
+.pnav span{font-size:7px;color:#94a3b8;}
+.pnav span.on{color:#6366f1;font-weight:700;}
+
+/* ── Misc ── */
+.note{border-left:4px solid #4f46e5;background:#eef2ff;border-radius:0 10px 10px 0;padding:14px 18px;margin-top:16px;}
+.note p{font-size:14px!important;line-height:1.6;}
+.warn{border-left:4px solid #f59e0b;background:#fffbeb;border-radius:0 10px 10px 0;padding:14px 18px;margin-top:16px;}
+.warn p{font-size:14px!important;line-height:1.6;}
+.tip{border-left:4px solid #10b981;background:#f0fdf4;border-radius:0 10px 10px 0;padding:14px 18px;margin-top:16px;}
+.tip p{font-size:14px!important;line-height:1.6;}
+.col-lbl{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;}
+.sec-hdr{display:flex;align-items:center;gap:16px;padding:40px 0 24px;page-break-after:avoid;}
+.sec-num{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:22px;color:#fff;flex-shrink:0;}
+.step-tag{display:inline-flex;align-items:center;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:700;margin-bottom:14px;}
+@media print{.sec-hdr{padding:20px 0 16px;}}
+
+/* ── Progress bar ── */
+.prog{background:#e2e8f0;border-radius:4px;height:5px;overflow:hidden;margin:3px 0 5px;}
+.prog-fill{height:100%;border-radius:4px;}
+
+/* ── Today tracker card ── */
+.tracker-card{background:#fff;border-radius:10px;border:1px solid #e2e8f0;overflow:hidden;margin-bottom:6px;}
+.tracker-accent{height:3px;}
+.tracker-body{padding:8px 10px;}
+.tracker-steps{display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:#f8fafc;border-top:1px solid #f1f5f9;}
+.tracker-step{display:flex;flex-direction:column;align-items:center;gap:2px;}
+.tracker-step-dot{width:12px;height:12px;border-radius:50%;border:2px solid #e2e8f0;}
+.tracker-step-dot.done{background:#4f46e5;border-color:#4f46e5;}
+.tracker-step-dot.active{background:#fff;border-color:#4f46e5;box-shadow:0 0 0 3px rgba(79,70,229,.2);}
+.tracker-step-lbl{font-size:6px;color:#94a3b8;font-weight:600;}
+.tracker-step-lbl.done{color:#4f46e5;}
+.tracker-step-lbl.active{color:#4f46e5;font-weight:700;}
+.tracker-line{flex:1;height:2px;background:#e2e8f0;margin:0 2px;margin-bottom:10px;}
+.tracker-line.done{background:#4f46e5;}
+
+/* ── Calendar ── */
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-top:6px;}
+.cal-day{font-size:7px;text-align:center;padding:3px 2px;border-radius:5px;color:#64748b;}
+.cal-day.today{background:#4f46e5;color:#fff;font-weight:700;}
+.cal-day.booked{background:#fef3c7;color:#92400e;font-weight:600;}
+.cal-day.hdr{font-weight:700;color:#94a3b8;font-size:6px;}
+
+/* ── Worker card ── */
+.worker-card{background:#fff;border-radius:8px;border:1px solid #e2e8f0;padding:8px 10px;display:flex;align-items:center;gap:8px;margin-bottom:5px;}
+.worker-avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#4f46e5,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:700;flex-shrink:0;}
+
+/* ── Modal ── */
+.modal-overlay{background:rgba(15,23,42,.6);border-radius:10px;padding:10px;margin-top:8px;}
+.modal-box{background:#fff;border-radius:10px;padding:10px;border:1px solid #e2e8f0;}
+.modal-title{font-size:10px;font-weight:800;color:#0f172a;margin-bottom:6px;}
+
+/* ── Category grid ── */
+.cat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:4px;margin-top:6px;}
+.cat-item{background:#fff;border:1.5px solid #e2e8f0;border-radius:8px;padding:6px 8px;text-align:center;font-size:8px;font-weight:600;color:#374151;}
+.cat-item.selected{border-color:#4f46e5;background:#eef2ff;color:#4f46e5;}
+
+/* ── Checklist ── */
+.checklist{background:#fff;border-radius:12px;border:1px solid #e2e8f0;padding:18px;margin-bottom:24px;}
+.checklist-item{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid #f1f5f9;}
+.checklist-item:last-child{border-bottom:none;}
+.checklist-num{width:24px;height:24px;border-radius:50%;background:#4f46e5;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.checklist-content h4{font-size:13px;font-weight:700;color:#0f172a;margin-bottom:3px;}
+.checklist-content p{font-size:12px;color:#64748b;line-height:1.5;}
+
+/* ── Flow diagram ── */
+.flow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:20px 0;}
+.flow-box{background:#fff;border:2px solid #e2e8f0;border-radius:10px;padding:10px 14px;text-align:center;flex:1;min-width:120px;}
+.flow-box.active{border-color:#4f46e5;background:#eef2ff;}
+.flow-title{font-size:11px;font-weight:800;color:#0f172a;margin-bottom:3px;}
+.flow-desc{font-size:9px;color:#64748b;}
+.flow-arrow{font-size:18px;color:#94a3b8;}
+</style>
+</head>
+<body>
+
+<!-- PRINT BTN -->
+<div class="no-print" style="position:fixed;top:16px;right:16px;z-index:999;">
+  <button onclick="window.print()" style="display:flex;align-items:center;gap:7px;background:#1e293b;color:#fff;font-size:12px;font-weight:700;padding:9px 16px;border-radius:12px;border:none;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.25);">
+    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+    Download PDF
+  </button>
+</div>
+
+<!-- COVER -->
+<div style="background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 55%,#4f46e5 100%);padding:80px 24px;text-align:center;">
+  <div style="width:68px;height:68px;background:linear-gradient(135deg,#4f46e5,#7c3aed);border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:34px;margin:0 auto 16px;box-shadow:0 8px 24px rgba(79,70,229,.4);">🥷</div>
+  <p style="color:#818cf8;font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;margin-bottom:10px;">Ninja Services</p>
+  <h1 style="color:#fff;font-size:clamp(26px,4vw,46px);font-weight:900;line-height:1.2;max-width:640px;margin:0 auto 10px;">Company Onboarding Guide</h1>
+  <p style="color:#93c5fd;font-size:15px;max-width:500px;margin:0 auto 36px;">Real dashboard UI walkthrough — every page explained with side-by-side app preview.</p>
+  <div style="display:inline-flex;align-items:center;gap:20px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:14px;padding:12px 24px;">
+    <div style="text-align:center;"><div style="font-size:20px;margin-bottom:3px;">🖥️</div><div style="color:#e0f2fe;font-size:11px;font-weight:600;">Dashboard</div><div style="color:#64748b;font-size:10px;">Left panel</div></div>
+    <div style="color:#4f46e5;font-size:20px;font-weight:900;">↔</div>
+    <div style="text-align:center;"><div style="font-size:20px;margin-bottom:3px;">📱</div><div style="color:#e0f2fe;font-size:11px;font-weight:600;">User App</div><div style="color:#64748b;font-size:10px;">Right panel</div></div>
+  </div>
+  <p style="color:#334155;font-size:11px;margin-top:24px;">Version 1.0 · 2024</p>
+</div>
+
+<!-- HOW TO READ -->
+<div class="wrap" style="padding-top:40px;">
+  <div style="background:#fff;border-radius:16px;border:1px solid #e2e8f0;padding:28px 32px;margin-bottom:36px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;box-shadow:0 4px 16px rgba(0,0,0,.06);">
+    <div style="font-size:42px;">📖</div>
+    <div style="flex:1;min-width:280px;">
+      <p style="font-size:20px;font-weight:800;color:#0f172a;margin-bottom:8px;">How to Read This Guide</p>
+      <p style="font-size:16px;color:#475569;line-height:1.7;">Each step shows <strong>two panels side by side</strong>. Left = what you do on the <strong>real company dashboard</strong>. Right = what the user sees on their <strong>mobile app</strong> as a result.</p>
+    </div>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;">
+      <div style="background:#eef2ff;border:2px solid #c7d2fe;border-radius:12px;padding:16px 20px;text-align:center;"><div style="font-size:28px;margin-bottom:6px;">🖥️</div><p style="font-size:15px;font-weight:700;color:#4f46e5;margin:0 0 4px 0;">LEFT = Dashboard</p><p style="font-size:13px;color:#64748b;margin:0;">What you do</p></div>
+      <div style="background:#f0fdf4;border:2px solid #bbf7d0;border-radius:12px;padding:16px 20px;text-align:center;"><div style="font-size:28px;margin-bottom:6px;">📱</div><p style="font-size:15px;font-weight:700;color:#15803d;margin:0 0 4px 0;">RIGHT = User App</p><p style="font-size:13px;color:#64748b;margin:0;">What user sees</p></div>
+    </div>
+  </div>
+
+<!-- TABLE OF CONTENTS -->
+<div style="background:#fff;border-radius:16px;border:1px solid #e2e8f0;padding:32px;margin-bottom:40px;box-shadow:0 4px 16px rgba(0,0,0,.06);page-break-inside:avoid;">
+  <h2 style="font-size:26px;font-weight:900;color:#0f172a;margin-bottom:24px;">📋 Table of Contents</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;">
+    <div style="padding:16px;border-left:4px solid #4f46e5;background:#f8fafc;border-radius:0 10px 10px 0;font-size:15px;font-weight:600;"><strong style="color:#4f46e5;font-size:18px;">A.</strong> Overview Page</div>
+    <div style="padding:16px;border-left:4px solid #10b981;background:#f8fafc;border-radius:0 10px 10px 0;font-size:15px;font-weight:600;"><strong style="color:#10b981;font-size:18px;">B.</strong> Categories Page</div>
+    <div style="padding:16px;border-left:4px solid #f59e0b;background:#f8fafc;border-radius:0 10px 10px 0;font-size:15px;font-weight:600;"><strong style="color:#f59e0b;font-size:18px;">C.</strong> Services Page</div>
+    <div style="padding:16px;border-left:4px solid #ef4444;background:#f8fafc;border-radius:0 10px 10px 0;font-size:15px;font-weight:600;"><strong style="color:#ef4444;font-size:18px;">D.</strong> Bookings Page</div>
+    <div style="padding:16px;border-left:4px solid #8b5cf6;background:#f8fafc;border-radius:0 10px 10px 0;font-size:15px;font-weight:600;"><strong style="color:#8b5cf6;font-size:18px;">E.</strong> Calendar / Slots Page</div>
+    <div style="padding:16px;border-left:4px solid #06b6d4;background:#f8fafc;border-radius:0 10px 10px 0;font-size:15px;font-weight:600;"><strong style="color:#06b6d4;font-size:18px;">F.</strong> Technicians Page</div>
+    <div style="padding:16px;border-left:4px solid #ec4899;background:#f8fafc;border-radius:0 10px 10px 0;font-size:15px;font-weight:600;"><strong style="color:#ec4899;font-size:18px;">G.</strong> User App Screens</div>
+    <div style="padding:16px;border-left:4px solid #64748b;background:#f8fafc;border-radius:0 10px 10px 0;font-size:15px;font-weight:600;"><strong style="color:#64748b;font-size:18px;">H.</strong> Complete Booking Flow</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SECTION A – OVERVIEW PAGE
+═══════════════════════════════════════════════════════════ -->
+<div class="sec-hdr">
+  <div class="sec-num" style="background:#4f46e5;">A</div>
+  <div>
+    <div style="font-size:24px;font-weight:900;color:#0f172a;">Overview Page</div>
+    <div style="font-size:16px;color:#64748b;">Your dashboard home — today's stats, booking tracker, and revenue chart</div>
+  </div>
+</div>
+
+<div class="pair">
+  <!-- LEFT: Dashboard Overview -->
+  <div class="pair-left">
+    <div class="col-lbl" style="color:#4f46e5;">🖥️ Dashboard – Overview</div>
+    <div class="step-tag" style="background:#eef2ff;color:#4f46e5;">First screen after login</div>
+    <p style="font-size:16px;color:#475569;line-height:1.8;margin-bottom:18px;">This is the first page you see after logging in. It shows <strong>Today's Booking Tracker</strong> with all bookings for today, stats cards (Pending, In Progress, Completed), and weekly revenue chart.</p>
+    <div class="ds">
+      <div class="ds-chrome">
+        <div class="d" style="background:#ef4444;"></div>
+        <div class="d" style="background:#f59e0b;"></div>
+        <div class="d" style="background:#22c55e;"></div>
+        <span class="url">ninjaservices.in/dashboard</span>
+      </div>
+      <div class="ds-body">
+        <div class="ds-sb">
+          <div class="ds-sb-hdr">
+            <div class="ds-sb-logo">🥷</div>
+            <div class="ds-sb-name">Ninja Car Wash</div>
+            <div class="ds-sb-email">ninja@example.com</div>
+          </div>
+          <div class="ds-nav">
+            <div class="ds-nav-item on">Overview</div>
+            <div class="ds-nav-item">Categories</div>
+            <div class="ds-nav-item">Services</div>
+            <div class="ds-nav-item">Bookings <span class="badge">3</span></div>
+            <div class="ds-nav-item">Calendar / Slots</div>
+            <div class="ds-nav-item">Technicians</div>
+            <div class="ds-nav-item">Feedback</div>
+            <div class="ds-nav-item">Payments</div>
+            <div class="ds-nav-item">Settings</div>
+            <div class="ds-nav-item">How to Use <span class="new">NEW</span></div>
+          </div>
+        </div>
+        <div class="ds-main">
+          <div class="ds-page-hdr">
+            <div class="ds-page-title">📊 Today's Booking Tracker</div>
+            <div class="ds-page-sub">Real-time view of all bookings for today</div>
+          </div>
+          <div class="stat-grid">
+            <div class="stat-card"><div class="stat-val">3</div><div class="stat-lbl">Pending</div></div>
+            <div class="stat-card"><div class="stat-val">1</div><div class="stat-lbl">In Progress</div></div>
+            <div class="stat-card"><div class="stat-val">7</div><div class="stat-lbl">Completed</div></div>
+          </div>
+          <div class="tracker-card">
+            <div class="tracker-accent" style="background:linear-gradient(90deg,#f59e0b 25%,#e2e8f0 25%);"></div>
+            <div class="tracker-body">
+              <div class="bk-row">
+                <span class="sp sp-pending">● Pending</span>
+                <span class="bk-sub">🕐 10:00 AM</span>
+                <span class="bk-price">₹200</span>
+              </div>
+              <div class="bk-name">Car Exterior Wash</div>
+              <div class="bk-sub">👤 Rahul Sharma • 9876543210</div>
+            </div>
+            <div class="tracker-steps">
+              <div class="tracker-step"><div class="tracker-step-dot active"></div><div class="tracker-step-lbl active">Pending</div></div>
+              <div class="tracker-line"></div>
+              <div class="tracker-step"><div class="tracker-step-dot"></div><div class="tracker-step-lbl">Assigned</div></div>
+              <div class="tracker-line"></div>
+              <div class="tracker-step"><div class="tracker-step-dot"></div><div class="tracker-step-lbl">Started</div></div>
+              <div class="tracker-line"></div>
+              <div class="tracker-step"><div class="tracker-step-dot"></div><div class="tracker-step-lbl">Done</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="note"><p style="font-size:15px;color:#4f46e5;margin:0;line-height:1.7;"><strong>Today's Tracker</strong> shows only today's bookings with real-time status updates. Each booking card has a progress bar showing current stage.</p></div>
+  </div>
+  <!-- RIGHT: Phone App Home -->
+  <div class="pair-right">
+    <div class="col-lbl" style="color:#15803d;">📱 User App – Home Screen</div>
+    <p style="font-size:15px;color:#64748b;text-align:center;margin-bottom:14px;line-height:1.6;">User browses categories and selects services</p>
+    <div class="phone">
+      <div class="pbar"><span>9:41</span><span>●●●</span></div>
+      <div style="background:#f97316;padding:10px;color:#fff;">
+        <div style="font-size:9px;font-weight:700;margin-bottom:4px;">📍 Hyderabad, India</div>
+        <div style="background:rgba(255,255,255,.2);border-radius:8px;padding:5px 8px;font-size:8px;color:rgba(255,255,255,.8);">🔍 Search services...</div>
+      </div>
+      <div style="display:flex;gap:0;border-bottom:1px solid #e2e8f0;">
+        <div style="flex:1;text-align:center;padding:6px 4px;font-size:8px;font-weight:700;color:#4f46e5;border-bottom:2px solid #4f46e5;">Services</div>
+        <div style="flex:1;text-align:center;padding:6px 4px;font-size:8px;color:#94a3b8;">Packages</div>
+        <div style="flex:1;text-align:center;padding:6px 4px;font-size:8px;color:#94a3b8;">Offers</div>
+      </div>
+      <div style="padding:8px;display:grid;grid-template-columns:1fr 1fr;gap:5px;">
+        <div style="border:2px solid #4f46e5;border-radius:8px;padding:6px;text-align:center;background:#eef2ff;">
+          <div style="font-size:14px;margin-bottom:2px;">🚗</div>
+          <div style="font-size:7px;font-weight:700;color:#4f46e5;">Automobile Washing</div>
+        </div>
+        <div style="border:1px solid #e2e8f0;border-radius:8px;padding:6px;text-align:center;">
+          <div style="font-size:14px;margin-bottom:2px;">⚡</div>
+          <div style="font-size:7px;font-weight:600;color:#374151;">Electrician</div>
+        </div>
+        <div style="border:1px solid #e2e8f0;border-radius:8px;padding:6px;text-align:center;">
+          <div style="font-size:14px;margin-bottom:2px;">🔧</div>
+          <div style="font-size:7px;font-weight:600;color:#374151;">Plumber</div>
+        </div>
+        <div style="border:1px solid #e2e8f0;border-radius:8px;padding:6px;text-align:center;">
+          <div style="font-size:14px;margin-bottom:2px;">🏀</div>
+          <div style="font-size:7px;font-weight:600;color:#374151;">Basketball</div>
+        </div>
+      </div>
+      <div class="pnav">
+        <span class="on">🏠 Home</span><span>📋 Book</span><span>👤 Me</span>
+      </div>
+    </div>
+    <div class="tip" style="width:190px;"><p style="font-size:11px;font-weight:700;color:#15803d;margin:0;">💡 User sees your categories here</p></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SECTION B – CATEGORIES PAGE
+═══════════════════════════════════════════════════════════ -->
+<div class="sec-hdr pgbrk">
+  <div class="sec-num" style="background:#10b981;">B</div>
+  <div>
+    <div style="font-size:24px;font-weight:900;color:#0f172a;">Categories Page</div>
+    <div style="font-size:16px;color:#64748b;">Select global categories your company offers</div>
+  </div>
+</div>
+
+<div class="pair">
+  <div class="pair-left">
+    <div class="col-lbl" style="color:#10b981;">🖥️ Dashboard – Categories</div>
+    <div class="step-tag" style="background:#f0fdf4;color:#15803d;">Step 1 – Select categories</div>
+    <p style="font-size:16px;color:#475569;line-height:1.8;margin-bottom:18px;">Go to <strong>Categories</strong> in sidebar. Click <strong>Add Global Category</strong>. A modal shows all platform categories. Select the ones your company offers (e.g., Automobile Washing, Electrician).</p>
+    <div class="ds">
+      <div class="ds-chrome">
+        <div class="d" style="background:#ef4444;"></div>
+        <div class="d" style="background:#f59e0b;"></div>
+        <div class="d" style="background:#22c55e;"></div>
+        <span class="url">dashboard/categories</span>
+      </div>
+      <div class="ds-body">
+        <div class="ds-sb">
+          <div class="ds-sb-hdr">
+            <div class="ds-sb-logo">🥷</div>
+            <div class="ds-sb-name">Ninja Car Wash</div>
+          </div>
+          <div class="ds-nav">
+            <div class="ds-nav-item">Overview</div>
+            <div class="ds-nav-item on">Categories</div>
+            <div class="ds-nav-item">Services</div>
+            <div class="ds-nav-item">Bookings</div>
+            <div class="ds-nav-item">Calendar / Slots</div>
+            <div class="ds-nav-item">Technicians</div>
+          </div>
+        </div>
+        <div class="ds-main">
+          <div class="ds-page-hdr">
+            <div class="ds-page-title">Categories</div>
+            <div class="ds-page-sub">Select categories your company offers</div>
+          </div>
+          <span class="btn-primary">+ Add Global Category</span>
+          <div class="modal-overlay">
+            <div class="modal-box">
+              <div class="modal-title">Select Global Categories</div>
+              <div class="cat-grid">
+                <div class="cat-item selected">🚗 Automobile Washing</div>
+                <div class="cat-item">⚡ Electrician</div>
+                <div class="cat-item">🔧 Plumber</div>
+                <div class="cat-item">🏀 Basketball</div>
+                <div class="cat-item">🍕 Food Delivery</div>
+                <div class="cat-item">🏠 Home Cleaning</div>
+              </div>
+              <div style="margin-top:8px;display:flex;gap:4px;">
+                <span class="btn-primary">Save Selection</span>
+                <span class="btn-outline">Cancel</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="note"><p style="font-size:15px;color:#10b981;margin:0;line-height:1.7;"><strong>Important:</strong> Select only categories you actually provide. Users will see these on the app home screen.</p></div>
+  </div>
+  <div class="pair-right">
+    <div class="col-lbl" style="color:#15803d;">📱 User App – Categories</div>
+    <p style="font-size:12px;color:#64748b;text-align:center;margin-bottom:10px;">User sees selected categories on home</p>
+    <div class="phone">
+      <div class="pbar"><span>9:41</span><span>●●●</span></div>
+      <div style="background:#f97316;padding:10px;color:#fff;">
+        <div style="font-size:9px;font-weight:700;margin-bottom:4px;">📍 Hyderabad, India</div>
+      </div>
+      <div style="padding:10px;">
+        <div style="font-size:10px;font-weight:800;color:#0f172a;margin-bottom:8px;">Browse Services</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+          <div style="border:2px solid #4f46e5;border-radius:10px;padding:10px;text-align:center;background:#eef2ff;">
+            <div style="font-size:20px;margin-bottom:4px;">🚗</div>
+            <div style="font-size:8px;font-weight:700;color:#4f46e5;">Automobile Washing</div>
+            <div style="font-size:7px;color:#64748b;margin-top:2px;">12 companies</div>
+          </div>
+          <div style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;text-align:center;">
+            <div style="font-size:20px;margin-bottom:4px;">⚡</div>
+            <div style="font-size:8px;font-weight:700;color:#374151;">Electrician</div>
+            <div style="font-size:7px;color:#64748b;margin-top:2px;">8 companies</div>
+          </div>
+        </div>
+      </div>
+      <div class="pnav">
+        <span class="on">🏠 Home</span><span>📋 Book</span><span>👤 Me</span>
+      </div>
+    </div>
+    <div class="tip" style="width:190px;"><p style="font-size:9px;font-weight:700;color:#15803d;">✅ Only selected categories appear</p></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SECTION C – SERVICES PAGE
+═══════════════════════════════════════════════════════════ -->
+<div class="sec-hdr">
+  <div class="sec-num" style="background:#f59e0b;">C</div>
+  <div>
+    <div style="font-size:24px;font-weight:900;color:#0f172a;">Services Page</div>
+    <div style="font-size:16px;color:#64748b;">Add services with name, price, and description</div>
+  </div>
+</div>
+
+<div class="pair">
+  <div class="pair-left">
+    <div class="col-lbl" style="color:#f59e0b;">🖥️ Dashboard – Services</div>
+    <div class="step-tag" style="background:#fffbeb;color:#92400e;">Step 2 – Add services</div>
+    <p style="font-size:16px;color:#475569;line-height:1.8;margin-bottom:18px;">Go to <strong>Services</strong> page. Click <strong>Add Service</strong>. Fill in service name, price, and description. Services appear under your selected categories.</p>
+    <div class="ds">
+      <div class="ds-chrome">
+        <div class="d" style="background:#ef4444;"></div>
+        <div class="d" style="background:#f59e0b;"></div>
+        <div class="d" style="background:#22c55e;"></div>
+        <span class="url">dashboard/services</span>
+      </div>
+      <div class="ds-body">
+        <div class="ds-sb">
+          <div class="ds-sb-hdr">
+            <div class="ds-sb-logo">🥷</div>
+            <div class="ds-sb-name">Ninja Car Wash</div>
+          </div>
+          <div class="ds-nav">
+            <div class="ds-nav-item">Overview</div>
+            <div class="ds-nav-item">Categories</div>
+            <div class="ds-nav-item on">Services</div>
+            <div class="ds-nav-item">Bookings</div>
+            <div class="ds-nav-item">Calendar / Slots</div>
+            <div class="ds-nav-item">Technicians</div>
+          </div>
+        </div>
+        <div class="ds-main">
+          <div class="ds-page-hdr">
+            <div class="ds-page-title">Services</div>
+            <div class="ds-page-sub">Manage your service offerings</div>
+          </div>
+          <span class="btn-primary">+ Add Service</span>
+          <div style="background:#fff;border-radius:8px;border:1px solid #e2e8f0;padding:8px;margin-top:6px;">
+            <div style="font-size:9px;font-weight:700;color:#0f172a;margin-bottom:6px;">Add New Service</div>
+            <div class="form-row">
+              <div class="form-lbl">Service Name</div>
+              <input class="form-inp" value="Car Exterior Wash" readonly/>
+            </div>
+            <div class="form-row">
+              <div class="form-lbl">Price (₹)</div>
+              <input class="form-inp" value="200" readonly/>
+            </div>
+            <div class="form-row">
+              <div class="form-lbl">Description</div>
+              <input class="form-inp" value="Complete exterior wash with foam" readonly/>
+            </div>
+            <div class="form-row">
+              <div class="form-lbl">Category</div>
+              <input class="form-inp" value="Automobile Washing" readonly/>
+            </div>
+            <span class="btn-success">Save Service</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="warn"><p style="font-size:15px;color:#92400e;margin:0;line-height:1.7;"><strong>Tip:</strong> Add clear descriptions. Users see this when selecting services.</p></div>
+  </div>
+  <div class="pair-right">
+    <div class="col-lbl" style="color:#15803d;">📱 User App – Select Service</div>
+    <p style="font-size:12px;color:#64748b;text-align:center;margin-bottom:10px;">User selects service from your company</p>
+    <div class="phone">
+      <div class="pbar"><span>9:41</span><span>●●●</span></div>
+      <div class="ptop">
+        <span style="font-size:13px;color:#0f172a;">←</span>
+        <span class="ptitle">Select Service</span>
+        <span></span>
+      </div>
+      <div style="padding:8px;">
+        <div style="background:#fff;border:2px solid #4f46e5;border-radius:10px;padding:8px;margin-bottom:6px;">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+            <div style="font-size:16px;">🚗</div>
+            <div style="flex:1;">
+              <div style="font-size:9px;font-weight:700;color:#0f172a;">Car Exterior Wash</div>
+              <div style="font-size:7px;color:#64748b;">Complete exterior wash with foam</div>
+            </div>
+            <div style="font-size:10px;font-weight:800;color:#059669;">₹200</div>
+          </div>
+          <div style="background:#eef2ff;border-radius:6px;padding:4px 6px;font-size:7px;color:#4f46e5;font-weight:600;">✓ Selected</div>
+        </div>
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:8px;margin-bottom:6px;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <div style="font-size:16px;">🚗</div>
+            <div style="flex:1;">
+              <div style="font-size:9px;font-weight:700;color:#0f172a;">Full Car Detailing</div>
+              <div style="font-size:7px;color:#64748b;">Interior + Exterior deep clean</div>
+            </div>
+            <div style="font-size:10px;font-weight:800;color:#059669;">₹500</div>
+          </div>
+        </div>
+      </div>
+      <div class="pnav">
+        <span>🏠 Home</span><span class="on">📋 Book</span><span>👤 Me</span>
+      </div>
+    </div>
+    <div class="tip" style="width:190px;"><p style="font-size:9px;font-weight:700;color:#15803d;">✅ Your services appear here</p></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SECTION D – BOOKINGS PAGE
+═══════════════════════════════════════════════════════════ -->
+<div class="sec-hdr pgbrk">
+  <div class="sec-num" style="background:#ef4444;">D</div>
+  <div>
+    <div style="font-size:18px;font-weight:900;color:#0f172a;">Bookings Page</div>
+    <div style="font-size:12px;color:#64748b;">Manage bookings: assign workers, mark started, verify OTP, complete</div>
+  </div>
+</div>
+
+<!-- D1: Pending Booking -->
+<div class="pair">
+  <div class="pair-left">
+    <div class="col-lbl" style="color:#ef4444;">🖥️ Dashboard – Pending Booking</div>
+    <div class="step-tag" style="background:#fee2e2;color:#991b1b;">Step 3.1 – Assign worker</div>
+    <p style="font-size:13px;color:#475569;line-height:1.7;margin-bottom:14px;">When a booking arrives, it shows as <strong>Pending</strong>. Click <strong>Assign Worker</strong>, select a technician from the list, and confirm assignment.</p>
+    <div class="ds">
+      <div class="ds-chrome">
+        <div class="d" style="background:#ef4444;"></div>
+        <div class="d" style="background:#f59e0b;"></div>
+        <div class="d" style="background:#22c55e;"></div>
+        <span class="url">dashboard/bookings</span>
+      </div>
+      <div class="ds-body">
+        <div class="ds-sb">
+          <div class="ds-sb-hdr">
+            <div class="ds-sb-logo">🥷</div>
+            <div class="ds-sb-name">Ninja Car Wash</div>
+          </div>
+          <div class="ds-nav">
+            <div class="ds-nav-item">Overview</div>
+            <div class="ds-nav-item">Categories</div>
+            <div class="ds-nav-item">Services</div>
+            <div class="ds-nav-item on">Bookings <span class="badge">3</span></div>
+            <div class="ds-nav-item">Calendar / Slots</div>
+            <div class="ds-nav-item">Technicians</div>
+          </div>
+        </div>
+        <div class="ds-main">
+          <div class="ds-page-hdr">
+            <div class="ds-page-title">Bookings</div>
+            <div class="ds-page-sub">Manage all service bookings</div>
+          </div>
+          <div class="filter-tabs">
+            <div class="ftab on">All</div>
+            <div class="ftab">Pending</div>
+            <div class="ftab">Assigned</div>
+            <div class="ftab">Started</div>
+            <div class="ftab">Completed</div>
+          </div>
+          <div class="bk-card">
+            <div class="bk-accent" style="background:#fef3c7;"></div>
+            <div class="bk-body">
+              <div class="bk-row">
+                <span class="bk-name">Rahul Sharma</span>
+                <span class="sp sp-pending">Pending</span>
+                <span class="bk-price">₹200</span>
+              </div>
+              <div class="bk-sub">Car Exterior Wash • 📅 June 15 • 🕐 10:00 AM</div>
+              <div class="bk-sub">📞 9876543210 • 📍 Hyderabad</div>
+              <div style="margin-top:6px;display:flex;gap:4px;">
+                <span class="btn-primary">Assign Worker</span>
+                <span class="btn-danger">Reject</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="note"><p style="font-size:12px;color:#ef4444;margin:0;"><strong>Action:</strong> Assign a worker to move booking from Pending → Assigned status.</p></div>
+  </div>
+  <div class="pair-right">
+    <div class="col-lbl" style="color:#15803d;">📱 User App – Booking Placed</div>
+    <p style="font-size:12px;color:#64748b;text-align:center;margin-bottom:10px;">User sees booking confirmation</p>
+    <div class="phone">
+      <div class="pbar"><span>9:41</span><span>●●●</span></div>
+      <div class="ptop">
+        <span style="font-size:13px;color:#0f172a;">←</span>
+        <span class="ptitle">Booking Details</span>
+        <span></span>
+      </div>
+      <div style="padding:10px;">
+        <div style="background:#fef3c7;border:1px solid #fbbf24;border-radius:10px;padding:8px;margin-bottom:8px;text-align:center;">
+          <div style="font-size:16px;margin-bottom:3px;">⏳</div>
+          <div style="font-size:9px;font-weight:700;color:#92400e;">Booking Pending</div>
+          <div style="font-size:7px;color:#92400e;margin-top:2px;">Waiting for company to assign worker</div>
+        </div>
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:8px;">
+          <div style="font-size:8px;font-weight:700;color:#0f172a;margin-bottom:4px;">Service Details</div>
+          <div style="font-size:8px;color:#64748b;margin-bottom:2px;">🚗 Car Exterior Wash</div>
+          <div style="font-size:8px;color:#64748b;margin-bottom:2px;">📅 June 15, 2024 • 🕐 10:00 AM</div>
+          <div style="font-size:8px;color:#64748b;margin-bottom:2px;">📍 Hyderabad, India</div>
+          <div style="font-size:9px;font-weight:800;color:#059669;margin-top:4px;">₹200</div>
+        </div>
+      </div>
+      <div class="pnav">
+        <span>🏠 Home</span><span class="on">📋 Book</span><span>👤 Me</span>
+      </div>
+    </div>
+    <div class="tip" style="width:190px;"><p style="font-size:9px;font-weight:700;color:#15803d;">⏳ User waits for assignment</p></div>
+  </div>
+</div>
+
+<!-- D2: Assigned Booking -->
+<div class="pair">
+  <div class="pair-left">
+    <div class="col-lbl" style="color:#ef4444;">🖥️ Dashboard – Assigned Booking</div>
+    <div class="step-tag" style="background:#ede9fe;color:#5b21b6;">Step 3.2 – Mark as started</div>
+    <p style="font-size:13px;color:#475569;line-height:1.7;margin-bottom:14px;">After assigning a worker, booking status changes to <strong>Assigned</strong>. When the worker arrives and is ready to start, click <strong>Mark as Started</strong>. System generates a 6-digit OTP.</p>
+    <div class="ds">
+      <div class="ds-chrome">
+        <div class="d" style="background:#ef4444;"></div>
+        <div class="d" style="background:#f59e0b;"></div>
+        <div class="d" style="background:#22c55e;"></div>
+        <span class="url">dashboard/bookings</span>
+      </div>
+      <div class="ds-body">
+        <div class="ds-sb">
+          <div class="ds-sb-hdr">
+            <div class="ds-sb-logo">🥷</div>
+            <div class="ds-sb-name">Ninja Car Wash</div>
+          </div>
+          <div class="ds-nav">
+            <div class="ds-nav-item">Overview</div>
+            <div class="ds-nav-item">Categories</div>
+            <div class="ds-nav-item">Services</div>
+            <div class="ds-nav-item on">Bookings <span class="badge">3</span></div>
+            <div class="ds-nav-item">Calendar / Slots</div>
+            <div class="ds-nav-item">Technicians</div>
+          </div>
+        </div>
+        <div class="ds-main">
+          <div class="ds-page-hdr">
+            <div class="ds-page-title">Bookings</div>
+          </div>
+          <div class="bk-card">
+            <div class="bk-accent" style="background:#ede9fe;"></div>
+            <div class="bk-body">
+              <div class="bk-row">
+                <span class="bk-name">Rahul Sharma</span>
+                <span class="sp sp-assigned">Assigned</span>
+                <span class="bk-price">₹200</span>
+              </div>
+              <div class="bk-sub">Car Exterior Wash • June 15 • 10:00 AM</div>
+              <div class="bk-sub">👷 Worker: Ravi Kumar • 9988776655</div>
+              <div style="margin-top:6px;display:flex;gap:4px;">
+                <span class="btn-success">Mark as Started</span>
+                <span class="btn-outline">View Details</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="note"><p style="font-size:12px;color:#5b21b6;margin:0;"><strong>Action:</strong> Mark as Started generates OTP. Worker must get this OTP from customer to verify arrival.</p></div>
+  </div>
+  <div class="pair-right">
+    <div class="col-lbl" style="color:#15803d;">📱 User App – Worker Assigned</div>
+    <p style="font-size:12px;color:#64748b;text-align:center;margin-bottom:10px;">User sees worker details</p>
+    <div class="phone">
+      <div class="pbar"><span>9:41</span><span>●●●</span></div>
+      <div class="ptop">
+        <span style="font-size:13px;color:#0f172a;">←</span>
+        <span class="ptitle">Track Booking</span>
+        <span></span>
+      </div>
+      <div style="padding:10px;">
+        <div style="background:#ede9fe;border:1px solid #a78bfa;border-radius:10px;padding:8px;margin-bottom:8px;text-align:center;">
+          <div style="font-size:16px;margin-bottom:3px;">👷</div>
+          <div style="font-size:9px;font-weight:700;color:#5b21b6;">Worker Assigned</div>
+          <div style="font-size:7px;color:#5b21b6;margin-top:2px;">Ravi Kumar is on the way</div>
+        </div>
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:8px;margin-bottom:8px;">
+          <div style="font-size:8px;font-weight:700;color:#0f172a;margin-bottom:4px;">Worker Details</div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#4f46e5,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;font-weight:700;">R</div>
+            <div style="flex:1;">
+              <div style="font-size:9px;font-weight:700;color:#0f172a;">Ravi Kumar</div>
+              <div style="font-size:7px;color:#64748b;">📞 9988776655</div>
+            </div>
+          </div>
+        </div>
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:8px;">
+          <div style="font-size:8px;font-weight:700;color:#0f172a;margin-bottom:4px;">Booking Status</div>
+          <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px;">
+            <div style="width:8px;height:8px;border-radius:50%;background:#10b981;"></div>
+            <div style="font-size:7px;color:#64748b;">Booked</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px;">
+            <div style="width:8px;height:8px;border-radius:50%;background:#10b981;"></div>
+            <div style="font-size:7px;color:#64748b;">Worker Assigned</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px;">
+            <div style="width:8px;height:8px;border-radius:50%;background:#e2e8f0;"></div>
+            <div style="font-size:7px;color:#94a3b8;">In Progress</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:4px;">
+            <div style="width:8px;height:8px;border-radius:50%;background:#e2e8f0;"></div>
+            <div style="font-size:7px;color:#94a3b8;">Completed</div>
+          </div>
+        </div>
+      </div>
+      <div class="pnav">
+        <span>🏠 Home</span><span class="on">📋 Book</span><span>👤 Me</span>
+      </div>
+    </div>
+    <div class="tip" style="width:190px;"><p style="font-size:9px;font-weight:700;color:#15803d;">✅ User sees worker info</p></div>
+  </div>
+</div>
+
+<!-- D3: Started Booking with OTP -->
+<div class="pair">
+  <div class="pair-left">
+    <div class="col-lbl" style="color:#ef4444;">🖥️ Dashboard – Started (OTP Entry)</div>
+    <div class="step-tag" style="background:#dbeafe;color:#1e40af;">Step 3.3 – Verify OTP</div>
+    <p style="font-size:13px;color:#475569;line-height:1.7;margin-bottom:14px;">After marking as started, booking shows <strong>Started</strong> status with OTP display. Worker gets OTP from customer and enters it to verify. Once verified, work begins.</p>
+    <div class="ds">
+      <div class="ds-chrome">
+        <div class="d" style="background:#ef4444;"></div>
+        <div class="d" style="background:#f59e0b;"></div>
+        <div class="d" style="background:#22c55e;"></div>
+        <span class="url">dashboard/bookings</span>
+      </div>
+      <div class="ds-body">
+        <div class="ds-sb">
+          <div class="ds-sb-hdr">
+            <div class="ds-sb-logo">🥷</div>
+            <div class="ds-sb-name">Ninja Car Wash</div>
+          </div>
+          <div class="ds-nav">
+            <div class="ds-nav-item">Overview</div>
+            <div class="ds-nav-item">Categories</div>
+            <div class="ds-nav-item">Services</div>
+            <div class="ds-nav-item on">Bookings <span class="badge">3</span></div>
+            <div class="ds-nav-item">Calendar / Slots</div>
+            <div class="ds-nav-item">Technicians</div>
+          </div>
+        </div>
+        <div class="ds-main">
+          <div class="ds-page-hdr">
+            <div class="ds-page-title">Bookings</div>
+          </div>
+          <div class="bk-card">
+            <div class="bk-accent" style="background:#dbeafe;"></div>
+            <div class="bk-body">
+              <div class="bk-row">
+                <span class="bk-name">Rahul Sharma</span>
+                <span class="sp sp-started">Started</span>
+                <span class="bk-price">₹200</span>
+              </div>
+              <div class="bk-sub">Car Exterior Wash • June 15 • 10:00 AM</div>
+              <div class="bk-sub">👷 Worker: Ravi Kumar</div>
+              <div style="background:#dbeafe;border-radius:6px;padding:6px;margin-top:6px;">
+                <div style="font-size:7px;color:#1e40af;margin-bottom:2px;">Customer OTP:</div>
+                <div style="font-size:14px;font-weight:900;color:#1e40af;letter-spacing:2px;">456789</div>
+              </div>
+              <div style="margin-top:6px;">
+                <div class="form-lbl">Enter OTP to verify</div>
+                <input class="form-inp" placeholder="Enter 6-digit OTP" style="margin-bottom:4px;"/>
+                <span class="btn-success">Verify & Start Work</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="note"><p style="font-size:12px;color:#1e40af;margin:0;"><strong>OTP Verification:</strong> Worker asks customer for OTP, enters it to confirm arrival and start work.</p></div>
+  </div>
+  <div class="pair-right">
+    <div class="col-lbl" style="color:#15803d;">📱 User App – OTP Display</div>
+    <p style="font-size:12px;color:#64748b;text-align:center;margin-bottom:10px;">User shows OTP to worker</p>
+    <div class="phone">
+      <div class="pbar"><span>9:41</span><span>●●●</span></div>
+      <div class="ptop">
+        <span style="font-size:13px;color:#0f172a;">←</span>
+        <span class="ptitle">Track Booking</span>
+        <span></span>
+      </div>
+      <div style="padding:10px;">
+        <div style="background:#dbeafe;border:2px solid #3b82f6;border-radius:10px;padding:12px;margin-bottom:8px;text-align:center;">
+          <div style="font-size:16px;margin-bottom:4px;">🔐</div>
+          <div style="font-size:9px;font-weight:700;color:#1e40af;margin-bottom:6px;">Show this OTP to Worker</div>
+          <div style="background:#fff;border-radius:8px;padding:8px;margin-bottom:4px;">
+            <div style="font-size:20px;font-weight:900;color:#1e40af;letter-spacing:3px;">456789</div>
+          </div>
+          <div style="font-size:7px;color:#1e40af;">Worker will verify this to start work</div>
+        </div>
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:8px;">
+          <div style="font-size:8px;font-weight:700;color:#0f172a;margin-bottom:4px;">Current Status</div>
+          <div style="display:flex;align-items:center;gap:4px;">
+            <div style="width:10px;height:10px;border-radius:50%;background:#3b82f6;animation:pulse 2s infinite;"></div>
+            <div style="font-size:8px;font-weight:700;color:#1e40af;">Worker has started</div>
+          </div>
+          <div style="font-size:7px;color:#64748b;margin-top:2px;">Waiting for OTP verification...</div>
+        </div>
+      </div>
+      <div class="pnav">
+        <span>🏠 Home</span><span class="on">📋 Book</span><span>👤 Me</span>
+      </div>
+    </div>
+    <div class="tip" style="width:190px;"><p style="font-size:9px;font-weight:700;color:#15803d;">🔐 User shares OTP with worker</p></div>
+  </div>
+</div>
+
+<!-- D4: Completed Booking -->
+<div class="pair">
+  <div class="pair-left">
+    <div class="col-lbl" style="color:#ef4444;">🖥️ Dashboard – Mark Complete</div>
+    <div class="step-tag" style="background:#d1fae5;color:#065f46;">Step 3.4 – Complete booking</div>
+    <p style="font-size:13px;color:#475569;line-height:1.7;margin-bottom:14px;">After work is done, click <strong>Mark as Completed</strong>. Booking moves to Completed status. Payment is recorded and user can leave feedback.</p>
+    <div class="ds">
+      <div class="ds-chrome">
+        <div class="d" style="background:#ef4444;"></div>
+        <div class="d" style="background:#f59e0b;"></div>
+        <div class="d" style="background:#22c55e;"></div>
+        <span class="url">dashboard/bookings</span>
+      </div>
+      <div class="ds-body">
+        <div class="ds-sb">
+          <div class="ds-sb-hdr">
+            <div class="ds-sb-logo">🥷</div>
+            <div class="ds-sb-name">Ninja Car Wash</div>
+          </div>
+          <div class="ds-nav">
+            <div class="ds-nav-item">Overview</div>
+            <div class="ds-nav-item">Categories</div>
+            <div class="ds-nav-item">Services</div>
+            <div class="ds-nav-item on">Bookings <span class="badge">3</span></div>
+            <div class="ds-nav-item">Calendar / Slots</div>
+            <div class="ds-nav-item">Technicians</div>
+          </div>
+        </div>
+        <div class="ds-main">
+          <div class="ds-page-hdr">
+            <div class="ds-page-title">Bookings</div>
+          </div>
+          <div class="bk-card">
+            <div class="bk-accent" style="background:#d1fae5;"></div>
+            <div class="bk-body">
+              <div class="bk-row">
+                <span class="bk-name">Rahul Sharma</span>
+                <span class="sp sp-completed">Completed</span>
+                <span class="bk-price">₹200</span>
+              </div>
+              <div class="bk-sub">Car Exterior Wash • June 15 • 10:00 AM</div>
+              <div class="bk-sub">👷 Worker: Ravi Kumar • ✅ OTP Verified</div>
+              <div style="background:#d1fae5;border-radius:6px;padding:6px;margin-top:6px;text-align:center;">
+                <div style="font-size:8px;font-weight:700;color:#065f46;">✓ Service Completed Successfully</div>
+                <div style="font-size:7px;color:#065f46;margin-top:2px;">Payment received • Feedback pending</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="tip"><p style="font-size:12px;color:#065f46;margin:0;"><strong>Done!</strong> Booking is complete. Revenue is added to your dashboard stats.</p></div>
+  </div>
+  <div class="pair-right">
+    <div class="col-lbl" style="color:#15803d;">📱 User App – Completed</div>
+    <p style="font-size:12px;color:#64748b;text-align:center;margin-bottom:10px;">User sees completion and can rate</p>
+    <div class="phone">
+      <div class="pbar"><span>9:41</span><span>●●●</span></div>
+      <div class="ptop">
+        <span style="font-size:13px;color:#0f172a;">←</span>
+        <span class="ptitle">Booking Complete</span>
+        <span></span>
+      </div>
+      <div style="padding:10px;">
+        <div style="background:#d1fae5;border:2px solid #10b981;border-radius:10px;padding:12px;margin-bottom:8px;text-align:center;">
+          <div style="font-size:24px;margin-bottom:4px;">✅</div>
+          <div style="font-size:10px;font-weight:800;color:#065f46;margin-bottom:2px;">Service Completed!</div>
+          <div style="font-size:7px;color:#065f46;">Thank you for using Ninja Services</div>
+        </div>
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:8px;margin-bottom:8px;">
+          <div style="font-size:8px;font-weight:700;color:#0f172a;margin-bottom:4px;">Rate Your Experience</div>
+          <div style="display:flex;gap:4px;justify-content:center;margin-bottom:4px;">
+            <span style="font-size:16px;color:#fbbf24;">⭐</span>
+            <span style="font-size:16px;color:#fbbf24;">⭐</span>
+            <span style="font-size:16px;color:#fbbf24;">⭐</span>
+            <span style="font-size:16px;color:#fbbf24;">⭐</span>
+            <span style="font-size:16px;color:#fbbf24;">⭐</span>
+          </div>
+          <input style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:5px 8px;font-size:8px;width:100%;margin-bottom:4px;" placeholder="Write your feedback..."/>
+          <div style="background:#4f46e5;color:#fff;text-align:center;padding:6px;border-radius:6px;font-size:8px;font-weight:700;">Submit Feedback</div>
+        </div>
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:8px;">
+          <div style="font-size:8px;font-weight:700;color:#0f172a;margin-bottom:4px;">Payment Summary</div>
+          <div style="display:flex;justify-content:space-between;font-size:8px;color:#64748b;margin-bottom:2px;">
+            <span>Service Charge</span>
+            <span>₹200</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:9px;font-weight:800;color:#059669;padding-top:4px;border-top:1px solid #f1f5f9;">
+            <span>Total Paid</span>
+            <span>₹200</span>
+          </div>
+        </div>
+      </div>
+      <div class="pnav">
+        <span>🏠 Home</span><span class="on">📋 Book</span><span>👤 Me</span>
+      </div>
+    </div>
+    <div class="tip" style="width:190px;"><p style="font-size:9px;font-weight:700;color:#15803d;">✅ User can rate and review</p></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SECTION E – CALENDAR / SLOTS PAGE
+═══════════════════════════════════════════════════════════ -->
+<div class="sec-hdr pgbrk">
+  <div class="sec-num" style="background:#8b5cf6;">E</div>
+  <div>
+    <div style="font-size:18px;font-weight:900;color:#0f172a;">Calendar / Slots Page</div>
+    <div style="font-size:12px;color:#64748b;">Manage availability and booking slots</div>
+  </div>
+</div>
+
+<div class="pair">
+  <div class="pair-left">
+    <div class="col-lbl" style="color:#8b5cf6;">🖥️ Dashboard – Calendar / Slots</div>
+    <div class="step-tag" style="background:#f3e8ff;color:#6b21a8;">Step 4 – Set availability</div>
+    <p style="font-size:13px;color:#475569;line-height:1.7;margin-bottom:14px;">Go to <strong>Calendar / Slots</strong> to manage your availability. Set working hours, block dates, and view upcoming bookings on calendar. Users can only book during available slots.</p>
+    <div class="ds">
+      <div class="ds-chrome">
+        <div class="d" style="background:#ef4444;"></div>
+        <div class="d" style="background:#f59e0b;"></div>
+        <div class="d" style="background:#22c55e;"></div>
+        <span class="url">dashboard/slots</span>
+      </div>
+      <div class="ds-body">
+        <div class="ds-sb">
+          <div class="ds-sb-hdr">
+            <div class="ds-sb-logo">🥷</div>
+            <div class="ds-sb-name">Ninja Car Wash</div>
+          </div>
+          <div class="ds-nav">
+            <div class="ds-nav-item">Overview</div>
+            <div class="ds-nav-item">Categories</div>
+            <div class="ds-nav-item">Services</div>
+            <div class="ds-nav-item">Bookings</div>
+            <div class="ds-nav-item on">Calendar / Slots</div>
+            <div class="ds-nav-item">Technicians</div>
+          </div>
+        </div>
+        <div class="ds-main">
+          <div class="ds-page-hdr">
+            <div class="ds-page-title">Calendar & Availability</div>
+            <div class="ds-page-sub">Manage your booking slots</div>
+          </div>
+          <div style="background:#fff;border-radius:8px;border:1px solid #e2e8f0;padding:8px;margin-bottom:6px;">
+            <div style="font-size:9px;font-weight:700;color:#0f172a;margin-bottom:4px;">June 2024</div>
+            <div class="cal-grid">
+              <div class="cal-day hdr">S</div>
+              <div class="cal-day hdr">M</div>
+              <div class="cal-day hdr">T</div>
+              <div class="cal-day hdr">W</div>
+              <div class="cal-day hdr">T</div>
+              <div class="cal-day hdr">F</div>
+              <div class="cal-day hdr">S</div>
+              <div class="cal-day">1</div>
+              <div class="cal-day">2</div>
+              <div class="cal-day">3</div>
+              <div class="cal-day">4</div>
+              <div class="cal-day">5</div>
+              <div class="cal-day">6</div>
+              <div class="cal-day">7</div>
+              <div class="cal-day">8</div>
+              <div class="cal-day">9</div>
+              <div class="cal-day">10</div>
+              <div class="cal-day">11</div>
+              <div class="cal-day">12</div>
+              <div class="cal-day">13</div>
+              <div class="cal-day">14</div>
+              <div class="cal-day today">15</div>
+              <div class="cal-day booked">16</div>
+              <div class="cal-day booked">17</div>
+              <div class="cal-day">18</div>
+              <div class="cal-day">19</div>
+              <div class="cal-day">20</div>
+              <div class="cal-day">21</div>
+            </div>
+          </div>
+          <div style="background:#fff;border-radius:8px;border:1px solid #e2e8f0;padding:8px;">
+            <div style="font-size:9px;font-weight:700;color:#0f172a;margin-bottom:4px;">Availability Settings</div>
+            <div class="form-row">
+              <div class="form-lbl">Working Hours</div>
+              <div style="display:flex;gap:4px;">
+                <input class="form-inp" value="09:00 AM" readonly style="flex:1;"/>
+                <span style="font-size:9px;color:#64748b;padding:5px;">to</span>
+                <input class="form-inp" value="06:00 PM" readonly style="flex:1;"/>
+              </div>
+            </div>
+            <div style="display:flex;gap:4px;margin-top:4px;">
+              <span class="btn-primary">Save Changes</span>
+              <span class="btn-outline">Block Date</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="note"><p style="font-size:12px;color:#8b5cf6;margin:0;"><strong>Availability:</strong> Set your working hours and block dates when you're not available. Users can only book during open slots.</p></div>
+  </div>
+  <div class="pair-right">
+    <div class="col-lbl" style="color:#15803d;">📱 User App – Select Date & Time</div>
+    <p style="font-size:12px;color:#64748b;text-align:center;margin-bottom:10px;">User picks available slot</p>
+    <div class="phone">
+      <div class="pbar"><span>9:41</span><span>●●●</span></div>
+      <div class="ptop">
+        <span style="font-size:13px;color:#0f172a;">←</span>
+        <span class="ptitle">Select Date & Time</span>
+        <span></span>
+      </div>
+      <div style="padding:10px;">
+        <div style="font-size:9px;font-weight:700;color:#0f172a;margin-bottom:6px;">Select Date</div>
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:6px;margin-bottom:8px;">
+          <div style="display:flex;gap:3px;overflow-x:auto;">
+            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:6px 8px;text-align:center;min-width:50px;">
+              <div style="font-size:7px;color:#94a3b8;">Mon</div>
+              <div style="font-size:10px;font-weight:700;color:#64748b;">14</div>
+            </div>
+            <div style="background:#4f46e5;border:1px solid #4f46e5;border-radius:6px;padding:6px 8px;text-align:center;min-width:50px;">
+              <div style="font-size:7px;color:#c7d2fe;">Tue</div>
+              <div style="font-size:10px;font-weight:700;color:#fff;">15</div>
+            </div>
+            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:6px 8px;text-align:center;min-width:50px;">
+              <div style="font-size:7px;color:#94a3b8;">Wed</div>
+              <div style="font-size:10px;font-weight:700;color:#64748b;">16</div>
+            </div>
+            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:6px 8px;text-align:center;min-width:50px;">
+              <div style="font-size:7px;color:#94a3b8;">Thu</div>
+              <div style="font-size:10px;font-weight:700;color:#64748b;">17</div>
+            </div>
+          </div>
+        </div>
+        <div style="font-size:9px;font-weight:700;color:#0f172a;margin-bottom:6px;">Select Time Slot</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+          <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:6px;text-align:center;font-size:8px;color:#64748b;">09:00 AM</div>
+          <div style="background:#4f46e5;border:1px solid #4f46e5;border-radius:6px;padding:6px;text-align:center;font-size:8px;color:#fff;font-weight:700;">10:00 AM</div>
+          <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:6px;text-align:center;font-size:8px;color:#64748b;">11:00 AM</div>
+          <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:6px;text-align:center;font-size:8px;color:#64748b;">12:00 PM</div>
+          <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:6px;text-align:center;font-size:8px;color:#64748b;">02:00 PM</div>
+          <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:6px;text-align:center;font-size:8px;color:#64748b;">03:00 PM</div>
+        </div>
+      </div>
+      <div class="pnav">
+        <span>🏠 Home</span><span class="on">📋 Book</span><span>👤 Me</span>
+      </div>
+    </div>
+    <div class="tip" style="width:190px;"><p style="font-size:9px;font-weight:700;color:#15803d;">📅 Only available slots shown</p></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SECTION F – TECHNICIANS PAGE
+═══════════════════════════════════════════════════════════ -->
+<div class="sec-hdr">
+  <div class="sec-num" style="background:#06b6d4;">F</div>
+  <div>
+    <div style="font-size:18px;font-weight:900;color:#0f172a;">Technicians Page</div>
+    <div style="font-size:12px;color:#64748b;">Add and manage your workers/technicians</div>
+  </div>
+</div>
+
+<div class="pair">
+  <div class="pair-left">
+    <div class="col-lbl" style="color:#06b6d4;">🖥️ Dashboard – Technicians</div>
+    <div class="step-tag" style="background:#cffafe;color:#0e7490;">Step 5 – Add workers</div>
+    <p style="font-size:13px;color:#475569;line-height:1.7;margin-bottom:14px;">Go to <strong>Technicians</strong> page. Click <strong>Add Worker</strong>. Enter worker name, phone, and assign services they can handle. Workers appear in assignment dropdown when bookings arrive.</p>
+    <div class="ds">
+      <div class="ds-chrome">
+        <div class="d" style="background:#ef4444;"></div>
+        <div class="d" style="background:#f59e0b;"></div>
+        <div class="d" style="background:#22c55e;"></div>
+        <span class="url">dashboard/technicians</span>
+      </div>
+      <div class="ds-body">
+        <div class="ds-sb">
+          <div class="ds-sb-hdr">
+            <div class="ds-sb-logo">🥷</div>
+            <div class="ds-sb-name">Ninja Car Wash</div>
+          </div>
+          <div class="ds-nav">
+            <div class="ds-nav-item">Overview</div>
+            <div class="ds-nav-item">Categories</div>
+            <div class="ds-nav-item">Services</div>
+            <div class="ds-nav-item">Bookings</div>
+            <div class="ds-nav-item">Calendar / Slots</div>
+            <div class="ds-nav-item on">Technicians</div>
+          </div>
+        </div>
+        <div class="ds-main">
+          <div class="ds-page-hdr">
+            <div class="ds-page-title">Technicians</div>
+            <div class="ds-page-sub">Manage your workers</div>
+          </div>
+          <span class="btn-primary">+ Add Worker</span>
+          <div style="background:#fff;border-radius:8px;border:1px solid #e2e8f0;padding:8px;margin-top:6px;margin-bottom:6px;">
+            <div style="font-size:9px;font-weight:700;color:#0f172a;margin-bottom:6px;">Add New Worker</div>
+            <div class="form-row">
+              <div class="form-lbl">Worker Name</div>
+              <input class="form-inp" value="Ravi Kumar" readonly/>
+            </div>
+            <div class="form-row">
+              <div class="form-lbl">Phone Number</div>
+              <input class="form-inp" value="9988776655" readonly/>
+            </div>
+            <div class="form-row">
+              <div class="form-lbl">Assigned Services</div>
+              <div style="display:flex;gap:3px;flex-wrap:wrap;margin-top:3px;">
+                <span style="background:#eef2ff;color:#4f46e5;font-size:7px;font-weight:700;padding:3px 6px;border-radius:12px;">Car Exterior Wash</span>
+                <span style="background:#eef2ff;color:#4f46e5;font-size:7px;font-weight:700;padding:3px 6px;border-radius:12px;">Full Car Detailing</span>
+              </div>
+            </div>
+            <span class="btn-success">Save Worker</span>
+          </div>
+          <div style="font-size:9px;font-weight:700;color:#0f172a;margin-bottom:4px;">Active Workers</div>
+          <div class="worker-card">
+            <div class="worker-avatar">R</div>
+            <div style="flex:1;">
+              <div style="font-size:9px;font-weight:700;color:#0f172a;">Ravi Kumar</div>
+              <div style="font-size:7px;color:#64748b;">📞 9988776655 • 2 services</div>
+            </div>
+            <span style="background:#d1fae5;color:#065f46;font-size:7px;font-weight:700;padding:2px 6px;border-radius:12px;">Active</span>
+          </div>
+          <div class="worker-card">
+            <div class="worker-avatar">S</div>
+            <div style="flex:1;">
+              <div style="font-size:9px;font-weight:700;color:#0f172a;">Suresh Reddy</div>
+              <div style="font-size:7px;color:#64748b;">📞 9876543210 • 3 services</div>
+            </div>
+            <span style="background:#d1fae5;color:#065f46;font-size:7px;font-weight:700;padding:2px 6px;border-radius:12px;">Active</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="note"><p style="font-size:12px;color:#06b6d4;margin:0;"><strong>Workers:</strong> Add all your technicians. Assign them to specific services so they appear in relevant booking assignments.</p></div>
+  </div>
+  <div class="pair-right">
+    <div class="col-lbl" style="color:#15803d;">📱 User App – Worker Info</div>
+    <p style="font-size:12px;color:#64748b;text-align:center;margin-bottom:10px;">User sees assigned worker details</p>
+    <div class="phone">
+      <div class="pbar"><span>9:41</span><span>●●●</span></div>
+      <div class="ptop">
+        <span style="font-size:13px;color:#0f172a;">←</span>
+        <span class="ptitle">Worker Details</span>
+        <span></span>
+      </div>
+      <div style="padding:10px;">
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px;text-align:center;margin-bottom:8px;">
+          <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#4f46e5,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff;font-weight:700;margin:0 auto 8px;">R</div>
+          <div style="font-size:11px;font-weight:800;color:#0f172a;margin-bottom:2px;">Ravi Kumar</div>
+          <div style="font-size:8px;color:#64748b;margin-bottom:6px;">📞 9988776655</div>
+          <div style="display:flex;gap:4px;justify-content:center;">
+            <span style="background:#eef2ff;color:#4f46e5;font-size:7px;font-weight:700;padding:3px 8px;border-radius:12px;">⭐ 4.8</span>
+            <span style="background:#d1fae5;color:#065f46;font-size:7px;font-weight:700;padding:3px 8px;border-radius:12px;">✓ Verified</span>
+          </div>
+        </div>
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px;">
+          <div style="font-size:9px;font-weight:700;color:#0f172a;margin-bottom:6px;">Specializations</div>
+          <div style="display:flex;gap:3px;flex-wrap:wrap;">
+            <span style="background:#f8fafc;border:1px solid #e2e8f0;color:#374151;font-size:7px;font-weight:600;padding:4px 8px;border-radius:6px;">🚗 Car Wash</span>
+            <span style="background:#f8fafc;border:1px solid #e2e8f0;color:#374151;font-size:7px;font-weight:600;padding:4px 8px;border-radius:6px;">✨ Detailing</span>
+          </div>
+        </div>
+      </div>
+      <div class="pnav">
+        <span>🏠 Home</span><span class="on">📋 Book</span><span>👤 Me</span>
+      </div>
+    </div>
+    <div class="tip" style="width:190px;"><p style="font-size:9px;font-weight:700;color:#15803d;">👷 Worker profile visible to user</p></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SECTION G – USER APP SCREENS
+═══════════════════════════════════════════════════════════ -->
+<div class="sec-hdr pgbrk">
+  <div class="sec-num" style="background:#ec4899;">G</div>
+  <div>
+    <div style="font-size:18px;font-weight:900;color:#0f172a;">User App Screens</div>
+    <div style="font-size:12px;color:#64748b;">Complete user journey from home to booking completion</div>
+  </div>
+</div>
+
+<!-- G1: Home Screen -->
+<div class="pair">
+  <div class="pair-left">
+    <div style="font-size:14px;font-weight:800;color:#ec4899;margin-bottom:8px;">📱 Screen 1: Home</div>
+    <p style="font-size:13px;color:#475569;line-height:1.7;margin-bottom:14px;">User opens the app and sees all available service categories. They can browse Services, Packages, or Offers. Location is shown at top.</p>
+    <div class="phone" style="width:220px;">
+      <div class="pbar"><span>9:41</span><span>●●●</span></div>
+      <div style="background:#f97316;padding:12px;color:#fff;">
+        <div style="font-size:10px;font-weight:700;margin-bottom:6px;">📍 Hyderabad, India</div>
+        <div style="background:rgba(255,255,255,.2);border-radius:8px;padding:6px 10px;font-size:9px;color:rgba(255,255,255,.8);">🔍 Search services...</div>
+      </div>
+      <div style="display:flex;gap:0;border-bottom:1px solid #e2e8f0;">
+        <div style="flex:1;text-align:center;padding:8px 4px;font-size:9px;font-weight:700;color:#4f46e5;border-bottom:2px solid #4f46e5;">Services</div>
+        <div style="flex:1;text-align:center;padding:8px 4px;font-size:9px;color:#94a3b8;">Packages</div>
+        <div style="flex:1;text-align:center;padding:8px 4px;font-size:9px;color:#94a3b8;">Offers</div>
+      </div>
+      <div style="padding:10px;display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+        <div style="border:2px solid #4f46e5;border-radius:10px;padding:10px;text-align:center;background:#eef2ff;">
+          <div style="font-size:20px;margin-bottom:4px;">🚗</div>
+          <div style="font-size:8px;font-weight:700;color:#4f46e5;">Automobile Washing</div>
+          <div style="font-size:7px;color:#64748b;margin-top:2px;">12 companies</div>
+        </div>
+        <div style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;text-align:center;">
+          <div style="font-size:20px;margin-bottom:4px;">⚡</div>
+          <div style="font-size:8px;font-weight:700;color:#374151;">Electrician</div>
+          <div style="font-size:7px;color:#64748b;margin-top:2px;">8 companies</div>
+        </div>
+        <div style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;text-align:center;">
+          <div style="font-size:20px;margin-bottom:4px;">🔧</div>
+          <div style="font-size:8px;font-weight:700;color:#374151;">Plumber</div>
+          <div style="font-size:7px;color:#64748b;margin-top:2px;">5 companies</div>
+        </div>
+        <div style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;text-align:center;">
+          <div style="font-size:20px;margin-bottom:4px;">🏀</div>
+          <div style="font-size:8px;font-weight:700;color:#374151;">Basketball</div>
+          <div style="font-size:7px;color:#64748b;margin-top:2px;">3 companies</div>
+        </div>
+      </div>
+      <div class="pnav">
+        <span class="on">🏠 Home</span><span>📋 Book</span><span>👤 Me</span>
+      </div>
+    </div>
+  </div>
+  <div class="pair-right">
+    <div style="font-size:14px;font-weight:800;color:#ec4899;margin-bottom:8px;">📱 Screen 2: Select Service</div>
+    <p style="font-size:13px;color:#475569;line-height:1.7;margin-bottom:14px;">After selecting a category, user sees all services under that category with prices and descriptions.</p>
+    <div class="phone" style="width:220px;">
+      <div class="pbar"><span>9:41</span><span>●●●</span></div>
+      <div class="ptop">
+        <span style="font-size:14px;color:#0f172a;">←</span>
+        <span class="ptitle">Select Service</span>
+        <span></span>
+      </div>
+      <div style="padding:10px;">
+        <div style="background:#fff;border:2px solid #4f46e5;border-radius:10px;padding:10px;margin-bottom:8px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+            <div style="font-size:20px;">🚗</div>
+            <div style="flex:1;">
+              <div style="font-size:10px;font-weight:700;color:#0f172a;">Car Exterior Wash</div>
+              <div style="font-size:8px;color:#64748b;">Complete exterior wash with foam</div>
+            </div>
+            <div style="font-size:11px;font-weight:800;color:#059669;">₹200</div>
+          </div>
+          <div style="background:#eef2ff;border-radius:6px;padding:5px 8px;font-size:8px;color:#4f46e5;font-weight:700;text-align:center;">✓ Selected</div>
+        </div>
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px;margin-bottom:8px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="font-size:20px;">🚗</div>
+            <div style="flex:1;">
+              <div style="font-size:10px;font-weight:700;color:#0f172a;">Full Car Detailing</div>
+              <div style="font-size:8px;color:#64748b;">Interior + Exterior deep clean</div>
+            </div>
+            <div style="font-size:11px;font-weight:800;color:#059669;">₹500</div>
+          </div>
+        </div>
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="font-size:20px;">✨</div>
+            <div style="flex:1;">
+              <div style="font-size:10px;font-weight:700;color:#0f172a;">Premium Polish</div>
+              <div style="font-size:8px;color:#64748b;">Professional car polishing</div>
+            </div>
+            <div style="font-size:11px;font-weight:800;color:#059669;">₹800</div>
+          </div>
+        </div>
+      </div>
+      <div class="pnav">
+        <span>🏠 Home</span><span class="on">📋 Book</span><span>👤 Me</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- G2: Select Company & Booking History -->
+<div class="pair">
+  <div class="pair-left">
+    <div style="font-size:14px;font-weight:800;color:#ec4899;margin-bottom:8px;">📱 Screen 3: Select Company</div>
+    <p style="font-size:13px;color:#475569;line-height:1.7;margin-bottom:14px;">User sees all companies offering the selected service. They can view ratings, distance, and select their preferred company.</p>
+    <div class="phone" style="width:220px;">
+      <div class="pbar"><span>9:41</span><span>●●●</span></div>
+      <div class="ptop">
+        <span style="font-size:14px;color:#0f172a;">←</span>
+        <span class="ptitle">Select Company</span>
+        <span></span>
+      </div>
+      <div style="padding:10px;">
+        <div style="background:#fff;border:2px solid #4f46e5;border-radius:10px;padding:10px;margin-bottom:8px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+            <div style="width:40px;height:40px;border-radius:8px;background:linear-gradient(135deg,#4f46e5,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:18px;">🥷</div>
+            <div style="flex:1;">
+              <div style="font-size:10px;font-weight:700;color:#0f172a;">Ninja Car Wash</div>
+              <div style="font-size:8px;color:#64748b;">📍 2.3 km away • ⭐ 4.8 (120)</div>
+            </div>
+          </div>
+          <div style="background:#eef2ff;border-radius:6px;padding:5px 8px;font-size:8px;color:#4f46e5;font-weight:700;text-align:center;">✓ Selected</div>
+        </div>
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px;margin-bottom:8px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="width:40px;height:40px;border-radius:8px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:18px;">🚗</div>
+            <div style="flex:1;">
+              <div style="font-size:10px;font-weight:700;color:#0f172a;">Quick Wash Pro</div>
+              <div style="font-size:8px;color:#64748b;">📍 3.5 km away • ⭐ 4.5 (85)</div>
+            </div>
+          </div>
+        </div>
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="width:40px;height:40px;border-radius:8px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:18px;">✨</div>
+            <div style="flex:1;">
+              <div style="font-size:10px;font-weight:700;color:#0f172a;">Premium Auto Care</div>
+              <div style="font-size:8px;color:#64748b;">📍 5.1 km away • ⭐ 4.9 (200)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="pnav">
+        <span>🏠 Home</span><span class="on">📋 Book</span><span>👤 Me</span>
+      </div>
+    </div>
+  </div>
+  <div class="pair-right">
+    <div style="font-size:14px;font-weight:800;color:#ec4899;margin-bottom:8px;">📱 Screen 4: Bookings History</div>
+    <p style="font-size:13px;color:#475569;line-height:1.7;margin-bottom:14px;">User can view all their bookings with filter tabs (All, Active, Pending, Done). Each booking shows status and details.</p>
+    <div class="phone" style="width:220px;">
+      <div class="pbar"><span>9:41</span><span>●●●</span></div>
+      <div class="ptop">
+        <span style="font-size:14px;color:#0f172a;">←</span>
+        <span class="ptitle">My Bookings</span>
+        <span></span>
+      </div>
+      <div style="display:flex;gap:4px;padding:8px 10px;overflow-x:auto;border-bottom:1px solid #f1f5f9;">
+        <span style="background:#6366f1;color:#fff;font-size:8px;font-weight:700;padding:4px 10px;border-radius:20px;">All</span>
+        <span style="background:#f1f5f9;color:#64748b;font-size:8px;padding:4px 10px;border-radius:20px;">Active</span>
+        <span style="background:#f1f5f9;color:#64748b;font-size:8px;padding:4px 10px;border-radius:20px;">Pending</span>
+        <span style="background:#f1f5f9;color:#64748b;font-size:8px;padding:4px 10px;border-radius:20px;">Done</span>
+      </div>
+      <div style="padding:10px;">
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px;margin-bottom:8px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <span style="background:#dbeafe;color:#1e40af;font-size:8px;font-weight:700;padding:3px 8px;border-radius:12px;">In Progress</span>
+            <span style="font-size:10px;font-weight:800;color:#059669;">₹200</span>
+          </div>
+          <div style="font-size:10px;font-weight:700;color:#0f172a;margin-bottom:2px;">Car Exterior Wash</div>
+          <div style="font-size:8px;color:#64748b;margin-bottom:2px;">🏢 Ninja Car Wash</div>
+          <div style="font-size:8px;color:#64748b;">📅 June 15 • 🕐 10:00 AM</div>
+        </div>
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <span style="background:#d1fae5;color:#065f46;font-size:8px;font-weight:700;padding:3px 8px;border-radius:12px;">Completed</span>
+            <span style="font-size:10px;font-weight:800;color:#059669;">₹500</span>
+          </div>
+          <div style="font-size:10px;font-weight:700;color:#0f172a;margin-bottom:2px;">Full Car Detailing</div>
+          <div style="font-size:8px;color:#64748b;margin-bottom:2px;">🏢 Premium Auto Care</div>
+          <div style="font-size:8px;color:#64748b;">📅 June 10 • 🕐 02:00 PM</div>
+        </div>
+      </div>
+      <div class="pnav">
+        <span>🏠 Home</span><span class="on">📋 Book</span><span>👤 Me</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SECTION H – COMPLETE BOOKING FLOW
+═══════════════════════════════════════════════════════════ -->
+<div class="sec-hdr pgbrk">
+  <div class="sec-num" style="background:#64748b;">H</div>
+  <div>
+    <div style="font-size:18px;font-weight:900;color:#0f172a;">Complete Booking Flow</div>
+    <div style="font-size:12px;color:#64748b;">End-to-end journey from user booking to completion</div>
+  </div>
+</div>
+
+<div style="background:#fff;border-radius:14px;border:1px solid #e2e8f0;padding:24px;margin-bottom:32px;">
+  <h3 style="font-size:16px;font-weight:800;color:#0f172a;margin-bottom:16px;">📊 Booking Lifecycle Diagram</h3>
+  <div class="flow">
+    <div class="flow-box active">
+      <div style="font-size:20px;margin-bottom:4px;">📱</div>
+      <div class="flow-title">User Books</div>
+      <div class="flow-desc">Selects service, company, date & time</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">
+      <div style="font-size:20px;margin-bottom:4px;">⏳</div>
+      <div class="flow-title">Pending</div>
+      <div class="flow-desc">Booking arrives on dashboard</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">
+      <div style="font-size:20px;margin-bottom:4px;">👷</div>
+      <div class="flow-title">Assigned</div>
+      <div class="flow-desc">Company assigns worker</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">
+      <div style="font-size:20px;margin-bottom:4px;">🔐</div>
+      <div class="flow-title">Started</div>
+      <div class="flow-desc">OTP generated & verified</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">
+      <div style="font-size:20px;margin-bottom:4px;">✅</div>
+      <div class="flow-title">Completed</div>
+      <div class="flow-desc">Service done, payment recorded</div>
+    </div>
+  </div>
+  
+  <div style="margin-top:24px;padding-top:24px;border-top:1px solid #e2e8f0;">
+    <h4 style="font-size:14px;font-weight:700;color:#0f172a;margin-bottom:12px;">Status Color Guide</h4>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="width:20px;height:20px;background:#fef3c7;border-radius:4px;"></div>
+        <span style="font-size:12px;color:#64748b;">Pending</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="width:20px;height:20px;background:#ede9fe;border-radius:4px;"></div>
+        <span style="font-size:12px;color:#64748b;">Assigned</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="width:20px;height:20px;background:#dbeafe;border-radius:4px;"></div>
+        <span style="font-size:12px;color:#64748b;">Started</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="width:20px;height:20px;background:#d1fae5;border-radius:4px;"></div>
+        <span style="font-size:12px;color:#64748b;">Completed</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SETUP CHECKLIST -->
+<div style="background:#fff;border-radius:14px;border:1px solid #e2e8f0;padding:24px;margin-bottom:32px;">
+  <h3 style="font-size:16px;font-weight:800;color:#0f172a;margin-bottom:16px;">✅ Setup Checklist</h3>
+  <div class="checklist-item">
+    <div class="checklist-num">1</div>
+    <div class="checklist-content">
+      <h4>Select Categories</h4>
+      <p>Go to Categories page and select all service categories your company offers (e.g., Automobile Washing, Electrician).</p>
+    </div>
+  </div>
+  <div class="checklist-item">
+    <div class="checklist-num">2</div>
+    <div class="checklist-content">
+      <h4>Add Services</h4>
+      <p>Go to Services page and add all services with names, prices, and descriptions. These appear to users when booking.</p>
+    </div>
+  </div>
+  <div class="checklist-item">
+    <div class="checklist-num">3</div>
+    <div class="checklist-content">
+      <h4>Add Workers</h4>
+      <p>Go to Technicians page and add all your workers with names, phone numbers, and assigned services.</p>
+    </div>
+  </div>
+  <div class="checklist-item">
+    <div class="checklist-num">4</div>
+    <div class="checklist-content">
+      <h4>Set Availability</h4>
+      <p>Go to Calendar / Slots page and set your working hours. Block dates when you're not available.</p>
+    </div>
+  </div>
+  <div class="checklist-item">
+    <div class="checklist-num">5</div>
+    <div class="checklist-content">
+      <h4>Start Accepting Bookings</h4>
+      <p>Once setup is complete, users can find your company on the app and start booking services!</p>
+    </div>
+  </div>
+</div>
+
+<!-- KEY FEATURES -->
+<div style="background:#fff;border-radius:14px;border:1px solid #e2e8f0;padding:24px;margin-bottom:32px;">
+  <h3 style="font-size:16px;font-weight:800;color:#0f172a;margin-bottom:16px;">🌟 Key Features</h3>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;">
+    <div style="padding:16px;background:#f8fafc;border-radius:10px;">
+      <div style="font-size:24px;margin-bottom:8px;">📊</div>
+      <h4 style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:4px;">Real-time Dashboard</h4>
+      <p style="font-size:12px;color:#64748b;line-height:1.5;">Today's Booking Tracker shows all bookings with live status updates and progress tracking.</p>
+    </div>
+    <div style="padding:16px;background:#f8fafc;border-radius:10px;">
+      <div style="font-size:24px;margin-bottom:8px;">🔐</div>
+      <h4 style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:4px;">OTP Verification</h4>
+      <p style="font-size:12px;color:#64748b;line-height:1.5;">Secure 6-digit OTP system ensures worker arrival verification before work begins.</p>
+    </div>
+    <div style="padding:16px;background:#f8fafc;border-radius:10px;">
+      <div style="font-size:24px;margin-bottom:8px;">👷</div>
+      <h4 style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:4px;">Worker Management</h4>
+      <p style="font-size:12px;color:#64748b;line-height:1.5;">Add unlimited workers, assign services, and track their bookings and performance.</p>
+    </div>
+    <div style="padding:16px;background:#f8fafc;border-radius:10px;">
+      <div style="font-size:24px;margin-bottom:8px;">📅</div>
+      <h4 style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:4px;">Smart Scheduling</h4>
+      <p style="font-size:12px;color:#64748b;line-height:1.5;">Calendar view with availability management. Users can only book during your open slots.</p>
+    </div>
+    <div style="padding:16px;background:#f8fafc;border-radius:10px;">
+      <div style="font-size:24px;margin-bottom:8px;">💰</div>
+      <h4 style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:4px;">Revenue Tracking</h4>
+      <p style="font-size:12px;color:#64748b;line-height:1.5;">Weekly revenue charts and payment history. Track earnings by service and worker.</p>
+    </div>
+    <div style="padding:16px;background:#f8fafc;border-radius:10px;">
+      <div style="font-size:24px;margin-bottom:8px;">⭐</div>
+      <h4 style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:4px;">Feedback System</h4>
+      <p style="font-size:12px;color:#64748b;line-height:1.5;">Users can rate and review services. Build reputation and improve service quality.</p>
+    </div>
+  </div>
+</div>
+
+<!-- SUPPORT FOOTER -->
+<div style="background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 100%);border-radius:14px;padding:32px;text-align:center;color:#fff;">
+  <div style="font-size:32px;margin-bottom:12px;">🥷</div>
+  <h3 style="font-size:18px;font-weight:800;margin-bottom:8px;">Need Help?</h3>
+  <p style="font-size:13px;color:#93c5fd;margin-bottom:20px;">Our support team is here to help you get started</p>
+  <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+    <div style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:10px;padding:12px 20px;">
+      <div style="font-size:12px;color:#93c5fd;margin-bottom:2px;">Email Support</div>
+      <div style="font-size:13px;font-weight:700;">support@ninjaservices.in</div>
+    </div>
+    <div style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:10px;padding:12px 20px;">
+      <div style="font-size:12px;color:#93c5fd;margin-bottom:2px;">Phone Support</div>
+      <div style="font-size:13px;font-weight:700;">+91 1800-XXX-XXXX</div>
+    </div>
+  </div>
+  <p style="font-size:11px;color:#64748b;margin-top:24px;">© 2024 Ninja Services. All rights reserved.</p>
+</div>
+
+</div><!-- wrap -->
+</body>
+</html>
