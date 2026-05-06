@@ -1,0 +1,751 @@
+/* ========================================
+   COMPREHENSIVE RESPONSIVE STYLES
+   Mobile-First Approach
+   ======================================== */
+
+/* ========== GLOBAL RESPONSIVE UTILITIES ========== */
+
+/* Prevent horizontal scroll */
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Responsive Container */
+.responsive-container {
+  width: 100%;
+  max-width: 100%;
+  padding-left: 16px;
+  padding-right: 16px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Responsive Grid */
+.responsive-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+/* Responsive Table Wrapper */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 1rem;
+}
+
+.table-responsive table {
+  min-width: 600px;
+  width: 100%;
+}
+
+/* ========== SIDEBAR RESPONSIVE ========== */
+@media (max-width: 1024px) {
+  .sd-sidebar {
+    width: 100%;
+    height: auto;
+    max-height: none;
+  }
+  
+  .sd-menu {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 8px;
+    padding: 12px;
+  }
+  
+  .sd-menu-item {
+    margin-bottom: 0;
+    text-align: center;
+    font-size: 13px;
+    padding: 8px 10px;
+  }
+  
+  .sd-sidebar-header {
+    padding: 16px;
+  }
+  
+  .sd-sidebar-header h2 {
+    font-size: 16px;
+  }
+  
+  .sd-sidebar-header p {
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 768px) {
+  .sd-menu {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .sd-company-logo {
+    width: 50px;
+    height: 50px;
+  }
+}
+
+@media (max-width: 480px) {
+  .sd-menu {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ========== DASHBOARD CARDS RESPONSIVE ========== */
+@media (max-width: 1024px) {
+  .sd-cards {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .sd-cards {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .sd-card {
+    padding: 16px;
+  }
+  
+  .sd-card-title {
+    font-size: 12px;
+  }
+  
+  .sd-card-value {
+    font-size: 22px;
+  }
+}
+
+/* ========== STATS GRIDS RESPONSIVE ========== */
+@media (max-width: 1024px) {
+  .bookings-stats-grid,
+  .technicians-stats-grid,
+  .services-stats-grid,
+  .categories-stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+}
+
+@media (max-width: 768px) {
+  .bookings-stats-grid,
+  .technicians-stats-grid,
+  .services-stats-grid,
+  .categories-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  
+  .bookings-stat-card,
+  .technicians-stat-card {
+    padding: 12px;
+  }
+  
+  .bookings-stat-label,
+  .technicians-stat-label {
+    font-size: 11px;
+  }
+  
+  .bookings-stat-value,
+  .technicians-stat-value {
+    font-size: 20px;
+  }
+  
+  .bookings-stat-icon,
+  .technicians-stat-icon {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+@media (max-width: 480px) {
+  .bookings-stats-grid,
+  .technicians-stats-grid,
+  .services-stats-grid,
+  .categories-stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ========== FILTERS RESPONSIVE ========== */
+@media (max-width: 1024px) {
+  .bookings-filters,
+  .technicians-filters {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .bookings-search,
+  .technicians-search {
+    width: 100%;
+  }
+  
+  .bookings-filter-group,
+  .technicians-filter-group {
+    width: 100%;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .bookings-filter-group select,
+  .technicians-filter-group select {
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .bookings-search input,
+  .technicians-search input {
+    font-size: 14px;
+    padding: 10px 12px 10px 36px;
+  }
+  
+  .bookings-filter-group select,
+  .technicians-filter-group select {
+    font-size: 13px;
+    padding: 8px 10px;
+  }
+}
+
+/* ========== BOOKING CARDS RESPONSIVE ========== */
+@media (max-width: 1024px) {
+  .bookings-list {
+    gap: 12px;
+  }
+}
+
+@media (max-width: 768px) {
+  .booking-card {
+    padding: 14px;
+  }
+  
+  .booking-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .booking-main-info {
+    width: 100%;
+  }
+  
+  .booking-price {
+    align-self: flex-start;
+  }
+  
+  .booking-details {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  
+  .booking-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .booking-actions button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .booking-card {
+    padding: 12px;
+  }
+  
+  .booking-service-name {
+    font-size: 15px;
+  }
+  
+  .booking-customer-name {
+    font-size: 13px;
+  }
+  
+  .booking-price {
+    font-size: 18px;
+  }
+}
+
+/* ========== MODALS RESPONSIVE ========== */
+@media (max-width: 1024px) {
+  .sd-modal {
+    max-width: 90%;
+    max-height: 85vh;
+  }
+}
+
+@media (max-width: 768px) {
+  .sd-modal-backdrop {
+    padding: 10px;
+  }
+  
+  .sd-modal {
+    width: 95%;
+    max-width: 95%;
+    max-height: 90vh;
+  }
+  
+  .sd-modal-header {
+    padding: 16px;
+  }
+  
+  .sd-modal-content {
+    padding: 16px;
+  }
+  
+  .sd-modal-actions {
+    padding: 12px 16px;
+    flex-direction: column-reverse;
+  }
+  
+  .sd-modal-actions button {
+    width: 100%;
+  }
+  
+  .sd-form-row {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .sd-package-duration-price {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .sd-modal {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 0;
+  }
+  
+  .sd-modal-header h2 {
+    font-size: 18px;
+  }
+  
+  .sd-form-group label {
+    font-size: 12px;
+  }
+  
+  .sd-form-group input,
+  .sd-form-group select,
+  .sd-form-group textarea {
+    font-size: 13px;
+    padding: 8px;
+  }
+}
+
+/* ========== BUTTONS RESPONSIVE ========== */
+@media (max-width: 768px) {
+  .sd-primary-btn,
+  .sd-secondary-btn,
+  .sd-danger-btn {
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+  
+  .sd-header-actions {
+    flex-direction: column;
+    width: 100%;
+    gap: 8px;
+  }
+  
+  .sd-header-actions button {
+    width: 100%;
+  }
+}
+
+/* ========== TABLES RESPONSIVE ========== */
+@media (max-width: 1024px) {
+  .technicians-table-container,
+  .bookings-table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .technicians-table,
+  .bookings-table {
+    min-width: 800px;
+  }
+}
+
+@media (max-width: 768px) {
+  .technicians-table,
+  .bookings-table {
+    font-size: 13px;
+  }
+  
+  .technicians-table th,
+  .technicians-table td,
+  .bookings-table th,
+  .bookings-table td {
+    padding: 10px 8px;
+  }
+}
+
+/* ========== SERVICE CARDS RESPONSIVE ========== */
+@media (max-width: 1024px) {
+  .sd-services-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .sd-services-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .sd-service-card-modern {
+    padding: 16px;
+  }
+  
+  .sd-service-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .sd-service-actions {
+    width: 100%;
+    flex-direction: row;
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 480px) {
+  .sd-service-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .sd-service-actions button {
+    width: 100%;
+  }
+}
+
+/* ========== TECHNICIAN CARDS RESPONSIVE ========== */
+@media (max-width: 768px) {
+  .technician-card {
+    flex-direction: column;
+    padding: 14px;
+  }
+  
+  .technician-info {
+    width: 100%;
+  }
+  
+  .technician-actions {
+    width: 100%;
+    flex-direction: row;
+    justify-content: space-between;
+    margin-top: 12px;
+  }
+  
+  .technician-stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .technician-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .technician-actions button {
+    width: 100%;
+  }
+  
+  .technician-stats {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ========== DATE FILTER TABS RESPONSIVE ========== */
+@media (max-width: 768px) {
+  .bookings-date-filter-tabs {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .bookings-filter-tab {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* ========== SETTINGS RESPONSIVE ========== */
+@media (max-width: 1024px) {
+  .settings-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .settings-tab-list {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  
+  .settings-tab {
+    flex: 1;
+    min-width: 120px;
+    padding: 10px 14px;
+    font-size: 13px;
+  }
+  
+  .settings-card {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .settings-tab-list {
+    flex-direction: column;
+  }
+  
+  .settings-tab {
+    width: 100%;
+  }
+}
+
+/* ========== OVERVIEW PAGE RESPONSIVE ========== */
+@media (max-width: 768px) {
+  .overview-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .overview-chart-container {
+    padding: 14px;
+  }
+  
+  .overview-recent-bookings {
+    padding: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .overview-stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ========== SLOTS PAGE RESPONSIVE ========== */
+@media (max-width: 1024px) {
+  .slots-calendar-container {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .slots-calendar {
+    font-size: 13px;
+  }
+  
+  .slots-day-cell {
+    padding: 8px 4px;
+  }
+  
+  .slots-time-slot {
+    padding: 6px 8px;
+    font-size: 11px;
+  }
+  
+  .sd-slot-form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ========== PAYMENTS PAGE RESPONSIVE ========== */
+@media (max-width: 768px) {
+  .payments-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .payment-card {
+    flex-direction: column;
+    padding: 14px;
+  }
+  
+  .payment-info {
+    width: 100%;
+  }
+  
+  .payment-amount {
+    align-self: flex-start;
+    margin-top: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .payments-stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ========== FEEDBACK PAGE RESPONSIVE ========== */
+@media (max-width: 768px) {
+  .feedback-card {
+    padding: 14px;
+  }
+  
+  .feedback-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .feedback-rating {
+    align-self: flex-start;
+  }
+}
+
+/* ========== NOTIFICATION DROPDOWN RESPONSIVE ========== */
+@media (max-width: 768px) {
+  .sd-notification-dropdown,
+  .overview-notification-dropdown {
+    left: 10px;
+    right: 10px;
+    width: auto;
+    max-width: none;
+  }
+  
+  .sd-notification-item,
+  .overview-notification-item {
+    padding: 12px 16px;
+  }
+  
+  .sd-notification-title,
+  .overview-notification-title {
+    font-size: 12px;
+  }
+  
+  .sd-notification-message,
+  .overview-notification-message {
+    font-size: 11px;
+  }
+}
+
+/* ========== PACKAGE CARDS RESPONSIVE ========== */
+@media (max-width: 768px) {
+  .package-card {
+    padding: 14px;
+  }
+  
+  .package-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .package-price {
+    align-self: flex-start;
+  }
+  
+  .package-details {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ========== CONFIRM DIALOG RESPONSIVE ========== */
+@media (max-width: 768px) {
+  .confirm-dialog {
+    width: 90%;
+    max-width: 90%;
+    padding: 20px;
+  }
+  
+  .confirm-dialog-title {
+    font-size: 18px;
+  }
+  
+  .confirm-dialog-message {
+    font-size: 14px;
+  }
+  
+  .confirm-dialog-actions {
+    flex-direction: column-reverse;
+    gap: 10px;
+  }
+  
+  .confirm-dialog-actions button {
+    width: 100%;
+  }
+}
+
+/* ========== TOAST NOTIFICATIONS RESPONSIVE ========== */
+@media (max-width: 768px) {
+  .toast-container {
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    width: auto;
+  }
+  
+  .toast {
+    padding: 12px 14px;
+    font-size: 13px;
+  }
+}
+
+/* ========== UTILITY CLASSES ========== */
+@media (max-width: 768px) {
+  .hide-mobile {
+    display: none !important;
+  }
+  
+  .show-mobile {
+    display: block !important;
+  }
+  
+  .mobile-full-width {
+    width: 100% !important;
+  }
+  
+  .mobile-text-center {
+    text-align: center !important;
+  }
+  
+  .mobile-stack {
+    flex-direction: column !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .hide-desktop {
+    display: none !important;
+  }
+  
+  .show-desktop {
+    display: block !important;
+  }
+}
+
+/* ========== PRINT STYLES ========== */
+@media print {
+  .sd-sidebar,
+  .sd-header-actions,
+  .bookings-filters,
+  .technicians-filters,
+  .mobile-menu-toggle,
+  .admin-navbar {
+    display: none !important;
+  }
+  
+  .sd-main {
+    padding: 0;
+  }
+  
+  .sd-wrapper {
+    display: block;
+  }
+}

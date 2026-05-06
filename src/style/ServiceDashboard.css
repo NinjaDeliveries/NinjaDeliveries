@@ -7,6 +7,307 @@
   min-height: 100vh;
   background-color: #f4f6fb;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+/* ========== MOBILE MENU TOGGLE BUTTON ========== */
+.sd-mobile-toggle {
+  display: none;
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 1001;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.5);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 300;
+  backdrop-filter: blur(10px);
+}
+
+.sd-mobile-toggle:hover {
+  transform: scale(1.08);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+}
+
+.sd-mobile-toggle:active {
+  transform: scale(0.92);
+}
+
+.sd-mobile-toggle.open {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+}
+
+/* ========== RESPONSIVE LAYOUT ========== */
+@media (max-width: 1024px) {
+  .sd-wrapper {
+    flex-direction: row;
+    width: 100%;
+    overflow-x: hidden;
+  }
+  
+  .sd-sidebar {
+    width: 280px;
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    transform: translateX(-100%);
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: none;
+  }
+  
+  .sd-sidebar.open {
+    transform: translateX(0);
+    box-shadow: 8px 0 24px rgba(0, 0, 0, 0.3);
+  }
+  
+  .sd-main {
+    padding: 16px;
+    margin-left: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding-top: 75px;
+    box-sizing: border-box;
+    flex: none;
+  }
+  
+  .sd-mobile-toggle {
+    display: flex;
+  }
+  
+  /* Backdrop for mobile sidebar */
+  .sd-sidebar-backdrop {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 999;
+    opacity: 0;
+    transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(4px);
+  }
+  
+  .sd-sidebar-backdrop.show {
+    display: block;
+    opacity: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .sd-wrapper {
+    width: 100%;
+    overflow-x: hidden;
+    display: block;
+  }
+  
+  .sd-sidebar {
+    position: fixed !important;
+    transform: translateX(-100%) !important;
+    width: 85vw;
+    max-width: 320px;
+  }
+  
+  .sd-sidebar.open {
+    transform: translateX(0) !important;
+  }
+  
+  .sd-main {
+    padding: 16px;
+    padding-top: 70px;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    box-sizing: border-box;
+    min-height: 100vh;
+    flex: none;
+    display: block;
+  }
+  
+  .modern-dashboard {
+    padding: 16px;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box;
+  }
+  
+  .sd-mobile-toggle {
+    top: 12px;
+    left: 12px;
+    width: 44px;
+    height: 44px;
+    font-size: 22px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border-radius: 50%;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  }
+  
+  /* Header adjustments for mobile */
+  .sd-header {
+    margin-bottom: 20px;
+  }
+  
+  .sd-header h1 {
+    font-size: 24px !important;
+    margin-bottom: 8px;
+  }
+  
+  .sd-header p {
+    font-size: 14px;
+    color: #6b7280;
+  }
+  
+  /* Stats grid mobile layout - 2x2 grid */
+  .modern-stats-grid,
+  .overview-stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px !important;
+  }
+  
+  /* Stats cards mobile styling */
+  .modern-stat-card,
+  .overview-stat-card {
+    padding: 16px !important;
+    border-radius: 12px !important;
+  }
+  
+  /* Company info card mobile */
+  .modern-welcome-compact,
+  .sd-company-info-card {
+    margin-bottom: 20px !important;
+    border-radius: 16px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .sd-wrapper {
+    display: block;
+    width: 100%;
+    overflow-x: hidden;
+  }
+  
+  .sd-sidebar {
+    position: fixed !important;
+    transform: translateX(-100%) !important;
+    width: 90vw;
+    max-width: 280px;
+  }
+  
+  .sd-main {
+    padding: 12px;
+    padding-top: 65px;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    box-sizing: border-box;
+    min-height: 100vh;
+    flex: none;
+    display: block;
+  }
+  
+  .modern-dashboard {
+    padding: 12px;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box;
+  }
+  
+  .sd-mobile-toggle {
+    width: 42px;
+    height: 42px;
+    font-size: 20px;
+    top: 10px;
+    left: 10px;
+  }
+  
+  /* Single column layout for very small screens */
+  .modern-stats-grid,
+  .overview-stats-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+  
+  /* Smaller padding on very small screens */
+  .modern-stat-card,
+  .overview-stat-card {
+    padding: 14px !important;
+  }
+  
+  .sd-sidebar {
+    width: 90vw;
+    max-width: 280px;
+  }
+  
+  /* Further reduce spacing on very small screens */
+  .sd-card,
+  .sd-section {
+    padding: 12px !important;
+    margin-bottom: 12px !important;
+  }
+  
+  /* Stack all grid layouts */
+  .sd-stats-grid,
+  .sd-cards,
+  .sd-info-grid,
+  .sd-services-grid,
+  .sd-slots-grid,
+  .sd-filter-row {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+  
+  /* Adjust button sizes */
+  button,
+  .sd-btn {
+    font-size: 14px;
+    padding: 10px 14px;
+    min-height: 42px;
+  }
+  
+  /* Make text more readable */
+  body {
+    font-size: 13px;
+  }
+  
+  h1 {
+    font-size: 20px !important;
+  }
+  
+  h2 {
+    font-size: 18px !important;
+  }
+  
+  h3 {
+    font-size: 16px !important;
+  }
+  
+  /* Optimize stat cards for small screens */
+  .sd-stat-card {
+    padding: 12px !important;
+  }
+  
+  .sd-stat-card h3 {
+    font-size: 14px !important;
+  }
+  
+  .sd-stat-card .sd-stat-number {
+    font-size: 24px !important;
+  }
 }
 
 /* ========== OVERVIEW NOTIFICATION BELL ========== */
@@ -246,6 +547,7 @@
   display: flex;
   flex-direction: column;
   position: relative;
+  flex-shrink: 0;
 }
 
 .sd-sidebar-header {
@@ -636,6 +938,9 @@
   overflow-x: hidden;
   padding: 24px;
   background: #f8fafc;
+  width: 100%;
+  min-height: 100vh;
+  box-sizing: border-box;
 }
 
 
@@ -14954,6 +15259,205 @@ input:checked + .settings-toggle-slider:before {
   
   .modern-action-btn {
     justify-content: center;
+  }
+  
+  /* ========== RECENT BOOKINGS MOBILE RESPONSIVE ========== */
+  
+  .modern-content-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  
+  .modern-bookings-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  
+  .modern-bookings-title-section {
+    justify-content: center;
+  }
+  
+  .modern-view-all-btn {
+    width: 100%;
+    text-align: center;
+    padding: 10px 16px;
+  }
+  
+  .modern-booking-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 14px;
+  }
+  
+  .modern-booking-avatar {
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+    align-self: center;
+  }
+  
+  .modern-booking-details {
+    text-align: center;
+  }
+  
+  .modern-booking-service {
+    font-size: 15px;
+  }
+  
+  .modern-booking-customer {
+    font-size: 13px;
+  }
+  
+  .modern-booking-status {
+    display: flex;
+    justify-content: center;
+  }
+  
+  .modern-booking-amount {
+    text-align: center;
+    font-size: 18px;
+    min-width: auto;
+  }
+  
+  .modern-booking-view {
+    opacity: 1;
+    width: 100%;
+    padding: 10px;
+    background: rgba(79, 70, 229, 0.1);
+    border-radius: 8px;
+    font-size: 14px;
+  }
+  
+  .modern-booking-view::after {
+    content: ' View Details';
+  }
+  
+  /* Services Card Mobile */
+  .modern-services-header {
+    justify-content: center;
+  }
+  
+  .modern-service-info {
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-start;
+  }
+  
+  .modern-service-name {
+    font-size: 13px;
+  }
+  
+  .modern-service-revenue {
+    font-size: 13px;
+  }
+  
+  .modern-service-progress {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .modern-service-bookings {
+    font-size: 12px;
+  }
+}
+
+/* ========== SMALL MOBILE (480px) ========== */
+@media (max-width: 480px) {
+  .modern-dashboard {
+    padding: 12px;
+  }
+  
+  .modern-bookings-card,
+  .modern-services-card {
+    padding: 16px;
+    border-radius: 16px;
+  }
+  
+  .modern-bookings-icon,
+  .modern-services-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+  }
+  
+  .modern-bookings-title,
+  .modern-services-title {
+    font-size: 16px;
+  }
+  
+  .modern-booking-item {
+    padding: 12px;
+    gap: 10px;
+  }
+  
+  .modern-booking-avatar {
+    width: 36px;
+    height: 36px;
+    font-size: 14px;
+  }
+  
+  .modern-booking-service {
+    font-size: 14px;
+  }
+  
+  .modern-booking-customer {
+    font-size: 12px;
+  }
+  
+  .modern-booking-amount {
+    font-size: 16px;
+  }
+  
+  .modern-status-badge {
+    font-size: 11px;
+    padding: 3px 10px;
+  }
+  
+  .modern-booking-view {
+    padding: 8px;
+    font-size: 13px;
+  }
+  
+  .modern-service-item {
+    gap: 12px;
+  }
+  
+  .modern-service-name {
+    font-size: 12px;
+  }
+  
+  .modern-service-revenue {
+    font-size: 12px;
+  }
+  
+  .modern-service-bookings {
+    font-size: 11px;
+  }
+  
+  .modern-empty-state {
+    padding: 30px 16px;
+  }
+  
+  .modern-empty-state p {
+    font-size: 13px;
+  }
+}
+
+/* ========== TOUCH-FRIENDLY IMPROVEMENTS ========== */
+@media (hover: none) and (pointer: coarse) {
+  .modern-booking-view {
+    opacity: 1;
+    min-height: 44px;
+  }
+  
+  .modern-view-all-btn {
+    min-height: 44px;
+  }
+  
+  .modern-booking-item {
+    min-height: 60px;
   }
 }
 

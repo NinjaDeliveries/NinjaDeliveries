@@ -13,6 +13,7 @@ const ServiceDashboard = () => {
   const { getBookingNotificationCount } = useNotifications();
 
   const [serviceData, setServiceData] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   // Removed loading state - ServiceRoute handles initial loading
 
   const badgeCount = getBookingNotificationCount();
@@ -61,10 +62,40 @@ const ServiceDashboard = () => {
     navigate("/", { replace: true });
   };
 
+  const toggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
+  };
+
+  const closeSidebar = () => {
+    setSidebarOpen(false);
+  };
+
+  // Close sidebar when route changes (mobile)
+  useEffect(() => {
+    closeSidebar();
+  }, [location.pathname]);
+
   return (
     <div className="sd-wrapper">
+      {/* MOBILE TOGGLE BUTTON */}
+      <button 
+        className={`sd-mobile-toggle ${sidebarOpen ? 'open' : ''}`}
+        onClick={toggleSidebar}
+        aria-label="Toggle menu"
+      >
+        {sidebarOpen ? '×' : '☰'}
+      </button>
+
+      {/* BACKDROP FOR MOBILE */}
+      {sidebarOpen && (
+        <div 
+          className="sd-sidebar-backdrop show" 
+          onClick={closeSidebar}
+        />
+      )}
+
       {/* SIDEBAR */}
-      <aside className="sd-sidebar">
+      <aside className={`sd-sidebar ${sidebarOpen ? 'open' : ''}`}>
         <div className="sd-sidebar-header">
           {serviceData?.logoUrl && (
             <div 
@@ -94,7 +125,10 @@ const ServiceDashboard = () => {
               className={`sd-menu-item ${
                 location.pathname === item.path ? "active" : ""
               } ${item.highlight ? "highlight-menu" : ""}`}
-              onClick={() => navigate(item.path)}
+              onClick={() => {
+                navigate(item.path);
+                closeSidebar(); // Close sidebar on mobile after navigation
+              }}
             >
               <span>{item.label}</span>
               {item.badge > 0 && (

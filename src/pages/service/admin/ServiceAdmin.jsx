@@ -1088,7 +1088,7 @@ const ServiceAdmin = () => {
               Real-time insights and analytics for service companies
             </p>
           </div>
-          <div style={styles.headerActions}>
+          <div style={styles.headerActions} className="service-admin-header-actions">
             <div style={styles.liveIndicator}>
               <div style={styles.liveDot} className="service-admin-pulse"></div>
               <span style={{ color: darkMode ? '#94a3b8' : '#64748b' }}>Live Data</span>
@@ -1105,6 +1105,7 @@ const ServiceAdmin = () => {
                 cursor: 'pointer',
                 transform: 'scale(1)'
               }}
+              className="service-admin-button"
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = 'translateY(-2px) scale(1.02)';
                 e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
@@ -1133,6 +1134,7 @@ const ServiceAdmin = () => {
                 cursor: 'pointer',
                 transform: 'scale(1)'
               }}
+              className="service-admin-button"
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = 'translateY(-2px) scale(1.02)';
                 e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
@@ -4159,6 +4161,7 @@ const styles = {
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
     // improved page depth with subtle gradient background
     background: 'linear-gradient(to bottom, #f8fafc, #eef2ff)',
+    overflowX: 'hidden', // Prevent horizontal scroll
   },
 
   loadingContainer: {
@@ -4228,6 +4231,7 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     gap: '16px',
+    flexWrap: 'wrap',
   },
 
   liveIndicator: {

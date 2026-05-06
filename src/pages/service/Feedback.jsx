@@ -8,6 +8,7 @@ import {
   getDocs,
 } from "firebase/firestore";
 import "../../style/ServiceDashboard.css";
+import "./Feedback.css";
 
 const Feedback = () => {
   const [ratings, setRatings] = useState([]);
@@ -16,6 +17,7 @@ const Feedback = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [ratingFilter, setRatingFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("newest"); // newest, oldest, highest, lowest
   const [stats, setStats] = useState({
     totalFeedback: 0,
     averageRating: 0,
@@ -254,9 +256,12 @@ const Feedback = () => {
           // Sort manually by date (newest first)
           feedbackList.sort((a, b) => b.createdAt - a.createdAt);
 
-          console.log(`✅ Fallback filter result: ${feedbackList.length} items for company`);
-          setRatings(feedbackList);
-          calculateStats(feedbackList);
+          // Enrich with service and category names
+          const enrichedFeedback = enrichFeedbackData(feedbackList);
+
+          console.log(`✅ Fallback filter result: ${enrichedFeedback.length} items for company`);
+          setRatings(enrichedFeedback);
+          calculateStats(enrichedFeedback);
           setLoading(false);
         }, (error) => {
           console.error("❌ Fallback listener error:", error);
@@ -284,7 +289,7 @@ const Feedback = () => {
         unsubscribe();
       }
     };
-  }, []);
+  }, [enrichFeedbackData]);
 
   // Manual refresh function
   const handleRefresh = () => {
@@ -359,19 +364,43 @@ const Feedback = () => {
     });
   }, [fetchServicesAndCategories, setupRealtimeFeedbackListener]);
 
-  // Filter feedback based on search and rating
-  const filteredRatings = ratings.filter((rating) => {
-    const matchesSearch = !searchQuery || 
-      rating.customerName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      rating.feedback?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      rating.serviceName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      rating.categoryName?.toLowerCase().includes(searchQuery.toLowerCase());
+  // Filter and sort feedback
+  const getFilteredAndSortedRatings = () => {
+    let filtered = ratings.filter((rating) => {
+      const matchesSearch = !searchQuery || 
+        rating.customerName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        rating.feedback?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        rating.serviceName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        rating.categoryName?.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesRating = ratingFilter === "all" || 
-      parseInt(rating.rating) === parseInt(ratingFilter);
+      const matchesRating = ratingFilter === "all" || 
+        parseInt(rating.rating) === parseInt(ratingFilter);
 
-    return matchesSearch && matchesRating;
-  });
+      return matchesSearch && matchesRating;
+    });
+
+    // Sort based on selected option
+    switch (sortBy) {
+      case "newest":
+        filtered.sort((a, b) => b.createdAt - a.createdAt);
+        break;
+      case "oldest":
+        filtered.sort((a, b) => a.createdAt - b.createdAt);
+        break;
+      case "highest":
+        filtered.sort((a, b) => parseInt(b.rating || 0) - parseInt(a.rating || 0));
+        break;
+      case "lowest":
+        filtered.sort((a, b) => parseInt(a.rating || 0) - parseInt(b.rating || 0));
+        break;
+      default:
+        break;
+    }
+
+    return filtered;
+  };
+
+  const filteredRatings = getFilteredAndSortedRatings();
 
   const renderStars = (rating) => {
     const stars = [];
@@ -411,6 +440,10 @@ const Feedback = () => {
     return 'feedback-rating-poor';
   };
 
+  const getRatingPercentage = (count) => {
+    return stats.totalFeedback > 0 ? ((count / stats.totalFeedback) * 100).toFixed(1) : 0;
+  };
+
   if (loading) {
     return (
       <div className="sd-main">
@@ -423,92 +456,122 @@ const Feedback = () => {
   }
 
   return (
-    <div className="sd-main">
+    <div className="sd-main feedback-page">
       {/* Page Header */}
-      <div className="sd-header">
-        <div>
-          <h1>Customer Feedback & Ratings</h1>
-          <p>View customer ratings and feedback for your services</p>
+      <div className="feedback-page-header">
+        <div className="feedback-header-content">
+          <h1>⭐ Customer Feedback & Ratings</h1>
+          <p>View and analyze customer ratings and feedback for your services</p>
           <div className="feedback-live-indicator">
             <div className="feedback-live-dot"></div>
-            Live Data
+            <span>Live Data</span>
           </div>
         </div>
-        <div className="feedback-header-actions">
-          <button 
-            className="feedback-refresh-btn"
-            onClick={handleRefresh}
-            disabled={loading}
-          >
-            {loading ? (
-              <>
-                <div className="feedback-btn-spinner"></div>
-                Refreshing...
-              </>
-            ) : (
-              <>
-                🔄 Refresh
-              </>
-            )}
-          </button>
-        </div>
+        <button 
+          className="feedback-refresh-btn"
+          onClick={handleRefresh}
+          disabled={loading}
+        >
+          {loading ? (
+            <>
+              <div className="feedback-btn-spinner"></div>
+              Refreshing...
+            </>
+          ) : (
+            <>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <polyline points="23 4 23 10 17 10"></polyline>
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+              </svg>
+              Refresh
+            </>
+          )}
+        </button>
       </div>
 
       {/* Stats Cards */}
       <div className="feedback-stats-grid">
         <div className="feedback-stat-card average">
           <div className="feedback-stat-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <svg viewBox="0 0 24 24" fill="currentColor">
               <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
             </svg>
           </div>
           <div className="feedback-stat-content">
             <p className="feedback-stat-label">Average Rating</p>
-            <p className="feedback-stat-value">{stats.averageRating} / 5</p>
+            <p className="feedback-stat-value">{stats.averageRating} <span className="feedback-stat-max">/ 5.0</span></p>
+            <div className="feedback-stat-stars">
+              {renderStars(Math.round(stats.averageRating))}
+            </div>
           </div>
         </div>
 
         <div className="feedback-stat-card total">
           <div className="feedback-stat-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <svg viewBox="0 0 24 24" fill="currentColor">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
             </svg>
           </div>
           <div className="feedback-stat-content">
             <p className="feedback-stat-label">Total Reviews</p>
             <p className="feedback-stat-value">{stats.totalFeedback}</p>
+            <p className="feedback-stat-subtitle">All time feedback</p>
           </div>
         </div>
 
         <div className="feedback-stat-card positive">
           <div className="feedback-stat-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M14,17H17L19,13V7H13V13H16M6,17H9L11,13V7H5V13H8L6,17Z"/>
             </svg>
           </div>
           <div className="feedback-stat-content">
             <p className="feedback-stat-label">With Comments</p>
             <p className="feedback-stat-value">{stats.withComments}</p>
+            <p className="feedback-stat-subtitle">{getRatingPercentage(stats.withComments)}% of reviews</p>
+          </div>
+        </div>
+
+        <div className="feedback-stat-card excellent">
+          <div className="feedback-stat-icon">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+            </svg>
+          </div>
+          <div className="feedback-stat-content">
+            <p className="feedback-stat-label">5-Star Reviews</p>
+            <p className="feedback-stat-value">{stats.fiveStars}</p>
+            <p className="feedback-stat-subtitle">{getRatingPercentage(stats.fiveStars)}% excellent</p>
           </div>
         </div>
       </div>
 
       {/* Rating Distribution */}
       <div className="feedback-distribution-card">
-        <h3>Rating Distribution</h3>
-        <div className="feedback-distribution-bars">
+        <div className="feedback-distribution-header">
+          <h3>📊 Rating Distribution</h3>
+          <p>Breakdown of customer ratings</p>
+        </div>
+        <div className="feedback-distribution-content">
           {[5, 4, 3, 2, 1].map(star => {
             const count = stats[`${['', 'one', 'two', 'three', 'four', 'five'][star]}Star${star === 1 ? '' : 's'}`] || 0;
-            const percentage = stats.totalFeedback > 0 ? (count / stats.totalFeedback) * 100 : 0;
+            const percentage = getRatingPercentage(count);
             
             return (
               <div key={star} className="feedback-distribution-row">
-                <span className="feedback-distribution-label">{star} ⭐</span>
-                <div className="feedback-distribution-bar">
+                <div className="feedback-distribution-label">
+                  <span className="feedback-distribution-star-count">{star}</span>
+                  <svg className="feedback-distribution-star-icon" viewBox="0 0 24 24" fill="currentColor">
+                    <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
+                  </svg>
+                </div>
+                <div className="feedback-distribution-bar-container">
                   <div 
-                    className="feedback-distribution-fill"
+                    className={`feedback-distribution-bar star-${star}`}
                     style={{ width: `${percentage}%` }}
-                  ></div>
+                  >
+                    <span className="feedback-distribution-bar-label">{percentage}%</span>
+                  </div>
                 </div>
                 <span className="feedback-distribution-count">{count}</span>
               </div>
@@ -519,7 +582,7 @@ const Feedback = () => {
 
       {/* Filters */}
       <div className="feedback-filters">
-        <div className="feedback-search">
+        <div className="feedback-search-wrapper">
           <svg className="feedback-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
             <circle cx="11" cy="11" r="8"/>
             <path d="m21 21-4.35-4.35"/>
@@ -531,21 +594,64 @@ const Feedback = () => {
             onChange={(e) => setSearchQuery(e.target.value)}
             className="feedback-search-input"
           />
+          {searchQuery && (
+            <button 
+              className="feedback-search-clear"
+              onClick={() => setSearchQuery("")}
+            >
+              ✕
+            </button>
+          )}
         </div>
 
-        <select
-          value={ratingFilter}
-          onChange={(e) => setRatingFilter(e.target.value)}
-          className="feedback-filter-select"
-        >
-          <option value="all">All Ratings</option>
-          <option value="5">5 Stars</option>
-          <option value="4">4 Stars</option>
-          <option value="3">3 Stars</option>
-          <option value="2">2 Stars</option>
-          <option value="1">1 Star</option>
-        </select>
+        <div className="feedback-filter-group">
+          <select
+            value={ratingFilter}
+            onChange={(e) => setRatingFilter(e.target.value)}
+            className="feedback-filter-select"
+          >
+            <option value="all">All Ratings</option>
+            <option value="5">⭐⭐⭐⭐⭐ 5 Stars</option>
+            <option value="4">⭐⭐⭐⭐ 4 Stars</option>
+            <option value="3">⭐⭐⭐ 3 Stars</option>
+            <option value="2">⭐⭐ 2 Stars</option>
+            <option value="1">⭐ 1 Star</option>
+          </select>
+
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="feedback-filter-select"
+          >
+            <option value="newest">Newest First</option>
+            <option value="oldest">Oldest First</option>
+            <option value="highest">Highest Rating</option>
+            <option value="lowest">Lowest Rating</option>
+          </select>
+        </div>
       </div>
+
+      {/* Results Count */}
+      {(searchQuery || ratingFilter !== "all") && (
+        <div className="feedback-results-info">
+          <p>
+            Showing <strong>{filteredRatings.length}</strong> of <strong>{ratings.length}</strong> reviews
+            {searchQuery && ` matching "${searchQuery}"`}
+            {ratingFilter !== "all" && ` with ${ratingFilter} stars`}
+          </p>
+          {(searchQuery || ratingFilter !== "all") && (
+            <button 
+              className="feedback-clear-filters"
+              onClick={() => {
+                setSearchQuery("");
+                setRatingFilter("all");
+              }}
+            >
+              Clear Filters
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Feedback List */}
       <div className="feedback-list">
@@ -562,6 +668,17 @@ const Feedback = () => {
                 ? "Try adjusting your search or filters"
                 : "Customer ratings and feedback will appear here once customers rate your services"}
             </p>
+            {(searchQuery || ratingFilter !== "all") && (
+              <button 
+                className="feedback-empty-clear-btn"
+                onClick={() => {
+                  setSearchQuery("");
+                  setRatingFilter("all");
+                }}
+              >
+                Clear Filters
+              </button>
+            )}
           </div>
         ) : (
           filteredRatings.map((rating) => (
@@ -577,7 +694,13 @@ const Feedback = () => {
                       {rating.serviceName || 'Service'}
                       {rating.categoryName && ` • ${rating.categoryName}`}
                     </p>
-                    <span className="modern-feedback-date">{formatDate(rating.createdAt)}</span>
+                    <span className="modern-feedback-date">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                      </svg>
+                      {formatDate(rating.createdAt)}
+                    </span>
                   </div>
                 </div>
                 <div className="modern-feedback-rating-section">
