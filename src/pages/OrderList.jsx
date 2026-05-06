@@ -25,6 +25,10 @@ import {
   Chip,
   Divider,
   Tooltip,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from "@mui/material";
 import {
   AssignmentLate as AssignmentLateIcon,
@@ -336,6 +340,8 @@ const OrderList = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [daysRange, setDaysRange] = useState([]);
   const [updatingOrderId, setUpdatingOrderId] = useState(null);
+  const [riders, setRiders] = useState([]);
+  const [selectedRiders, setSelectedRiders] = useState({});
 
   useEffect(() => {
     const days = [];
@@ -344,6 +350,25 @@ const OrderList = () => {
     }
     setDaysRange(days);
   }, []);
+
+  // Fetch riders from riderDetails collection
+  const fetchRiders = useCallback(async () => {
+    try {
+      const ridersSnapshot = await getDocs(collection(db, "riderDetails"));
+      const ridersList = ridersSnapshot.docs.map((doc) => ({
+        id: doc.id,
+        name: doc.data().name || doc.data().fullName || "Unknown",
+        phoneNumber: doc.data().contactNumber || "N/A",
+      }));
+      setRiders(ridersList);
+    } catch (err) {
+      console.error("Error fetching riders:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchRiders();
+  }, [fetchRiders]);
 
   const handleDownloadBill = async (orderId) => {
     try {
@@ -531,6 +556,82 @@ const OrderList = () => {
         },
       };
       const config = buttonConfig[order.status] || {};
+      
+      // For pending orders, show rider select first, then accept button after selection
+      if (order.status === "pending") {
+        const isRiderSelected = selectedRiders[order.id];
+        
+        return (
+          <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+            <FormControl sx={{ minWidth: 200 }} size="small">
+              <InputLabel>Select Rider</InputLabel>
+              <Select
+                value={selectedRiders[order.id] || ""}
+                onChange={(e) =>
+                  setSelectedRiders((prev) => ({
+                    ...prev,
+                    [order.id]: e.target.value,
+                  }))
+                }
+                label="Select Rider"
+              >
+                <MenuItem value="">
+                  <em>Choose a rider</em>
+                </MenuItem>
+                {riders.map((rider) => (
+                  <MenuItem key={rider.id} value={rider.id}>
+                    {rider.name} ({rider.phoneNumber})
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            
+            {isRiderSelected && (
+              <Button
+                variant="contained"
+                onClick={() => {
+                  updateStatus(order.id, "accepted", {
+                    acceptedBy: selectedRiders[order.id],
+                  });
+                  setSelectedRiders((prev) => {
+                    const updated = { ...prev };
+                    delete updated[order.id];
+                    return updated;
+                  });
+                }}
+                disabled={updatingOrderId === order.id}
+                sx={{
+                  backgroundColor: config.color,
+                  color: "white",
+                  textTransform: "none",
+                  fontWeight: 600,
+                  px: 3,
+                  py: 1,
+                  borderRadius: "8px",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                  "&:hover": {
+                    backgroundColor: config.color,
+                    opacity: 0.9,
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                  },
+                  "&:disabled": {
+                    opacity: 0.7,
+                    backgroundColor: config.color,
+                    color: "white",
+                  },
+                }}
+              >
+                {updatingOrderId === order.id ? (
+                  <CircularProgress size={20} color="inherit" />
+                ) : (
+                  "Accept"
+                )}
+              </Button>
+            )}
+          </Box>
+        );
+      }
+      
       return (
         config.component || (
           <Button
@@ -567,7 +668,7 @@ const OrderList = () => {
         )
       );
     },
-    [updatingOrderId]
+    [updatingOrderId, selectedRiders, riders]
   );
 
   const shouldGlow = (status) => ["pending", "accepted", "tripStarted"].includes(status);

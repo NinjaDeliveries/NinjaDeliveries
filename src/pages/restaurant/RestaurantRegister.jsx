@@ -11,6 +11,7 @@ const RestaurantRegister = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const [form, setForm] = useState({
     ownerName: "",
@@ -18,6 +19,7 @@ const RestaurantRegister = () => {
     email: "",
     restaurantName: "",
     address: "",
+    cuisineType: "", // veg, nonveg, or both
     password: "",
     confirmPassword: "",
   });
@@ -42,6 +44,9 @@ const RestaurantRegister = () => {
     }
     if (!form.restaurantName.trim()) {
       return "Restaurant name is required";
+    }
+    if (!form.cuisineType) {
+      return "Please select the type of cuisine you serve";
     }
     if (form.password.length < 6) {
       return "Password must be at least 6 characters";
@@ -78,6 +83,7 @@ const RestaurantRegister = () => {
         email: form.email,
         phone: form.phone,
         address: form.address || "",
+        cuisineType: form.cuisineType,
         type: "restaurant",
         isActive: true, // Restaurant availability (open/closed)
         accountEnabled: true, // Login access (enabled/disabled)
@@ -85,8 +91,7 @@ const RestaurantRegister = () => {
         updatedAt: new Date(),
       });
 
-      alert("Restaurant account created successfully. Please login.");
-      navigate("/login");
+      setShowSuccessModal(true);
 
     } catch (error) {
       console.error(error);
@@ -169,6 +174,24 @@ const RestaurantRegister = () => {
             />
           </Input>
 
+          {/* Cuisine Type */}
+          <div className="input-wrapper">
+            <span className="input-icon">🍽️</span>
+            <select
+              required
+              name="cuisineType"
+              value={form.cuisineType}
+              onChange={handleChange}
+              className="form-input"
+              style={{ cursor: 'pointer' }}
+            >
+              <option value="">Select Cuisine Type</option>
+              <option value="veg">Vegetarian Only</option>
+              <option value="nonveg">Non-Vegetarian Only</option>
+              <option value="both">Both Veg & Non-Veg</option>
+            </select>
+          </div>
+
           {/* Address */}
           <Input icon="location">
             <input
@@ -209,6 +232,45 @@ const RestaurantRegister = () => {
 
         </form>
       </StyledWrapper>
+
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <SuccessModalOverlay>
+          <SuccessModalContent>
+            <SuccessIcon>✅</SuccessIcon>
+            <SuccessTitle>Account Created Successfully!</SuccessTitle>
+            
+            <SuccessMessage>
+              Your restaurant account has been created. Your account is now ready to use.
+            </SuccessMessage>
+
+            <ImportantNotice>
+              <NoticeTitle>📱 Important Information</NoticeTitle>
+              <NoticeText>
+                Please login using the <strong>Mobile App</strong>, not the website. 
+                The restaurant dashboard is only available in the mobile application.
+              </NoticeText>
+            </ImportantNotice>
+
+            <LoginDetails>
+              <DetailItem>
+                <DetailLabel>Email:</DetailLabel>
+                <DetailValue>{form.email}</DetailValue>
+              </DetailItem>
+              <DetailItem>
+                <DetailLabel>Restaurant:</DetailLabel>
+                <DetailValue>{form.restaurantName}</DetailValue>
+              </DetailItem>
+            </LoginDetails>
+
+            <SuccessButtonGroup>
+              <SuccessButton onClick={() => navigate("/login")}>
+                Go to Login
+              </SuccessButton>
+            </SuccessButtonGroup>
+          </SuccessModalContent>
+        </SuccessModalOverlay>
+      )}
     </Page>
   );
 };
@@ -378,5 +440,167 @@ const Input = ({ icon, children }) => (
     {children}
   </div>
 );
+
+const SuccessModalOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  animation: fadeIn 0.3s ease;
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+`;
+
+const SuccessModalContent = styled.div`
+  background: white;
+  border-radius: 20px;
+  padding: 40px 30px;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.4s ease;
+  text-align: center;
+
+  @keyframes slideUp {
+    from {
+      transform: translateY(30px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+`;
+
+const SuccessIcon = styled.div`
+  font-size: 60px;
+  margin-bottom: 20px;
+  animation: bounce 0.6s ease;
+
+  @keyframes bounce {
+    0%, 100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.1);
+    }
+  }
+`;
+
+const SuccessTitle = styled.h2`
+  font-size: 28px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 15px 0;
+`;
+
+const SuccessMessage = styled.p`
+  font-size: 16px;
+  color: #6b7280;
+  margin: 0 0 25px 0;
+  line-height: 1.6;
+`;
+
+const ImportantNotice = styled.div`
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-left: 4px solid #f59e0b;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 25px 0;
+  text-align: left;
+`;
+
+const NoticeTitle = styled.h3`
+  font-size: 16px;
+  font-weight: 700;
+  color: #92400e;
+  margin: 0 0 10px 0;
+`;
+
+const NoticeText = styled.p`
+  font-size: 14px;
+  color: #78350f;
+  margin: 0;
+  line-height: 1.6;
+
+  strong {
+    color: #d97706;
+  }
+`;
+
+const LoginDetails = styled.div`
+  background: #f3f4f6;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 25px 0;
+  text-align: left;
+`;
+
+const DetailItem = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid #e5e7eb;
+
+  &:last-child {
+    border-bottom: none;
+  }
+`;
+
+const DetailLabel = styled.span`
+  font-weight: 600;
+  color: #374151;
+  font-size: 14px;
+`;
+
+const DetailValue = styled.span`
+  color: #1f2937;
+  font-weight: 700;
+  font-size: 14px;
+  word-break: break-all;
+`;
+
+const SuccessButtonGroup = styled.div`
+  display: flex;
+  gap: 12px;
+  margin-top: 30px;
+`;
+
+const SuccessButton = styled.button`
+  flex: 1;
+  padding: 14px 24px;
+  background: linear-gradient(135deg, #fb923c 0%, #f97316 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(251, 146, 60, 0.3);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+`;
 
 export default RestaurantRegister;

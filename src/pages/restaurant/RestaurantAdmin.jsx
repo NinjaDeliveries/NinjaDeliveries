@@ -23,6 +23,12 @@ const RestaurantAdmin = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
   
+  // Assignment modal state
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [restaurants, setRestaurants] = useState([]);
+  const [assignmentLoading, setAssignmentLoading] = useState(false);
+  
   // Form state
   const [formData, setFormData] = useState({
     name: "",
@@ -74,6 +80,20 @@ const RestaurantAdmin = () => {
     } catch (error) {
       console.error("Error fetching categories:", error);
       toast.error("Failed to load categories");
+    }
+  };
+
+  const fetchRestaurants = async () => {
+    try {
+      const snap = await getDocs(collection(db, "registerRestaurant"));
+      const list = snap.docs.map(d => ({
+        id: d.id,
+        ...d.data()
+      }));
+      setRestaurants(list);
+    } catch (error) {
+      console.error("Error fetching restaurants:", error);
+      toast.error("Failed to load restaurants");
     }
   };
 
@@ -183,6 +203,62 @@ const RestaurantAdmin = () => {
     setFormData({ name: "", image: null, imagePreview: "" });
   };
 
+  const openAssignModal = async (category) => {
+    setSelectedCategory(category);
+    setShowAssignModal(true);
+    await fetchRestaurants();
+  };
+
+  const closeAssignModal = () => {
+    setShowAssignModal(false);
+    setSelectedCategory(null);
+    setRestaurants([]);
+  };
+
+  const toggleRestaurantAssignment = async (restaurantId) => {
+    if (!selectedCategory) return;
+    
+    setAssignmentLoading(true);
+    try {
+      const currentCompanyIds = selectedCategory.companyIds || [];
+      const isAssigned = currentCompanyIds.includes(restaurantId);
+      
+      let updatedCompanyIds;
+      if (isAssigned) {
+        // Remove restaurant from category
+        updatedCompanyIds = currentCompanyIds.filter(id => id !== restaurantId);
+      } else {
+        // Add restaurant to category
+        updatedCompanyIds = [...currentCompanyIds, restaurantId];
+      }
+
+      await updateDoc(doc(db, "restaurant_categories", selectedCategory.id), {
+        companyIds: updatedCompanyIds,
+        updatedAt: serverTimestamp()
+      });
+
+      // Update local state
+      setSelectedCategory(prev => ({
+        ...prev,
+        companyIds: updatedCompanyIds
+      }));
+
+      // Update categories list
+      setCategories(prev => prev.map(cat => 
+        cat.id === selectedCategory.id 
+          ? { ...cat, companyIds: updatedCompanyIds }
+          : cat
+      ));
+
+      toast.success(isAssigned ? "Restaurant removed from category" : "Restaurant assigned to category");
+    } catch (error) {
+      console.error("Error updating assignment:", error);
+      toast.error("Failed to update assignment");
+    } finally {
+      setAssignmentLoading(false);
+    }
+  };
+
   const handleLogout = async () => {
     try {
       await auth.signOut();
@@ -275,6 +351,12 @@ const RestaurantAdmin = () => {
                     Edit
                   </button>
                   <button 
+                    style={styles.assignButton}
+                    onClick={() => openAssignModal(category)}
+                  >
+                    Manage Assignments
+                  </button>
+                  <button 
                     style={{
                       ...styles.toggleButton,
                       backgroundColor: category.isActive ? '#ef4444' : '#10b981'
@@ -360,6 +442,81 @@ const RestaurantAdmin = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Assignment Modal */}
+      {showAssignModal && selectedCategory && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.assignModal}>
+            <div style={styles.modalHeader}>
+              <h2>Assign "{selectedCategory.name}" to Restaurants</h2>
+              <button style={styles.closeButton} onClick={closeAssignModal}>×</button>
+            </div>
+            
+            <div style={styles.assignContent}>
+              <p style={styles.assignDescription}>
+                Select which restaurants should have access to this category in their mobile app.
+              </p>
+              
+              {restaurants.length === 0 ? (
+                <div style={styles.emptyRestaurants}>
+                  <p>No restaurants found</p>
+                </div>
+              ) : (
+                <div style={styles.restaurantsList}>
+                  {restaurants.map(restaurant => {
+                    const isAssigned = selectedCategory.companyIds?.includes(restaurant.id) || false;
+                    return (
+                      <div 
+                        key={restaurant.id} 
+                        style={styles.restaurantItem}
+                      >
+                        <div style={styles.restaurantInfo}>
+                          <h4 style={styles.restaurantName}>{restaurant.restaurantName}</h4>
+                          <p style={styles.restaurantDetails}>
+                            Owner: {restaurant.ownerName} | Email: {restaurant.email}
+                          </p>
+                          <div style={styles.restaurantStatus}>
+                            <span style={{
+                              ...styles.statusBadgeSmall,
+                              backgroundColor: restaurant.isActive ? '#10b981' : '#ef4444'
+                            }}>
+                              {restaurant.isActive ? 'Active' : 'Inactive'}
+                            </span>
+                            <span style={{
+                              ...styles.statusBadgeSmall,
+                              backgroundColor: restaurant.accountEnabled ? '#3b82f6' : '#6b7280'
+                            }}>
+                              {restaurant.accountEnabled ? 'Enabled' : 'Disabled'}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <button
+                          style={{
+                            ...styles.assignToggleButton,
+                            backgroundColor: isAssigned ? '#ef4444' : '#10b981'
+                          }}
+                          onClick={() => toggleRestaurantAssignment(restaurant.id)}
+                          disabled={assignmentLoading}
+                        >
+                          {isAssigned ? 'Remove' : 'Assign'}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              
+              <div style={styles.assignSummary}>
+                <p>
+                  <strong>{selectedCategory.companyIds?.length || 0}</strong> restaurants 
+                  currently have access to this category
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -510,6 +667,18 @@ const styles = {
     transition: 'all 0.2s ease',
     flex: '1'
   },
+  assignButton: {
+    padding: '0.625rem 1.25rem',
+    backgroundColor: '#8b5cf6',
+    color: 'white',
+    border: 'none',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    fontSize: '0.875rem',
+    fontWeight: '600',
+    transition: 'all 0.2s ease',
+    flex: '1'
+  },
   toggleButton: {
     padding: '0.625rem 1.25rem',
     color: 'white',
@@ -638,6 +807,92 @@ const styles = {
     border: 'none',
     borderRadius: '6px',
     cursor: 'pointer'
+  },
+  // Assignment Modal Styles
+  assignModal: {
+    backgroundColor: 'white',
+    borderRadius: '12px',
+    padding: '2rem',
+    maxWidth: '800px',
+    width: '90%',
+    maxHeight: '90vh',
+    overflowY: 'auto'
+  },
+  assignContent: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '1.5rem'
+  },
+  assignDescription: {
+    color: '#6b7280',
+    margin: 0,
+    fontSize: '0.95rem'
+  },
+  restaurantsList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '1rem',
+    maxHeight: '400px',
+    overflowY: 'auto',
+    padding: '0.5rem'
+  },
+  restaurantItem: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '1.25rem',
+    border: '1px solid #e5e7eb',
+    borderRadius: '12px',
+    backgroundColor: '#f9fafb',
+    transition: 'all 0.2s ease'
+  },
+  restaurantInfo: {
+    flex: 1
+  },
+  restaurantName: {
+    margin: '0 0 0.5rem 0',
+    color: '#1f2937',
+    fontSize: '1.125rem',
+    fontWeight: '600'
+  },
+  restaurantDetails: {
+    margin: '0 0 0.75rem 0',
+    color: '#6b7280',
+    fontSize: '0.875rem'
+  },
+  restaurantStatus: {
+    display: 'flex',
+    gap: '0.5rem'
+  },
+  statusBadgeSmall: {
+    padding: '0.25rem 0.75rem',
+    borderRadius: '12px',
+    color: 'white',
+    fontSize: '0.75rem',
+    fontWeight: '600'
+  },
+  assignToggleButton: {
+    padding: '0.75rem 1.5rem',
+    color: 'white',
+    border: 'none',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    fontSize: '0.875rem',
+    fontWeight: '600',
+    transition: 'all 0.2s ease',
+    minWidth: '80px'
+  },
+  assignSummary: {
+    padding: '1rem',
+    backgroundColor: '#f3f4f6',
+    borderRadius: '8px',
+    textAlign: 'center',
+    color: '#374151'
+  },
+  emptyRestaurants: {
+    textAlign: 'center',
+    padding: '2rem',
+    color: '#6b7280'
   }
 };
 
