@@ -1497,6 +1497,7 @@ export default function Slots() {
           }}
         >
           <div 
+            className="booking-details-modal"
             style={{
               backgroundColor: 'white',
               borderRadius: '16px',

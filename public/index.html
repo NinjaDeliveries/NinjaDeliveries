@@ -277,14 +277,210 @@
         .card img { height: 180px; }
         .navbar-nav .nav-link { padding: 8px 10px; }
       }
+      
       @media (max-width: 768px) {
-        .header-section { text-align: center; padding: 80px 0 50px; }
+        .header-section { 
+          text-align: center; 
+          padding: 100px 0 50px;
+          min-height: auto;
+        }
         .header-section h1 { font-size: 2rem; }
+        .header-section p { font-size: 1rem; }
         .header-section .col-md-6 { margin-bottom: 20px; }
+        
         #aboutus { text-align: center; }
         #process h2, #aboutus h2 { font-size: 1.8rem; }
-        .card img { height: 150px; }
-        .app-mockup-panel { margin-top: 30px; }
+        
+        /* How It Works Cards - Single Column on Mobile */
+        #process .row { 
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+        }
+        #process .col-md-4 {
+          width: 100%;
+          max-width: 100%;
+        }
+        .card { 
+          margin: 0 auto;
+          max-width: 400px;
+        }
+        .card img { 
+          height: 200px;
+          object-fit: cover;
+        }
+        .card-body {
+          padding: 20px;
+        }
+        .card-title {
+          font-size: 1.1rem;
+        }
+        
+        /* App Mockup Panel Mobile */
+        .app-mockup-panel { 
+          margin-top: 30px;
+          max-width: 100%;
+          padding: 16px;
+        }
+        
+        .mock-cat-grid {
+          grid-template-columns: repeat(2, 1fr);
+          gap: 12px;
+        }
+        
+        .mock-cat-item img {
+          height: 90px;
+        }
+        
+        .mock-cat-item span {
+          font-size: 0.75rem;
+          padding: 8px 4px;
+        }
+        
+        .mock-cat-btn {
+          font-size: 0.7rem;
+          padding: 6px 4px;
+        }
+        
+        /* Footer Mobile */
+        .footer-section {
+          padding: 50px 0 20px;
+        }
+        
+        .footer-section .col-md-4 {
+          margin-bottom: 30px;
+        }
+      }
+      
+      @media (max-width: 480px) {
+        .header-section {
+          padding: 90px 0 40px;
+        }
+        
+        .header-section h1 {
+          font-size: 1.75rem;
+        }
+        
+        .header-section p {
+          font-size: 0.95rem;
+        }
+        
+        .header-section .btn {
+          padding: 10px 24px;
+          font-size: 0.95rem;
+        }
+        
+        /* App Mockup Panel - Very Small Screens */
+        .app-mockup-panel {
+          padding: 12px;
+          border-radius: 16px;
+        }
+        
+        .mock-deliver-bar,
+        .mock-search-bar {
+          padding: 8px 12px;
+          border-radius: 10px;
+        }
+        
+        .mock-deliver-label {
+          font-size: 0.65rem;
+        }
+        
+        .mock-deliver-loc {
+          font-size: 0.85rem;
+        }
+        
+        .mock-tab {
+          font-size: 0.7rem;
+          padding: 6px 4px;
+        }
+        
+        .mock-cat-grid {
+          grid-template-columns: repeat(2, 1fr);
+          gap: 8px;
+        }
+        
+        .mock-cat-item img {
+          height: 80px;
+        }
+        
+        .mock-cat-item span {
+          font-size: 0.7rem;
+          padding: 6px 4px;
+        }
+        
+        .mock-cat-btn {
+          font-size: 0.65rem;
+          padding: 5px 4px;
+          margin: auto 4px 6px;
+        }
+        
+        /* How It Works - Small Mobile */
+        #process {
+          padding: 60px 0;
+        }
+        
+        #process h2 {
+          font-size: 1.5rem;
+        }
+        
+        #process p {
+          font-size: 0.9rem;
+        }
+        
+        .card {
+          max-width: 100%;
+        }
+        
+        .card img {
+          height: 180px;
+        }
+        
+        .card-body {
+          padding: 16px;
+        }
+        
+        .card-title {
+          font-size: 1rem;
+        }
+        
+        /* About Us - Small Mobile */
+        #aboutus {
+          padding: 60px 0;
+        }
+        
+        #aboutus h2 {
+          font-size: 1.5rem;
+        }
+        
+        #aboutus p,
+        #aboutus ul li {
+          font-size: 0.9rem;
+        }
+        
+        #aboutus .btn {
+          padding: 10px 24px;
+          font-size: 0.95rem;
+        }
+        
+        /* Navbar Mobile */
+        .navbar-brand {
+          font-size: 1rem;
+        }
+        
+        .navbar-brand img {
+          height: 32px;
+        }
+        
+        /* Footer Small Mobile */
+        .footer-section h4 {
+          font-size: 1.1rem;
+        }
+        
+        .footer-section p,
+        .footer-section a {
+          font-size: 0.85rem;
+        }
       }
 
       @keyframes float {

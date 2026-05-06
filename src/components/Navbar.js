@@ -10,6 +10,7 @@ export default function Navbar() {
   const { user, stores, setUser } = useUser();
   const [open, setOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogout = async () => {
     if (isLoggingOut) return; // Prevent multiple clicks
@@ -95,35 +96,55 @@ export default function Navbar() {
 </div>
       </div>
 
-      <ul className="admin-navbar-nav">
+      {/* Mobile Hamburger Menu Toggle */}
+      <button 
+        className="mobile-menu-toggle"
+        onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+        aria-label="Toggle menu"
+      >
+        {mobileMenuOpen ? (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        ) : (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        )}
+      </button>
+
+      <ul className={`admin-navbar-nav ${mobileMenuOpen ? 'mobile-open' : ''}`}>
         <li>
-          <NavLink to="/home" activeclassname="active">
+          <NavLink to="/home" activeclassname="active" onClick={() => setMobileMenuOpen(false)}>
             Home
           </NavLink>
         </li>
         <li>
-          <NavLink to="/productslist" activeclassname="active">
+          <NavLink to="/productslist" activeclassname="active" onClick={() => setMobileMenuOpen(false)}>
             Products
           </NavLink>
         </li>
         <li>
-          <NavLink to="/riderlist" activeclassname="active">
+          <NavLink to="/riderlist" activeclassname="active" onClick={() => setMobileMenuOpen(false)}>
             Riders
           </NavLink>
         </li>
         <li>
-          <NavLink to="/scanorder" activeclassname="active">
+          <NavLink to="/scanorder" activeclassname="active" onClick={() => setMobileMenuOpen(false)}>
             Scan Order
           </NavLink>
         </li>
         <li>
-          <NavLink to="/report" activeclassname="active">
+          <NavLink to="/report" activeclassname="active" onClick={() => setMobileMenuOpen(false)}>
             Reports
           </NavLink>
         </li>
         {(user?.permissions?.includes("page:users") || user?.roleKey === "all_access_admin") && (
           <li>
-            <NavLink to="/admin" className={({ isActive }) => isActive ? "active" : ""}>
+            <NavLink to="/admin" className={({ isActive }) => isActive ? "active" : ""} onClick={() => setMobileMenuOpen(false)}>
               Admin Panel
             </NavLink>
           </li>

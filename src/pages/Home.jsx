@@ -483,43 +483,45 @@ const adminFunctions = [
         return effectivePermissions.includes(card.permission);
       })
       .map((card, index) => (
-        <div key={index} className="admin-card">
-          <div className="card-image-wrapper">
-            <img src={card.image} alt={card.title} className="card-image" />
-          </div>
-
-          <div className="card-content">
-            <div className="card-text-wrapper">
-              <h3 className="card-title">{card.title}</h3>
-              <p className="card-text">{card.text}</p>
+        <Link
+          key={index}
+          to={card.link}
+          onClick={async () => {
+            try {
+              if (user?.uid) {
+                await logActivity({
+                  type: "task",
+                  userId: user.uid,
+                  email: user.email || null,
+                  action: card.title,
+                  route: card.link,
+                });
+              }
+            } catch (err) {
+              console.error("task activity log error:", err);
+            }
+          }}
+          style={{ textDecoration: 'none', color: 'inherit' }}
+        >
+          <div className="admin-card">
+            <div className="card-image-wrapper">
+              <img src={card.image} alt={card.title} className="card-image" />
             </div>
 
-            <div className="card-button-wrapper">
-              <Link
-                to={card.link}
-                onClick={async () => {
-                  try {
-                    if (user?.uid) {
-                      await logActivity({
-                        type: "task",
-                        userId: user.uid,
-                        email: user.email || null,
-                        action: card.title,
-                        route: card.link,
-                      });
-                    }
-                  } catch (err) {
-                    console.error("task activity log error:", err);
-                  }
-                }}
-              >
+            <div className="card-content">
+              <div className="card-text-wrapper">
+                <h3 className="card-title">{card.title}</h3>
+                <p className="card-text">{card.text}</p>
+              </div>
+
+              <div className="card-button-wrapper">
                 <button className="card-button">
                   Open <FaArrowRight />
                 </button>
-              </Link>
+              </div>
             </div>
           </div>
-        </div>
+        </Link>
       ))}
   </div> {/* ✅ card-grid CLOSED PROPERLY */}
 
