@@ -245,11 +245,6 @@ function TodayBookingTracker() {
                       {booking.workerPhone && <span style={{ color: "#94a3b8", fontWeight: 400 }}> · {booking.workerPhone}</span>}
                     </p>
                   )}
-                  {status === "started" && booking.startOtp && (
-                    <p style={{ margin: "4px 0 0", fontSize: 12, color: "#3b82f6", fontWeight: 700, letterSpacing: 1 }}>
-                      🔑 OTP: {booking.startOtp}
-                    </p>
-                  )}
                 </div>
 
                 {/* Price only */}
@@ -408,14 +403,14 @@ function TodayBookingTracker() {
                     </div>
                   )}
 
-                  {/* ── STARTED: OTP + Complete ── */}
+                  {/* ── STARTED: Complete ── */}
                   {status === "started" && (
                     <div>
                       <div style={{ background: "#dbeafe", borderRadius: 10, padding: "10px 14px", marginBottom: 10 }}>
                         <p style={{ margin: 0, fontSize: 13, color: "#1e40af", fontWeight: 600 }}>
-                          🔑 OTP: <span style={{ fontSize: 20, letterSpacing: 4, fontWeight: 800 }}>{booking.startOtp}</span>
+                          🔒 Work in Progress
                         </p>
-                        <p style={{ margin: "3px 0 0", fontSize: 11, color: "#3b82f6" }}>Share with customer to verify completion</p>
+                        <p style={{ margin: "3px 0 0", fontSize: 11, color: "#3b82f6" }}>Customer will provide OTP to verify completion</p>
                       </div>
                       <button
                         onClick={() => { setOtpModal(booking); setOtpInput(""); setOtpError(""); }}
