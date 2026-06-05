@@ -189,6 +189,69 @@
   margin-bottom: 2rem;
 }
 
+/* ========== RESPONSIVE CARD GRID ========== */
+/* Large Desktop (1440px+) - 4 columns */
+@media (min-width: 1440px) {
+  .card-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+  }
+}
+
+/* Desktop (1024px - 1440px) - 3 columns */
+@media (max-width: 1439px) and (min-width: 1024px) {
+  .card-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.25rem;
+  }
+}
+
+/* Tablet (768px - 1024px) - 2 columns */
+@media (max-width: 1023px) and (min-width: 768px) {
+  .card-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+  
+  .card-image-wrapper {
+    height: 130px;
+  }
+}
+
+/* Mobile (< 768px) - 1 column */
+@media (max-width: 767px) {
+  .card-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    padding: 0 0.5rem;
+  }
+  
+  .admin-card {
+    max-width: 100%;
+  }
+  
+  .card-image-wrapper {
+    height: 160px;
+  }
+  
+  .card-content {
+    padding: 1rem;
+  }
+  
+  .card-title {
+    font-size: 1rem;
+  }
+  
+  .card-text {
+    font-size: 0.875rem;
+  }
+  
+  .card-button {
+    height: 42px;
+    font-size: 0.95rem;
+  }
+}
+
 /* Admin Card */
 .admin-card {
   background: white;
@@ -199,11 +262,17 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  cursor: pointer;
 }
 
 .admin-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+}
+
+.admin-card:active {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
 }
 
 /* Card Image */
@@ -405,6 +474,69 @@ html {
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+/* ========== RESPONSIVE RIDER TOGGLE ========== */
+@media (max-width: 768px) {
+  .rider-toggle-single-wrapper {
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 1.2rem;
+  }
+  
+  .rider-main-button,
+  .rider-status-toggle,
+  .edit-welcome-btn {
+    width: 100%;
+    max-width: 320px;
+    justify-content: center;
+  }
+  
+  .rider-main-button {
+    padding: 0.65rem 1.5rem;
+    font-size: 0.95rem;
+  }
+  
+  .rider-status-toggle {
+    min-width: 100%;
+    height: 44px;
+    font-size: 0.95rem;
+  }
+  
+  .edit-welcome-btn {
+    max-width: 100%;
+    padding: 0.65rem 1.5rem;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .rider-toggle-single-wrapper {
+    gap: 10px;
+  }
+  
+  .rider-main-button,
+  .rider-status-toggle,
+  .edit-welcome-btn {
+    max-width: 100%;
+    font-size: 0.875rem;
+  }
+  
+  .rider-main-button {
+    padding: 0.6rem 1.2rem;
+  }
+  
+  .rider-status-toggle {
+    height: 40px;
+  }
+  
+  .edit-welcome-btn {
+    padding: 0.6rem 1.2rem;
+  }
+  
+  .message-text {
+    font-size: 0.825rem;
+  }
 }
 
 /* Riders main button */
@@ -690,6 +822,57 @@ html {
 .logout-btn:active {
   transform: scale(0.96);
 }
+/* ========== MODAL RESPONSIVE ========== */
+@media (max-width: 768px) {
+  .modal-box {
+    width: 95%;
+    max-width: 95%;
+    padding: 1.25rem;
+  }
+  
+  .modal-box h3 {
+    font-size: 1rem;
+  }
+  
+  .modal-box textarea {
+    min-height: 100px;
+    font-size: 0.875rem;
+  }
+  
+  .modal-actions {
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+  
+  .modal-actions button {
+    width: 100%;
+    padding: 0.6rem 1.2rem;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .modal-box {
+    width: 100%;
+    max-width: 100%;
+    padding: 1rem;
+    border-radius: 12px;
+  }
+  
+  .modal-box h3 {
+    font-size: 0.95rem;
+  }
+  
+  .modal-box textarea {
+    font-size: 0.825rem;
+    padding: 8px;
+  }
+  
+  .modal-box label {
+    font-size: 0.8rem;
+  }
+}
+
 @keyframes modalPop {
   from {
     opacity: 0;

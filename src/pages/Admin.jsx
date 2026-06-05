@@ -699,7 +699,7 @@ const AVAILABLE_FEATURES = [
       <div style={styles.header}>
         <h1 style={styles.title}>Admin Dashboard</h1>
 
-        <div style={{ display: "flex", gap: "12px" }}>
+        <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }} className="admin-header-buttons">
           <button
             style={{
               padding: "10px 16px",
@@ -710,6 +710,7 @@ const AVAILABLE_FEATURES = [
               fontWeight: 600,
               cursor: "pointer",
             }}
+            className="admin-action-button"
             onClick={fetchCustomerRejectedServices}
           >
             Company Rejected Services
@@ -725,6 +726,7 @@ const AVAILABLE_FEATURES = [
               fontWeight: 600,
               cursor: "pointer",
             }}
+            className="admin-action-button"
             onClick={() => navigate("/Admin/categories-services")}
           >
             Global Packages
@@ -740,6 +742,7 @@ const AVAILABLE_FEATURES = [
               fontWeight: 600,
               cursor: "pointer",
             }}
+            className="admin-action-button"
             onClick={() => navigate("/Admin/service-admin")}
           >
             Service Admin

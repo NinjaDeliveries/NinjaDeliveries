@@ -486,6 +486,53 @@
   font-size: 18px;
 }
 
+.export-product-button {
+  padding: 0.7rem 1.2rem;
+  border: none;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.export-csv-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  box-shadow: 0 3px 10px rgba(102, 126, 234, 0.35);
+}
+.export-csv-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 16px rgba(102, 126, 234, 0.5);
+}
+
+.export-excel-btn {
+  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+  box-shadow: 0 3px 10px rgba(17, 153, 142, 0.35);
+}
+.export-excel-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 16px rgba(17, 153, 142, 0.5);
+}
+
+.export-barcode-btn {
+  background: linear-gradient(135deg, #f7971e 0%, #ffd200 100%);
+  box-shadow: 0 3px 10px rgba(247, 151, 30, 0.35);
+  color: #1a1a1a;
+}
+.export-barcode-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 16px rgba(247, 151, 30, 0.5);
+}
+
+.export-product-button span {
+  font-size: 15px;
+}
+
 .control-bar {
   background: white;
   border-radius: 20px;
@@ -583,5 +630,341 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* ========== RESPONSIVE STYLES ========== */
+
+/* Tablet (768px - 1024px) */
+@media (max-width: 1024px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  .form-group-grid.three-columns {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1.5rem;
+  }
+  
+  .add-product-button {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .control-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .filter-group {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .filter-group select {
+    width: 100%;
+  }
+}
+
+/* Mobile (< 768px) */
+@media (max-width: 768px) {
+  .product-update-container {
+    padding: 0;
+    min-height: 100vh;
+  }
+  
+  .product-update-card {
+    border-radius: 0;
+    min-height: 100vh;
+  }
+  
+  .product-update-header {
+    padding: 1.5rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .product-update-header h2 {
+    font-size: 22px;
+  }
+  
+  .close-button {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+  }
+  
+  .product-update-body {
+    padding: 1.5rem;
+  }
+  
+  .form-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  .form-column h3 {
+    font-size: 16px;
+    margin-bottom: 1rem;
+  }
+  
+  .form-group {
+    margin-bottom: 1rem;
+  }
+  
+  .form-group-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .form-group-grid.three-columns {
+    grid-template-columns: 1fr;
+  }
+  
+  .checkbox-group.full-width {
+    grid-column: span 1;
+  }
+  
+  .action-buttons {
+    flex-direction: column-reverse;
+    gap: 1rem;
+  }
+  
+  .action-buttons > div {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 1rem;
+    width: 100%;
+  }
+  
+  .delete-button,
+  .cancel-button,
+  .save-button {
+    width: 100%;
+    padding: 1rem;
+  }
+  
+  .delete-modal-content {
+    padding: 2rem;
+    width: 95%;
+  }
+  
+  .delete-modal-actions {
+    flex-direction: column-reverse;
+  }
+  
+  .delete-modal-actions button {
+    width: 100%;
+  }
+  
+  .data-block-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .data-block-content div {
+    width: 100%;
+    flex-direction: column;
+  }
+  
+  .edit-button,
+  .data-block-content .delete-button {
+    width: 100%;
+    text-align: center;
+  }
+  
+  .fetch-listed-items {
+    padding: 1rem;
+  }
+  
+  .header {
+    padding: 1.5rem;
+    border-radius: 12px;
+  }
+  
+  .header h1 {
+    font-size: 24px;
+  }
+  
+  .header p {
+    font-size: 14px;
+  }
+  
+  .add-product-button {
+    width: 100%;
+    padding: 1rem;
+  }
+  
+  .control-bar {
+    padding: 1rem;
+    border-radius: 12px;
+    gap: 1rem;
+  }
+  
+  .filter-group {
+    width: 100%;
+  }
+  
+  .filter-group select {
+    width: 100%;
+  }
+  
+  .products-list {
+    padding: 1.5rem;
+    border-radius: 12px;
+  }
+  
+  .products-list h2 {
+    font-size: 18px;
+  }
+  
+  .store-radio-group {
+    flex-direction: column;
+  }
+  
+  .store-radio-item {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  
+  /* Export buttons responsive */
+  .export-product-button {
+    width: 100%;
+    justify-content: center;
+    padding: 0.875rem 1rem;
+  }
+}
+
+/* Very Small Mobile (< 480px) */
+@media (max-width: 480px) {
+  .product-update-header {
+    padding: 1rem;
+  }
+  
+  .product-update-header h2 {
+    font-size: 20px;
+  }
+  
+  .product-update-body {
+    padding: 1rem;
+  }
+  
+  .form-column h3 {
+    font-size: 15px;
+  }
+  
+  .form-group label {
+    font-size: 13px;
+  }
+  
+  .form-control,
+  .form-select {
+    padding: 0.625rem;
+    font-size: 13px;
+  }
+  
+  .delete-modal-content {
+    padding: 1.5rem;
+  }
+  
+  .warning-icon {
+    width: 60px;
+    height: 60px;
+    font-size: 28px;
+  }
+  
+  .delete-modal-header h3 {
+    font-size: 20px;
+  }
+  
+  .delete-modal-header p {
+    font-size: 14px;
+  }
+  
+  .header {
+    padding: 1rem;
+  }
+  
+  .header h1 {
+    font-size: 20px;
+  }
+  
+  .control-bar {
+    padding: 1rem;
+  }
+  
+  .products-list {
+    padding: 1rem;
+  }
+  
+  .empty-icon {
+    font-size: 48px;
+  }
+  
+  .empty-state h3 {
+    font-size: 18px;
+  }
+  
+  .empty-state p {
+    font-size: 14px;
+  }
+  
+  .export-product-button {
+    font-size: 12px;
+    padding: 0.75rem 0.875rem;
+  }
+  
+  .export-product-button span {
+    font-size: 14px;
+  }
+}
+
+/* Landscape Mode (Mobile) */
+@media (max-width: 768px) and (orientation: landscape) {
+  .product-update-container {
+    padding: 1rem;
+  }
+  
+  .product-update-card {
+    border-radius: 12px;
+    max-height: 90vh;
+  }
+  
+  .form-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .product-update-header,
+  .close-button,
+  .action-buttons,
+  .add-product-button,
+  .control-bar,
+  .edit-button,
+  .delete-button {
+    display: none !important;
+  }
+  
+  .product-update-container {
+    background: white;
+    padding: 0;
+  }
+  
+  .product-update-card {
+    box-shadow: none;
+  }
+  
+  .product-update-body {
+    padding: 1rem;
   }
 }

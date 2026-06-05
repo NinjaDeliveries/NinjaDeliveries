@@ -1,4 +1,6 @@
 import "./App.css";
+import "./style/responsive.css";
+import "./style/pages-responsive.css";
 import { Routes, Route, Navigate } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Home from "./pages/Home";

@@ -18,6 +18,8 @@ import { db, storage } from "../context/Firebase";
 import { useUser } from "../context/adminContext";
 import "../style/listeditems.css";
 import { logAdminActivity } from "../utils/activityLogger";
+import * as XLSX from "xlsx"; // kept for potential future use
+import jsPDF from "jspdf";
 
 
 // Initialize Firebase auth
@@ -860,6 +862,325 @@ function FetchListedItems() {
       ? data.filter((item) => item.quantity === 0)
       : data;
 
+  // ── helpers ──────────────────────────────────────────────────────────────
+  const getExportRows = () =>
+    (filteredItems.length > 0 ? filteredItems : data).map((item, idx) => {
+      const finalPrice =
+        item.price - (item.price * (item.discount || 0)) / 100;
+      return {
+        "S.No": idx + 1,
+        Name: item.name || "",
+        Description: item.description || "",
+        "Price (₹)": item.price || 0,
+        "Discount (%)": item.discount || 0,
+        "Final Price (₹)": parseFloat(finalPrice.toFixed(2)),
+        Quantity: item.quantity ?? "",
+        "Shelf Life": item.shelfLife || "",
+        "CGST (%)": item.CGST || 0,
+        "SGST (%)": item.SGST || 0,
+        "CESS (%)": item.CESS || 0,
+        "Store Available": item.isStoreAvailable ? "Yes" : "No",
+        "Available After 10PM": item.availableAfter10PM ? "Yes" : "No",
+        "Is New": item.isNew ? "Yes" : "No",
+        "Weekly Sold": item.weeklySold || 0,
+        Keywords: (item.keywords || []).join("|"),
+        "Image URL": item.image || "",
+        "Store ID": item.storeId || "",
+      };
+    });
+
+  // ── CSV export ────────────────────────────────────────────────────────────
+  const exportToCSV = () => {
+    const rows = getExportRows();
+    if (!rows.length) { toast.warn("No products to export."); return; }
+    const headers = Object.keys(rows[0]);
+    const csvContent = [
+      headers.join(","),
+      ...rows.map((row) =>
+        headers.map((h) => {
+          const val = String(row[h]);
+          return val.includes(",") || val.includes('"') || val.includes("\n")
+            ? `"${val.replace(/"/g, '""')}"` : val;
+        }).join(",")
+      ),
+    ].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `products_${new Date().toISOString().split("T")[0]}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+    toast.success("CSV exported successfully!");
+  };
+
+  // ── Excel export with embedded barcodes (exceljs) ────────────────────────
+  const exportToExcel = async () => {
+    const items = filteredItems.length > 0 ? filteredItems : data;
+    if (!items.length) { toast.warn("No products to export."); return; }
+
+    toast.info("Generating Excel with barcodes...");
+
+    const ExcelJS = (await import("exceljs")).default;
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = "Ninja Deliveries";
+    workbook.created = new Date();
+
+    const ws = workbook.addWorksheet("Products", {
+      pageSetup: { fitToPage: true, fitToWidth: 1 },
+    });
+
+    // Row height in points — must be tall enough for barcode image
+    const ROW_H = 70; // pts  ≈ 93px on screen
+    // Barcode column width in Excel "character units" (1 unit ≈ 7px)
+    const BARCODE_COL_W = 36; // wide enough for barcode
+
+    // ── Column definitions (S.No first, then Barcode) ──────────────────────
+    ws.columns = [
+      { header: "S.No", key: "sno",          width: 6  },
+      { header: "Barcode", key: "barcode",   width: BARCODE_COL_W },
+      { header: "Name", key: "name",         width: 30 },
+      { header: "Description", key: "description", width: 35 },
+      { header: "Price (₹)", key: "price",   width: 12 },
+      { header: "Discount (%)", key: "discount", width: 13 },
+      { header: "Final Price (₹)", key: "finalPrice", width: 15 },
+      { header: "Quantity", key: "quantity", width: 10 },
+      { header: "Shelf Life", key: "shelfLife", width: 14 },
+      { header: "CGST (%)", key: "cgst",     width: 10 },
+      { header: "SGST (%)", key: "sgst",     width: 10 },
+      { header: "CESS (%)", key: "cess",     width: 10 },
+      { header: "Store Available", key: "storeAvailable", width: 15 },
+      { header: "After 10PM", key: "after10pm", width: 12 },
+      { header: "Is New", key: "isNew",      width: 10 },
+      { header: "Weekly Sold", key: "weeklySold", width: 13 },
+      { header: "Keywords", key: "keywords", width: 25 },
+      { header: "Store ID", key: "storeId",  width: 20 },
+    ];
+
+    // ── Header row styling ──────────────────────────────────────────────────
+    const headerRow = ws.getRow(1);
+    headerRow.height = 28;
+    headerRow.eachCell((cell) => {
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF4F46E5" } };
+      cell.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 11 };
+      cell.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+      cell.border = { bottom: { style: "medium", color: { argb: "FF3730A3" } } };
+    });
+
+    // ── Canvas for barcode generation ───────────────────────────────────────
+    const canvas = document.createElement("canvas");
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      const rowNum = i + 2; // 1-indexed, row 1 is header
+      const finalPrice = (item.price || 0) - ((item.price || 0) * (item.discount || 0)) / 100;
+
+      const row = ws.addRow({
+        sno: i + 1,
+        barcode: "",  // image placed separately
+        name: item.name || "",
+        description: item.description || "",
+        price: item.price || 0,
+        discount: item.discount || 0,
+        finalPrice: parseFloat(finalPrice.toFixed(2)),
+        quantity: item.quantity ?? "",
+        shelfLife: item.shelfLife || "",
+        cgst: item.CGST || 0,
+        sgst: item.SGST || 0,
+        cess: item.CESS || 0,
+        storeAvailable: item.isStoreAvailable ? "Yes" : "No",
+        after10pm: item.availableAfter10PM ? "Yes" : "No",
+        isNew: item.isNew ? "Yes" : "No",
+        weeklySold: item.weeklySold || 0,
+        keywords: (item.keywords || []).join("|"),
+        storeId: item.storeId || "",
+      });
+
+      row.height = ROW_H;
+
+      // Alternating row color
+      const rowBg = i % 2 === 0 ? "FFF5F3FF" : "FFFFFFFF";
+      row.eachCell({ includeEmpty: true }, (cell) => {
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: rowBg } };
+        cell.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+        cell.font = { size: 10 };
+        cell.border = {
+          bottom: { style: "thin", color: { argb: "FFE5E7EB" } },
+          right:  { style: "thin", color: { argb: "FFE5E7EB" } },
+        };
+      });
+
+      // S.No bold
+      row.getCell("sno").font = { bold: true, size: 10 };
+      // Final price green
+      row.getCell("finalPrice").font = { bold: true, color: { argb: "FF059669" }, size: 10 };
+
+      // ── Embed barcode image ───────────────────────────────────────────────
+      try {
+        const barcodeText = item.id.substring(0, 20);
+        drawBarcode128(canvas, barcodeText, { scale: 3, barH: 80, quiet: 20, fontSize: 13 });
+        const base64 = canvas.toDataURL("image/png").split(",")[1];
+        const imageId = workbook.addImage({ base64, extension: "png" });
+
+        // ExcelJS image position: col/row are 0-based integers
+        // Barcode column is index 1 (0=S.No, 1=Barcode)
+        // Add small padding (nativeCol/nativeRow offsets in EMUs: 1pt = 12700 EMU)
+        const PAD = 50000; // ~4pt padding in EMU
+        ws.addImage(imageId, {
+          tl: { nativeCol: 1, nativeColOff: PAD, nativeRow: rowNum - 1, nativeRowOff: PAD },
+          br: { nativeCol: 2, nativeColOff: -PAD, nativeRow: rowNum,    nativeRowOff: -PAD },
+          editAs: "oneCell",
+        });
+      } catch (_) { /* skip if barcode fails */ }
+    }
+
+    // ── Freeze header + S.No column ─────────────────────────────────────────
+    ws.views = [{ state: "frozen", xSplit: 1, ySplit: 1 }];
+
+    // ── Download ────────────────────────────────────────────────────────────
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `products_barcodes_${new Date().toISOString().split("T")[0]}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Excel with ${items.length} barcodes exported!`);
+  };
+
+  // ── Barcode (Code128) canvas helper ──────────────────────────────────────
+  const drawBarcode128 = (canvas, text, opts = {}) => {
+    // Minimal Code128-B encoder
+    const CODE128B_START = 104;
+    const CODE128_STOP = 106;
+    const encode = (str) => {
+      const chars = [];
+      for (let i = 0; i < str.length; i++) chars.push(str.charCodeAt(i) - 32);
+      let checksum = CODE128B_START;
+      chars.forEach((c, i) => (checksum += c * (i + 1)));
+      return [CODE128B_START, ...chars, checksum % 103, CODE128_STOP];
+    };
+    const PATTERNS = [
+      "11011001100","11001101100","11001100110","10010011000","10010001100",
+      "10001001100","10011001000","10011000100","10001100100","11001001000",
+      "11001000100","11000100100","10110011100","10011011100","10011001110",
+      "10111001100","10011101100","10011100110","11001110010","11001011100",
+      "11001001110","11011100100","11001110100","11101101110","11101001100",
+      "11100101100","11100100110","11101100100","11100110100","11100110010",
+      "11011011000","11011000110","11000110110","10100011000","10001011000",
+      "10001000110","10110001000","10001101000","10001100010","11010001000",
+      "11000101000","11000100010","10110111000","10110001110","10001101110",
+      "10111011000","10111000110","10001110110","11101110110","11010001110",
+      "11000101110","11011101000","11011100010","11011101110","11101011000",
+      "11101000110","11100010110","11101101000","11101100010","11100011010",
+      "11101111010","11001000010","11110001010","10100110000","10100001100",
+      "10010110000","10010000110","10000101100","10000100110","10110010000",
+      "10110000100","10011010000","10011000010","10000110100","10000110010",
+      "11000010010","11001010000","11110111010","11000010100","10001111010",
+      "10100111100","10010111100","10010011110","10111100100","10011110100",
+      "10011110010","11110100100","11110010100","11110010010","11011011110",
+      "11011110110","11110110110","10101111000","10100011110","10001011110",
+      "10111101000","10111100010","11110101000","11110100010","10111011110",
+      "10111101110","11101011110","11110101110","11010000100","11010010000",
+      "11010011100","1100011101011",
+    ];
+
+    const scale  = opts.scale  || 3;   // px per bar module — higher = sharper
+    const barH   = opts.barH   || 80;  // bar height px
+    const quiet  = opts.quiet  || 20;  // quiet zone px
+    const fontSize = opts.fontSize || 13;
+
+    const codes = encode(text);
+    const bits  = codes.map((c) => PATTERNS[c] || "").join("");
+    const totalW = bits.length * scale + quiet * 2;
+    const totalH = barH + fontSize + 8;
+
+    canvas.width  = totalW;
+    canvas.height = totalH;
+
+    const ctx = canvas.getContext("2d");
+    // White background
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, totalW, totalH);
+
+    // Bars
+    ctx.fillStyle = "#000000";
+    bits.split("").forEach((b, i) => {
+      if (b === "1") ctx.fillRect(quiet + i * scale, 0, scale, barH);
+    });
+
+    // Human-readable text below bars
+    ctx.fillStyle = "#000000";
+    ctx.font = `${fontSize}px monospace`;
+    ctx.textAlign = "center";
+    ctx.fillText(text.substring(0, 20), totalW / 2, barH + fontSize);
+  };
+
+  // ── Barcode PDF export ────────────────────────────────────────────────────
+  const exportBarcodes = () => {
+    const items = filteredItems.length > 0 ? filteredItems : data;
+    if (!items.length) { toast.warn("No products to export."); return; }
+
+    const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const pageW = 210, pageH = 297;
+    const cols = 3, rows = 5;
+    const cellW = pageW / cols, cellH = pageH / rows;
+    const canvas = document.createElement("canvas");
+
+    items.forEach((item, idx) => {
+      if (idx > 0 && idx % (cols * rows) === 0) pdf.addPage();
+      const col = idx % cols;
+      const row = Math.floor((idx % (cols * rows)) / cols);
+      const x = col * cellW + 4;
+      const y = row * cellH + 4;
+
+      // Draw barcode on canvas
+      const barcodeText = item.id.substring(0, 20);
+      drawBarcode128(canvas, barcodeText);
+      const barcodeImg = canvas.toDataURL("image/png");
+
+      // White card background
+      pdf.setFillColor(255, 255, 255);
+      pdf.setDrawColor(220, 220, 220);
+      pdf.roundedRect(x, y, cellW - 8, cellH - 8, 2, 2, "FD");
+
+      // Product name
+      pdf.setFontSize(8);
+      pdf.setFont("helvetica", "bold");
+      pdf.setTextColor(30, 30, 30);
+      const name = item.name || "Unknown";
+      const nameLines = pdf.splitTextToSize(name, cellW - 14);
+      pdf.text(nameLines.slice(0, 2), x + (cellW - 8) / 2, y + 7, { align: "center" });
+
+      // Price
+      const finalPrice = (item.price || 0) - ((item.price || 0) * (item.discount || 0)) / 100;
+      pdf.setFontSize(9);
+      pdf.setFont("helvetica", "bold");
+      pdf.setTextColor(16, 185, 129);
+      pdf.text(`₹${finalPrice.toFixed(2)}`, x + (cellW - 8) / 2, y + 14, { align: "center" });
+
+      // Barcode image
+      const barcodeH = 14;
+      const barcodeW = cellW - 18;
+      pdf.addImage(barcodeImg, "PNG", x + 5, y + 17, barcodeW, barcodeH);
+
+      // Barcode text below
+      pdf.setFontSize(6);
+      pdf.setFont("helvetica", "normal");
+      pdf.setTextColor(100, 100, 100);
+      pdf.text(barcodeText, x + (cellW - 8) / 2, y + 33, { align: "center" });
+
+      // Qty & shelf life
+      pdf.setFontSize(7);
+      pdf.setTextColor(80, 80, 80);
+      pdf.text(`Qty: ${item.quantity ?? "N/A"}  |  ${item.shelfLife || ""}`, x + (cellW - 8) / 2, y + 38, { align: "center" });
+    });
+
+    pdf.save(`barcodes_${new Date().toISOString().split("T")[0]}.pdf`);
+    toast.success(`${items.length} barcodes exported!`);
+  };
+
   return (
     <div className="fetch-listed-items">
       <div className="container">
@@ -868,9 +1189,20 @@ function FetchListedItems() {
             <h1>📦 Product Management</h1>
             <p>Manage your product inventory and track stock levels</p>
           </div>
-          <button className="add-product-button" onClick={handleAddProduct}>
-            <span>+</span> Add New Product
-          </button>
+          <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+            <button className="export-product-button export-csv-btn" onClick={exportToCSV} title="Export as CSV">
+              <span>📄</span> CSV
+            </button>
+            <button className="export-product-button export-excel-btn" onClick={exportToExcel} title="Export as Excel">
+              <span>📊</span> Excel
+            </button>
+            <button className="export-product-button export-barcode-btn" onClick={exportBarcodes} title="Export Barcodes PDF">
+              <span>🔖</span> Barcodes
+            </button>
+            <button className="add-product-button" onClick={handleAddProduct}>
+              <span>+</span> Add New Product
+            </button>
+          </div>
         </div>
         <div className="control-bar">
           <div className="search-bar">
