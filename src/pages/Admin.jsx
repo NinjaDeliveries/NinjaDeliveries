@@ -118,6 +118,40 @@ export const resolveLoginRedirect = (userDoc) => {
 export default function Admin() {
   const [editingUser, setEditingUser] = useState(null);
 
+  /* ================= POS UPLOAD STATE ================= */
+  const [posFile, setPosFile] = useState(null);
+  const [posDragOver, setPosDragOver] = useState(false);
+
+  const handlePosFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file && file.type === "application/pdf") {
+      setPosFile(file);
+    } else if (file) {
+      toast.error("Only PDF files are allowed");
+      e.target.value = "";
+    }
+  };
+
+  const handlePosDrop = (e) => {
+    e.preventDefault();
+    setPosDragOver(false);
+    const file = e.dataTransfer.files[0];
+    if (file && file.type === "application/pdf") {
+      setPosFile(file);
+    } else {
+      toast.error("Only PDF files are allowed");
+    }
+  };
+
+  const handlePosSubmit = () => {
+    if (!posFile) {
+      toast.error("Please select a PDF file before submitting");
+      return;
+    }
+    // Backend connection will be added later
+    toast.success(`"${posFile.name}" is ready. Backend will be connected soon.`);
+  };
+
   const [pendingUsers, setPendingUsers] = useState([]);
   const [roles, setRoles] = useState(ROLE_PRESETS);
   const [roleName, setRoleName] = useState("");
@@ -709,6 +743,129 @@ const AVAILABLE_FEATURES = [
             onClick={() => navigate("/Admin/service-admin")}
           >
             Service Admin
+          </button>
+        </div>
+      </div>
+
+      {/* ===================== POS UPLOAD SECTION ===================== */}
+      <div style={styles.card}>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
+          <div style={{
+            width: "44px", height: "44px", borderRadius: "12px",
+            background: "linear-gradient(135deg, #f59e0b, #d97706)",
+            display: "flex", alignItems: "center", justifyContent: "center"
+          }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2">
+              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+              <line x1="8" y1="21" x2="16" y2="21"/>
+              <line x1="12" y1="17" x2="12" y2="21"/>
+            </svg>
+          </div>
+          <div>
+            <h3 style={{ margin: 0, fontSize: "20px", fontWeight: "700", color: "#1f2937" }}>
+              POS Upload
+            </h3>
+            <p style={{ margin: "3px 0 0", fontSize: "13px", color: "#6b7280" }}>
+              Upload your Point of Sale report or document in PDF format
+            </p>
+          </div>
+        </div>
+
+        {/* Drop zone */}
+        <div
+          onDragOver={(e) => { e.preventDefault(); setPosDragOver(true); }}
+          onDragLeave={() => setPosDragOver(false)}
+          onDrop={handlePosDrop}
+          onClick={() => document.getElementById("pos-pdf-input").click()}
+          style={{
+            border: `2px dashed ${posDragOver ? "#f59e0b" : posFile ? "#10b981" : "#d1d5db"}`,
+            borderRadius: "14px",
+            padding: "40px 24px",
+            textAlign: "center",
+            cursor: "pointer",
+            background: posDragOver ? "#fffbeb" : posFile ? "#f0fdf4" : "#fafafa",
+            transition: "all 0.2s ease",
+            marginBottom: "20px",
+          }}
+        >
+          <input
+            id="pos-pdf-input"
+            type="file"
+            accept="application/pdf"
+            style={{ display: "none" }}
+            onChange={handlePosFileChange}
+          />
+
+          {posFile ? (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="1.8">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="9" y1="15" x2="15" y2="15"/>
+              </svg>
+              <div>
+                <p style={{ margin: 0, fontWeight: "700", color: "#065f46", fontSize: "16px" }}>
+                  {posFile.name}
+                </p>
+                <p style={{ margin: "4px 0 0", fontSize: "13px", color: "#6b7280" }}>
+                  {(posFile.size / 1024).toFixed(1)} KB &nbsp;·&nbsp; PDF
+                </p>
+              </div>
+              <button
+                style={{
+                  marginTop: "6px", padding: "6px 14px", borderRadius: "8px",
+                  border: "1px solid #d1d5db", background: "#fff",
+                  color: "#374151", fontSize: "13px", cursor: "pointer", fontWeight: "500"
+                }}
+                onClick={(e) => { e.stopPropagation(); setPosFile(null); }}
+              >
+                Remove
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.8">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="17 8 12 3 7 8"/>
+                <line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+              <p style={{ margin: 0, fontSize: "16px", color: "#374151", fontWeight: "600" }}>
+                Drag & drop your PDF here
+              </p>
+              <p style={{ margin: 0, fontSize: "13px", color: "#9ca3af" }}>
+                or <span style={{ color: "#6366f1", fontWeight: "600" }}>click to browse</span> &nbsp;·&nbsp; PDF only
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Submit button */}
+        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+          <button
+            onClick={handlePosSubmit}
+            style={{
+              padding: "12px 28px",
+              borderRadius: "10px",
+              border: "none",
+              background: posFile
+                ? "linear-gradient(135deg, #f59e0b, #d97706)"
+                : "#e5e7eb",
+              color: posFile ? "#fff" : "#9ca3af",
+              fontWeight: "700",
+              fontSize: "15px",
+              cursor: posFile ? "pointer" : "not-allowed",
+              transition: "all 0.2s ease",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+            }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            Submit POS
           </button>
         </div>
       </div>
