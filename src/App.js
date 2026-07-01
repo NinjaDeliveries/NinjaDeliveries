@@ -62,6 +62,14 @@ import ServiceAdmin from "./pages/service/admin/ServiceAdmin";
 import RestaurantRegister from "./pages/restaurant/RestaurantRegister";
 import RestaurantAdmin from "./pages/restaurant/RestaurantAdmin";
 
+// Certificate Management Components
+import CertificateDashboard from "./pages/certificate/CertificateDashboard";
+import CreateCertificate from "./pages/certificate/CreateCertificate";
+import CertificateVerification from "./pages/certificate/CertificateVerification";
+
+// No Access Page
+import NoAccess from "./pages/certificate/NoAccess";
+
 // Notification System
 import { NotificationProvider } from "./context/NotificationContext";
 import NotificationAlert from "./components/NotificationAlert";
@@ -123,8 +131,13 @@ function App() {
         <div>
         {nav && isAdmin && <Navbar />}
         <NotificationAlert />
-        
         <Routes>
+          {/* Public Certificate Verification - No Auth Required */}
+          <Route 
+            path="/verify/:certificateId" 
+            element={<CertificateVerification />} 
+          />
+          
           {/* Main Route */}
           <Route
             path="/"
@@ -398,6 +411,20 @@ function App() {
 
           {/* Restaurant Admin */}
           <Route path="/restaurant-admin" element={<RestaurantAdmin />} />
+          
+          {/* Certificate Management Routes - TEMPORARY: OPEN ACCESS FOR TESTING */}
+          <Route 
+            path="/certificate/dashboard" 
+            element={<CertificateDashboard />} 
+          />
+          
+          <Route 
+            path="/certificate/create" 
+            element={<CreateCertificate />} 
+          />
+          
+          {/* No Access Page */}
+          <Route path="/no-access" element={<NoAccess />} />
         </Routes>
         
       </div>

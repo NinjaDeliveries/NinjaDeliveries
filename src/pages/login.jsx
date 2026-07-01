@@ -294,6 +294,16 @@ if (!isAdmin) {
       setNav(true);
       if(adminSnap.exists()){
         const adminData = adminSnap.data();
+        
+        // Check if user is co-admin and redirect to certificate dashboard
+        if (adminData.roleKey === "co-admin") {
+          toast("Co-Admin Login Successful!", {
+            type: "success",
+            position: "top-center",
+          });
+          navigate("/certificate/dashboard");
+          return; // Stop here for co-admin users
+        }
       }
       
 

@@ -30,5 +30,8 @@ export const PAGE_PERMISSIONS = {
 
   "/questions": "page:questions",
 
+  "/certificate/dashboard": "page:certificates",
+  "/certificate/create": "page:certificates",
+
   "/__admin_dev": "page:users"
 };
